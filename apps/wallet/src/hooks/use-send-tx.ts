@@ -18,7 +18,9 @@ export interface SendResult {
 /**
  * Signe + broadcast une tx Transfer, puis poll jusqu'à inclusion.
  *
- * Invalide le cache `["account"]` après succès pour rafraîchir balance/nonce.
+ * Le `maxFee` est calculé dynamiquement à partir de `sango_baseFee`
+ * (recommandation backend : `baseFee * 2`). Fallback sur `DEFAULT_MAX_FEE`
+ * si l'appel échoue (nœud ancien, endpoint custom).
  */
 export function useSendTx(): UseMutationResult<SendResult, Error, SendArgs> {
   const { client } = useSdkStore();
@@ -26,15 +28,28 @@ export function useSendTx(): UseMutationResult<SendResult, Error, SendArgs> {
 
   return useMutation<SendResult, Error, SendArgs>({
     mutationFn: async ({ to, amountBaseUnits }) => {
+      // 1. Récupère la base fee courante (avec fallback silencieux).
+      let maxFee = DEFAULT_MAX_FEE;
+      try {
+        const baseFeeStr = await client.getBaseFee();
+        const baseFee = BigInt(baseFeeStr);
+        maxFee = baseFee * 2n;
+      } catch {
+        // Nœud ancien ou endpoint custom sans sango_baseFee → fallback.
+      }
+
+      // 2. Signe + broadcast.
       const { txHash } = await client.send({
         to,
         amountBaseUnits,
         gasLimit: GAS_BY_TX_KIND[0x01],
-        maxFee: DEFAULT_MAX_FEE,
+        maxFee,
         priorityFee: DEFAULT_PRIORITY_FEE,
       });
 
       toast.info("Transaction envoyée", { description: txHash });
+
+      // 3. Poll jusqu'à inclusion.
       const result = await client.waitForInclusion(txHash);
 
       if (result.included) {

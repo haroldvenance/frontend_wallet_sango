@@ -1,0 +1,17 @@
+{
+  "name": "@sango/sdk",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@sango/types": "workspace:*",
+    "@sango/wallet-core": "workspace:*",
+    "@sango/rpc": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3"
+  }
+}

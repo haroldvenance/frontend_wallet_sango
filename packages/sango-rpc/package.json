@@ -1,0 +1,21 @@
+{
+  "name": "@sango/rpc",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.1",
+    "@sango/wallet-core": "workspace:*",
+    "@types/node": "^24.13.3"
+  },
+  "description": "Sango JSON-RPC client (TS)",
+  "dependencies": {
+    "@sango/types": "workspace:*"
+  }
+}
