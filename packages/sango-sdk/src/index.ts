@@ -77,10 +77,14 @@ export interface SendOptions {
   readonly priorityFee?: bigint;
 }
 
+export type InclusionStatus = "included" | "pending" | "rejected" | "dropped";
+
 export interface InclusionResult {
   readonly txHash: TxHashHex;
-  readonly included: boolean;
+  readonly status: InclusionStatus;
   readonly nonce: number;
+  readonly blockHeight?: number;
+  readonly error?: string;
 }
 
 /**
@@ -446,17 +450,90 @@ export class SangoClient {
     const timeoutMs = opts.timeoutMs ?? 15_000;
     const pollMs = opts.pollMs ?? 500;
     const start = Date.now();
+
+    // Snapshot nonce initial.
     const initial = await this.rpc.getAccount(wallet.identity.addressHex as Hex);
     if (!initial) throw new Error("Account not found");
     const initialNonce = initial.nonce;
 
+    let notFoundStreak = 0;
+    const NOT_FOUND_THRESHOLD = 3;
+
     while (Date.now() - start < timeoutMs) {
       await new Promise((r) => setTimeout(r, pollMs));
+
+      // 1. Tentative getTransactionByHash.
+      try {
+        const tx = await this.rpc.getTransactionByHash(txHash);
+        notFoundStreak = 0;
+
+        if (tx && tx.blockHeight !== null) {
+          return {
+            txHash,
+            status: "included",
+            nonce: tx.nonce,
+            blockHeight: tx.blockHeight,
+          };
+        }
+        // tx existe mais en mempool — on continue.
+      } catch {
+        // Erreur réseau ponctuelle → on continue.
+      }
+
+      // 2. Vérifie le nonce.
       const acc = await this.rpc.getAccount(wallet.identity.addressHex as Hex);
       if (acc && acc.nonce > initialNonce) {
-        return { txHash, included: true, nonce: acc.nonce };
+        // Le nonce a avancé mais la tx reste introuvable → rejet probable.
+        if (notFoundStreak >= NOT_FOUND_THRESHOLD) {
+          return {
+            txHash,
+            status: "rejected",
+            nonce: acc.nonce,
+            error:
+              "Transaction rejetée ou remplacée (nonce avancé, tx absente de la chaîne). " +
+              "Consulte les logs du node (RUST_LOG=debug).",
+          };
+        }
+        // Sinon, on considère que c'est la bonne tx.
+        return {
+          txHash,
+          status: "included",
+          nonce: acc.nonce,
+        };
       }
+
+      // 3. Incrémente le streak "non trouvée".
+      const txStillMissing = await this.rpc
+        .getTransactionByHash(txHash)
+        .then((t) => t === null)
+        .catch(() => false);
+      if (txStillMissing) notFoundStreak += 1;
     }
-    return { txHash, included: false, nonce: initialNonce };
+
+    // Timeout. Distingue pending (connue du RPC) vs dropped (inconnue).
+    try {
+      const tx = await this.rpc.getTransactionByHash(txHash);
+      if (!tx) {
+        return {
+          txHash,
+          status: "dropped",
+          nonce: initialNonce,
+          error:
+            "Transaction inconnue du RPC après timeout. " +
+            "Probablement évincée du mempool ou rejetée silencieusement.",
+        };
+      }
+      return {
+        txHash,
+        status: "pending",
+        nonce: initialNonce,
+      };
+    } catch {
+      return {
+        txHash,
+        status: "pending",
+        nonce: initialNonce,
+      };
+    }
   }
 }

@@ -26,15 +26,29 @@ function useInvalidateStaking() {
 
 async function runStakingAction(
   send: () => Promise<{ txHash: TxHashHex }>,
-  wait: (hash: TxHashHex) => Promise<{ included: boolean }>,
+  wait: (hash: TxHashHex) => Promise<{ status: string; error?: string }>,
   label: string,
 ): Promise<StakingResult> {
   const { txHash } = await send();
   toast.info(`${label} envoyé`, { description: txHash });
-  const { included } = await wait(txHash);
-  if (included) toast.success(`${label} inclus`, { description: txHash });
-  else toast.warning(`${label} en attente`, { description: "Pas encore inclus après 15 s" });
-  return { txHash, included };
+  const result = await wait(txHash);
+
+  switch (result.status) {
+    case "included":
+      toast.success(`${label} inclus`, { description: txHash });
+      break;
+    case "rejected":
+      toast.error(`${label} rejeté`, { description: result.error });
+      break;
+    case "dropped":
+      toast.error(`${label} perdu`, { description: result.error });
+      break;
+    default:
+      toast.warning(`${label} en attente`, {
+        description: "Pas encore inclus après 15 s",
+      });
+  }
+  return { txHash, included: result.status === "included" };
 }
 
 /** Bond (self-stake). */

@@ -72,7 +72,7 @@ export function useFaucet(): UseMutationResult<
         { timeoutMs: 20_000, pollMs: 500 },
       );
 
-      if (inclusion.included) {
+      if (inclusion.status === "included") {
         toast.success("Faucet : fonds reçus", {
           description: `${formatSango(amount)} SANGO`,
         });
@@ -85,7 +85,7 @@ export function useFaucet(): UseMutationResult<
       return {
         txHash: res.tx_hash,
         amountBaseUnits: amount,
-        included: inclusion.included,
+        included: inclusion.status === "included",
       };
     },
     onSuccess: () => {

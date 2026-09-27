@@ -49,17 +49,30 @@ export function useSendTx(): UseMutationResult<SendResult, Error, SendArgs> {
 
       toast.info("Transaction envoyée", { description: txHash });
 
+      // 2b. Invalide immédiatement le compte pour rafraîchir le solde
+      // dès que le backend a appliqué la tx (sans attendre le polling).
+      void qc.invalidateQueries({ queryKey: ["account"] });
+
       // 3. Poll jusqu'à inclusion.
       const result = await client.waitForInclusion(txHash);
 
-      if (result.included) {
-        toast.success("Transaction incluse", { description: txHash });
-      } else {
-        toast.warning("Transaction en attente", {
-          description: "Pas encore incluse après 15 s",
-        });
+      switch (result.status) {
+        case "included":
+          toast.success("Transaction incluse", { description: txHash });
+          break;
+        case "rejected":
+          toast.error("Transaction rejetée", { description: result.error });
+          break;
+        case "dropped":
+          toast.error("Transaction perdue", { description: result.error });
+          break;
+        case "pending":
+        default:
+          toast.warning("Transaction en attente", {
+            description: "Pas encore incluse après 15 s",
+          });
       }
-      return { txHash, included: result.included };
+      return { txHash, included: result.status === "included" };
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["account"] });

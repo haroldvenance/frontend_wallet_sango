@@ -13,6 +13,7 @@ import { NavLink } from "react-router-dom";
 import { LocaleToggle } from "@/components/settings/locale-toggle";
 import { NetworkSelector } from "@/components/settings/network-selector";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { ErrorBoundary } from "@/components/error-boundary";
 import { useChainInfo } from "@/hooks/use-chain-info";
 import { useTranslation } from "@/i18n/use-translation";
 import { shortenHash } from "@/lib/format";
@@ -164,7 +165,7 @@ export function AppShell({ children }: AppShellProps) {
           </header>
 
           <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
-            {children}
+            <ErrorBoundary scope="Route">{children}</ErrorBoundary>
           </main>
         </div>
       </div>
