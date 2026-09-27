@@ -1,1 +1,5 @@
 *.bak
+node_modules/
+.vite/
+*.tsbuildinfo
+packages/*/node_modules/

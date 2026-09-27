@@ -23,6 +23,18 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.9.1
         version: 5.9.1(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(react-hook-form@7.88.0(react@19.3.0))(zod@4.6.5)
+      '@sango/rpc':
+        specifier: workspace:*
+        version: link:../../packages/sango-rpc
+      '@sango/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sango-sdk
+      '@sango/types':
+        specifier: workspace:*
+        version: link:../../packages/sango-types
+      '@sango/wallet-core':
+        specifier: workspace:*
+        version: link:../../packages/wallet-core
       '@tanstack/react-query':
         specifier: ^5.103.2
         version: 5.103.2(react@19.3.0)
@@ -130,14 +142,39 @@ importers:
         specifier: ^5.0.1
         version: 5.0.1(@types/node@24.13.6)(jsdom@30.1.1)(vite@8.3.1(@types/node@24.13.6)(jiti@2.7.0))
 
-  packages/rpc-client:
+  packages/sango-rpc:
+    dependencies:
+      '@sango/types':
+        specifier: workspace:*
+        version: link:../sango-types
     devDependencies:
       '@sango/wallet-core':
         specifier: workspace:*
         version: link:../wallet-core
+      '@types/node':
+        specifier: ^24.13.3
+        version: 24.13.6
       vitest:
         specifier: ^5.0.1
         version: 5.0.1(@types/node@24.13.6)(jsdom@30.1.1)(vite@8.3.1(@types/node@24.13.6)(jiti@2.7.0))
+
+  packages/sango-sdk:
+    dependencies:
+      '@sango/rpc':
+        specifier: workspace:*
+        version: link:../sango-rpc
+      '@sango/types':
+        specifier: workspace:*
+        version: link:../sango-types
+      '@sango/wallet-core':
+        specifier: workspace:*
+        version: link:../wallet-core
+    devDependencies:
+      '@types/node':
+        specifier: ^24.13.3
+        version: 24.13.6
+
+  packages/sango-types: {}
 
   packages/wallet-core:
     dependencies:
@@ -147,10 +184,16 @@ importers:
       '@noble/hashes':
         specifier: ^2.4.0
         version: 2.4.0
+      '@sango/types':
+        specifier: workspace:*
+        version: link:../sango-types
       '@scure/base':
         specifier: 2.4.0
         version: 2.4.0
     devDependencies:
+      '@types/node':
+        specifier: ^24.13.3
+        version: 24.13.6
       vitest:
         specifier: ^5.0.1
         version: 5.0.1(@types/node@24.13.6)(jsdom@30.1.1)(vite@8.3.1(@types/node@24.13.6)(jiti@2.7.0))
