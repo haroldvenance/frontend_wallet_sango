@@ -17,6 +17,7 @@ export {
 export type {
   Account,
   ChainInfo,
+  EvmBlock,
   Delegation,
   Hex,
   PendingUnbonding,

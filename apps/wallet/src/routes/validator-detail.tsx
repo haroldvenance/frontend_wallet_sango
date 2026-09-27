@@ -4,10 +4,13 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { StakeModal } from "@/components/staking/stake-modal";
+import { ValidatorActionsPanel } from "@/components/staking/validator-actions-panel";
 import { useAccount } from "@/hooks/use-account";
 import { useMyDelegations } from "@/hooks/use-my-delegations";
 import {
   useBond,
+  useUnbond,
+  useUpdateCommission,
   useClaimRewards,
   useDelegate,
   useUndelegate,
@@ -18,7 +21,7 @@ import { useTranslation } from "@/i18n/use-translation";
 import { formatSango } from "@/lib/format";
 import { useWalletStore } from "@/stores/wallet-store";
 
-type ModalKind = "delegate" | "undelegate" | null;
+type ModalKind = "delegate" | "undelegate" | "bond" | "unbond" | "commission" | null;
 
 export function ValidatorDetailRoute() {
   const t = useTranslation();
@@ -33,6 +36,8 @@ export function ValidatorDetailRoute() {
   const undelegate = useUndelegate();
   const claim = useClaimRewards();
   const bond = useBond();
+  const unbond = useUnbond();
+  const updateCommission = useUpdateCommission();
   const unjail = useUnjail();
 
   const [modal, setModal] = useState<ModalKind>(null);
@@ -144,6 +149,22 @@ export function ValidatorDetailRoute() {
       )}
 
       {/* Actions */}
+            {isSelfValidator && (
+        <ValidatorActionsPanel
+          validator={validator}
+          onBond={() => setModal("bond")}
+          onUnbond={() => setModal("unbond")}
+          onUpdateCommission={() => setModal("commission")}
+          onUnjail={() => void unjail.mutateAsync()}
+          pending={{
+            bond: bond.isPending,
+            unbond: unbond.isPending,
+            updateCommission: updateCommission.isPending,
+            unjail: unjail.isPending,
+          }}
+        />
+      )}
+
       <div className="mt-4 flex flex-wrap gap-2">
         <button
           type="button"
@@ -158,24 +179,7 @@ export function ValidatorDetailRoute() {
         >
           <Coins className="size-4" /> {t.validators.delegate}
         </button>
-        {isSelfValidator && (
-          <button
-            type="button"
-            onClick={() => void bond.mutateAsync({ amountBaseUnits: 1000n * 10_000_000n })}
-            disabled={bond.isPending}
-            className="inline-flex h-10 items-center gap-2 rounded-xl border bg-card px-4 text-sm font-medium disabled:opacity-50"
-            title="Bond de 1000 SANGO (self-stake)"
-          >
-            🔒 Bond 1000 SANGO
-          </button>
-        )}
-
-        {isSelfValidator && (
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            Tu ne peux pas te déléguer à toi-même. Pour ajouter à ton propre
-            stake, utilise <strong>Bond</strong>.
-          </p>
-        )}
+        {/* Panneau proprio validateur */}
 
 
         {myBondedBaseUnits > 0n && (
@@ -214,6 +218,7 @@ export function ValidatorDetailRoute() {
 
       {/* Modales */}
       <StakeModal
+        mode="amount"
         open={modal === "delegate"}
         title={t.validators.delegate}
         submitLabel={t.validators.delegate}
@@ -227,6 +232,7 @@ export function ValidatorDetailRoute() {
       />
 
       <StakeModal
+        mode="amount"
         open={modal === "undelegate"}
         title={t.validators.undelegate}
         submitLabel={t.validators.undelegate}
@@ -239,6 +245,52 @@ export function ValidatorDetailRoute() {
         }}
         onClose={() => setModal(null)}
       />
+      <StakeModal
+        mode="amount"
+        open={modal === "bond"}
+        title={t.staking.bondTitle}
+        submitLabel={t.staking.bond}
+        pending={bond.isPending}
+        hint={t.staking.bondHint}
+        max={account ? BigInt(account.balance) : undefined}
+        onSubmit={async (amount) => {
+          await bond.mutateAsync({ amountBaseUnits: amount });
+          setModal(null);
+        }}
+        onClose={() => setModal(null)}
+      />
+
+      <StakeModal
+        mode="amount"
+        open={modal === "unbond"}
+        title={t.staking.unbondTitle}
+        submitLabel={t.staking.unbond}
+        pending={unbond.isPending}
+        hint={t.staking.unbondHint}
+        max={BigInt(validator.selfStake)}
+        onSubmit={async (amount) => {
+          await unbond.mutateAsync({ amountBaseUnits: amount });
+          setModal(null);
+        }}
+        onClose={() => setModal(null)}
+      />
+
+      <StakeModal
+        mode="commission"
+        open={modal === "commission"}
+        title={t.staking.updateCommissionTitle}
+        submitLabel={t.staking.updateCommission}
+        pending={updateCommission.isPending}
+        hint={t.staking.updateCommissionHint}
+        initialValue={(validator.commissionBps / 100).toFixed(0)}
+        maxPct={10}
+        onSubmit={async (bps) => {
+          await updateCommission.mutateAsync({ newCommissionBps: bps });
+          setModal(null);
+        }}
+        onClose={() => setModal(null)}
+      />
+
     </div>
   );
 }

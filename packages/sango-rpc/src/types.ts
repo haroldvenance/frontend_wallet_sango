@@ -178,3 +178,26 @@ export interface PendingUnbonding {
   /** Timestamp Unix de maturité. */
   readonly matureAt: number;
 }
+
+// --- EVM blocks (namespace eth_*) ------------------------------------------
+
+/**
+ * Bloc EVM, format EIP-1474 (simplifié).
+ *
+ * ⚠️ `transactions` ne contient que les txs EVM. Un bloc 100% natif
+ *    retourne `[]`.
+ */
+export interface EvmBlock {
+  readonly number: Hex;
+  readonly hash: Hex;
+  readonly parentHash: Hex;
+  readonly timestamp: Hex;
+  readonly gasLimit: Hex;
+  readonly gasUsed: Hex;
+  readonly baseFeePerGas?: Hex;
+  readonly miner: Hex;
+  readonly transactions: readonly Hex[];
+  readonly transactionsRoot: Hex;
+  readonly stateRoot: Hex;
+  readonly receiptsRoot: Hex;
+}

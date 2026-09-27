@@ -1,4 +1,5 @@
-import type { AddressHex, ValidatorInfo } from "@sango/rpc";
+import type { ValidatorInfo } from "@sango/rpc";
+import type { AddressHex } from "@sango/types";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 
 import { useSdkStore } from "@/stores/sdk-store";

@@ -3,7 +3,6 @@ import {
   CheckCircle2,
   Clock3,
   Copy,
-  XCircle,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -13,8 +12,6 @@ import { useTranslation } from "@/i18n/use-translation";
 import { formatSango } from "@/lib/format";
 import { EXPLORER_URL } from "@/lib/config";
 import { txKindLabel } from "@/lib/tx-classify";
-
-const BASE_UNITS_PER_SANGO = 10_000_000n;
 
 function shortHex(h: string, head = 10, tail = 8): string {
   if (h.length <= head + tail + 2) return h;
@@ -52,24 +49,14 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
     <div className="grid grid-cols-[140px_1fr] items-start gap-4 border-b py-3 last:border-b-0">
       <dt className="text-xs uppercase tracking-wider text-muted-foreground">{label}</dt>
       <dd className="break-all text-sm">{children}</dd>
-      <div className="mt-4">
-        <a
-          href={`${EXPLORER_URL}/tx/${tx.hash}`}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex h-10 items-center gap-2 rounded-xl border bg-card px-4 text-sm font-medium hover:bg-accent"
-        >
-          Voir dans l&apos;explorateur
-        </a>
-      </div>
-    </div>
+</div>
   );
 }
 
 export function HistoryDetailRoute() {
   const t = useTranslation();
   const { hash } = useParams<{ hash: string }>();
-  const { data: tx, isLoading, isError, error } = useTransaction(hash ?? null);
+  const { data: tx, isLoading, isError, error } = useTransaction((hash ?? null) as `0x${string}` | null);
 
   if (isLoading) {
     return (
@@ -187,6 +174,17 @@ export function HistoryDetailRoute() {
             </Row>
           )}
         </dl>
+      </div>
+
+      <div className="mt-4">
+        <a
+          href={`${EXPLORER_URL}/tx/${tx.hash}`}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex h-10 items-center gap-2 rounded-xl border bg-card px-4 text-sm font-medium hover:bg-accent"
+        >
+          Voir dans l&apos;explorateur
+        </a>
       </div>
     </div>
   );

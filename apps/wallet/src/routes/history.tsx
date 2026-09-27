@@ -1,6 +1,5 @@
 import type { Tx } from "@sango/rpc";
 import {
-  ArrowDownLeft,
   ArrowUpRight,
   Clock3,
   Coins,
@@ -18,7 +17,7 @@ import { Link } from "react-router-dom";
 import { flattenTxPages, useInfiniteTransactions } from "@/hooks/use-transactions";
 import { useTranslation } from "@/i18n/use-translation";
 import { formatSango, shortenAddress, shortenHash } from "@/lib/format";
-import { classifyTx, displayAmount, txKindLabel, type TxDirection } from "@/lib/tx-classify";
+import { classifyTx, displayAmount, txKindLabel } from "@/lib/tx-classify";
 import { useWalletStore } from "@/stores/wallet-store";
 
 // --- Types -----------------------------------------------------------------
@@ -29,7 +28,7 @@ interface Row {
   tx: Tx;
   label: string;
   amount: string;
-  direction: Direction;
+  direction: "in" | "out" | "neutral" | "pending";
   counterparty: string | null;
   icon: ReactElement;
 }

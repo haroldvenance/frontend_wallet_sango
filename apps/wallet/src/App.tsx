@@ -4,6 +4,8 @@ import { UnlockOverlay } from "@/components/auth/unlock-overlay";
 import { AppShell } from "@/components/layout/app-shell";
 import { AssetList } from "@/components/wallet/asset-list";
 import { BalanceCard } from "@/components/wallet/balance-card";
+import { MyStakingCard } from "@/components/wallet/my-staking-card";
+import { NetworkOverviewCard } from "@/components/wallet/network-overview-card";
 import { QuickActions } from "@/components/wallet/quick-actions";
 import { RecentActivity } from "@/components/wallet/recent-activity";
 import { useAutoLock } from "@/hooks/use-auto-lock";
@@ -32,6 +34,8 @@ function Dashboard() {
       <div className="space-y-8">
         <BalanceCard />
         <QuickActions />
+        <MyStakingCard />
+        <NetworkOverviewCard />
         <AssetList />
         <RecentActivity />
       </div>

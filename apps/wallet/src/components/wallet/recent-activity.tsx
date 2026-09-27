@@ -1,4 +1,3 @@
-import type { Tx } from "@sango/rpc";
 import {
   ArrowDownLeft,
   ArrowUpRight,

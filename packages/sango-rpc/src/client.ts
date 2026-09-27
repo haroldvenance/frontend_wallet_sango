@@ -8,6 +8,7 @@ import { decodeTransaction } from "@sango/wallet-core";
 
 import type {
   Account,
+  EvmBlock,
   ChainInfo,
   Delegation,
   Hex,
@@ -205,6 +206,38 @@ export class SangoRpcClient {
    */
   async sendTransaction(fullHex: Hex): Promise<Hex> {
     return this.#call<Hex>("sango_sendTransaction", [fullHex]);
+  }
+
+  // --- EVM blocks (namespace eth_*) ---------------------------------------
+
+  /**
+   * Hauteur du dernier bloc (EVM).
+   *
+   * Utile pour cross-check avec `sango_blockNumber`.
+   */
+  async ethBlockNumber(): Promise<number> {
+    const hex = await this.#call<string>("eth_blockNumber", []);
+    return Number.parseInt(hex, 16);
+  }
+
+  /**
+   * Récupère un bloc EVM par sa hauteur.
+   *
+   * @param height Hauteur (number) ou `"latest"` / `"earliest"`.
+   * @param fullTx `true` pour retourner les tx complètes, `false` pour
+   *               des hashs uniquement.
+   *
+   * ⚠️ `transactions` ne contient que les EVM. Un bloc 100% natif → `[]`.
+   */
+  async ethGetBlockByNumber(
+    height: number | "latest" | "earliest",
+    fullTx = false,
+  ): Promise<EvmBlock | null> {
+    const tag =
+      typeof height === "number"
+        ? `0x${height.toString(16)}`
+        : height;
+    return this.#call<EvmBlock | null>("eth_getBlockByNumber", [tag, fullTx]);
   }
 
   // --- Validators & staking -----------------------------------------------

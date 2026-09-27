@@ -86,7 +86,7 @@ export function useInfiniteTransactions(
   const { wallet, status } = useWalletStore();
   const address = wallet?.identity.addressHex as Hex | undefined;
 
-  return useInfiniteQuery<TxPage, Error>({
+  return useInfiniteQuery<TxPage, Error, { pages: TxPage[]; pageParams: number[] }, readonly unknown[], number>({
     queryKey: ["txs-infinite", endpoint, address, limit],
     enabled: status === "unlocked" && Boolean(address),
     initialPageParam: 0,

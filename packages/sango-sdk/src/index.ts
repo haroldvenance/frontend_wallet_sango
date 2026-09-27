@@ -3,6 +3,7 @@ import { SangoRpcClient } from "@sango/rpc";
 import type {
   Account,
   ChainInfo,
+  EvmBlock,
   Delegation,
   PendingUnbonding,
   ValidatorInfo,
@@ -190,6 +191,30 @@ export class SangoClient {
 
     const txHash = await this.rpc.sendTransaction(fullHex);
     return { txHash, signed };
+  }
+
+  // --- Réseau (blocs) -----------------------------------------------------
+
+  /**
+   * Renvoie les `count` derniers blocs (du plus récent au plus ancien).
+   *
+   * Utilise `eth_getBlockByNumber` (namespace EVM). Chaque appel est
+   * indépendant — on fetch en parallèle.
+   */
+  async getRecentBlocks(count = 5): Promise<EvmBlock[]> {
+    const latest = await this.rpc.ethBlockNumber();
+    const heights: number[] = [];
+    for (let i = 0; i < count; i += 1) {
+      const h = latest - i;
+      if (h < 0) break;
+      heights.push(h);
+    }
+
+    const blocks = await Promise.all(
+      heights.map((h) => this.rpc.ethGetBlockByNumber(h, false)),
+    );
+
+    return blocks.filter((b): b is EvmBlock => b !== null);
   }
 
   // --- Validators (lecture) -----------------------------------------------

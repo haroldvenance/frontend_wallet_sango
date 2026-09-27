@@ -1,4 +1,3 @@
-import type { AddressHex } from "@sango/types";
 import { Plus, ShieldCheck, ShieldAlert, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 
