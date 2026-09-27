@@ -36,13 +36,7 @@ export function Welcome() {
       title={t.welcome.title}
       subtitle={t.welcome.subtitle}
       logoSize={84}
-      footer={
-        <span className="flex items-center justify-center gap-2">
-          <span>Sango Wallet</span>
-          <span className="size-1 rounded-full bg-muted-foreground/40" />
-          <span>Testnet</span>
-        </span>
-      }
+      footer={<span>Sango Wallet</span>}
     >
       <nav className="space-y-3">
         {options.map((opt) => {
