@@ -1,6 +1,8 @@
 import type { Hex, Tx, TxPage } from "@sango/rpc";
 import {
+  useInfiniteQuery,
   useQuery,
+  type UseInfiniteQueryResult,
   type UseQueryResult,
 } from "@tanstack/react-query";
 
@@ -66,4 +68,43 @@ export function useTransaction(
     staleTime: 30_000,
     retry: 1,
   });
+}
+
+// --- Variante infinie (page /history) --------------------------------------
+
+/**
+ * Version paginée via `useInfiniteQuery`.
+ *
+ * Utilisée par `/history` pour le bouton « Charger plus ».
+ * Coexiste avec `useTransactions` (single page) qui reste utilisé par
+ * `RecentActivity`.
+ */
+export function useInfiniteTransactions(
+  limit = 20,
+): UseInfiniteQueryResult<{ pages: TxPage[]; pageParams: number[] }, Error> {
+  const { client, endpoint } = useSdkStore();
+  const { wallet, status } = useWalletStore();
+  const address = wallet?.identity.addressHex as Hex | undefined;
+
+  return useInfiniteQuery<TxPage, Error>({
+    queryKey: ["txs-infinite", endpoint, address, limit],
+    enabled: status === "unlocked" && Boolean(address),
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
+      client.rpc.getTransactionsByAddress(address!, limit, pageParam as number),
+    getNextPageParam: (lastPage) => {
+      const next = lastPage.offset + lastPage.limit;
+      return next < lastPage.total ? next : undefined;
+    },
+    refetchInterval: 10_000,
+    staleTime: 5_000,
+  });
+}
+
+/** Aplatit toutes les pages en une seule liste. */
+export function flattenTxPages(
+  data: { pages: TxPage[] } | undefined,
+): Tx[] {
+  if (!data) return [];
+  return data.pages.flatMap((p) => p.items);
 }

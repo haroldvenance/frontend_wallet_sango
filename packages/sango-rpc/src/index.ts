@@ -17,10 +17,13 @@ export {
 export type {
   Account,
   ChainInfo,
+  Delegation,
   Hex,
+  PendingUnbonding,
   RawTxItem,
   RawTxPage,
   SangoRpcClientOptions,
   Tx,
   TxPage,
+  ValidatorInfo,
 } from "./types";

@@ -41,3 +41,6 @@ export type { WalletIdentity } from "./wallet";
 
 export { decryptWalletSecret, encryptWalletSecret } from "./storage";
 export type { StoredWallet } from "./storage";
+
+export { Keyring } from "./keyring";
+export type { KeyringEntry } from "./keyring";

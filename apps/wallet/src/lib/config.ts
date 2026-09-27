@@ -33,7 +33,7 @@ export const NETWORK_ENDPOINTS: Record<Network, string> = {
  * Surchargeable via `VITE_SANGO_FAUCET_URL`.
  */
 export const FAUCET_ENDPOINT =
-  import.meta.env.VITE_SANGO_FAUCET_URL ?? "http://127.0.0.1:3000";
+  import.meta.env.VITE_SANGO_FAUCET_URL ?? "http://127.0.0.1:3001";
 
 /** Auto-lock après inactivité (15 min). */
 export const AUTO_LOCK_MS = 15 * 60 * 1000;
@@ -66,3 +66,11 @@ export const GAS_BY_TX_KIND: Record<number, bigint> = {
  */
 export const DEFAULT_MAX_FEE = 1_000n;
 export const DEFAULT_PRIORITY_FEE = 0n;
+
+/**
+ * URL de l'explorer web (devnet).
+ * Docs officielles : http://127.0.0.1:8090
+ * Surchargeable via VITE_SANGO_EXPLORER_URL.
+ */
+export const EXPLORER_URL =
+  import.meta.env.VITE_SANGO_EXPLORER_URL ?? "http://127.0.0.1:8090";

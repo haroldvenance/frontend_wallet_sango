@@ -7,10 +7,16 @@ import { BalanceCard } from "@/components/wallet/balance-card";
 import { QuickActions } from "@/components/wallet/quick-actions";
 import { RecentActivity } from "@/components/wallet/recent-activity";
 import { useAutoLock } from "@/hooks/use-auto-lock";
+import { useSdkWalletSync } from "@/hooks/use-sdk-wallet-sync";
 import { CreateWallet } from "@/routes/create-wallet";
+import { HistoryDetailRoute } from "@/routes/history-detail";
+import { HistoryRoute } from "@/routes/history";
 import { ImportWallet } from "@/routes/import-wallet";
+import { BecomeValidatorRoute } from "@/routes/become-validator";
 import { SendRoute } from "@/routes/send";
 import { Unlock } from "@/routes/unlock";
+import { ValidatorDetailRoute } from "@/routes/validator-detail";
+import { ValidatorsRoute } from "@/routes/validators";
 import { Welcome } from "@/routes/welcome";
 import { useTranslation } from "@/i18n/use-translation";
 import { useWalletStore } from "@/stores/wallet-store";
@@ -55,6 +61,8 @@ function LockGate() {
 }
 
 export default function App() {
+  useSdkWalletSync();
+
   return (
     <BrowserRouter>
       <LockGate />
@@ -66,6 +74,11 @@ export default function App() {
         <Route element={<ProtectedLayout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/send" element={<SendRoute />} />
+          <Route path="/validators" element={<ValidatorsRoute />} />
+          <Route path="/validators/:address" element={<ValidatorDetailRoute />} />
+          <Route path="/become-validator" element={<BecomeValidatorRoute />} />
+          <Route path="/history" element={<HistoryRoute />} />
+          <Route path="/history/:hash" element={<HistoryDetailRoute />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

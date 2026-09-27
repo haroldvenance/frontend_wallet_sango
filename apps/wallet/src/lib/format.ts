@@ -19,15 +19,23 @@ export function parseBaseUnits(s: string): bigint {
  *
  * Ex: 1234567890n → "123.4567890"
  */
-export function formatSango(baseUnits: bigint | string): string {
+export function formatSango(baseUnits: string | bigint, decimals = 7): string {
   const v = typeof baseUnits === "string" ? BigInt(baseUnits) : baseUnits;
-  const negative = v < 0n;
-  const abs = negative ? -v : v;
-  const whole = abs / BASE_UNITS_PER_SANGO;
-  const frac = abs % BASE_UNITS_PER_SANGO;
-  const fracStr = frac.toString().padStart(SANGO_DECIMALS, "0");
-  const s = `${whole}.${fracStr}`;
-  return negative ? `-${s}` : s;
+  const neg = v < 0n;
+  const abs = neg ? -v : v;
+  const BASE = 10_000_000n;
+
+  const whole = abs / BASE;
+  const frac = abs % BASE;
+
+  let out: string;
+  if (frac === 0n) {
+    out = whole.toString();
+  } else {
+    const fracStr = frac.toString().padStart(7, "0").slice(0, decimals).replace(/0+$/, "");
+    out = fracStr ? `${whole}.${fracStr}` : whole.toString();
+  }
+  return neg ? `-${out}` : out;
 }
 
 /**

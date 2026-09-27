@@ -9,12 +9,15 @@ import { decodeTransaction } from "@sango/wallet-core";
 import type {
   Account,
   ChainInfo,
+  Delegation,
   Hex,
+  PendingUnbonding,
   RawTxItem,
   RawTxPage,
   SangoRpcClientOptions,
   Tx,
   TxPage,
+  ValidatorInfo,
 } from "./types";
 
 interface JsonRpcSuccess<T> {
@@ -202,6 +205,44 @@ export class SangoRpcClient {
    */
   async sendTransaction(fullHex: Hex): Promise<Hex> {
     return this.#call<Hex>("sango_sendTransaction", [fullHex]);
+  }
+
+  // --- Validators & staking -----------------------------------------------
+
+  /**
+   * Liste **complète** des validateurs enregistrés.
+   *
+   * Retourne un tableau vide si aucun validateur (chaîne fraîche).
+   */
+  async getValidators(): Promise<ValidatorInfo[]> {
+    return this.#call<ValidatorInfo[]>("sango_getValidators", []);
+  }
+
+  /**
+   * Informations d'un validateur précis.
+   *
+   * Retourne `null` si l'adresse n'est pas un validateur enregistré.
+   */
+  async getValidatorInfo(address: Hex): Promise<ValidatorInfo | null> {
+    return this.#call<ValidatorInfo | null>("sango_getValidatorInfo", [address]);
+  }
+
+  /**
+   * Délégations émises **par** une adresse (délégateur).
+   *
+   * Retourne un tableau vide si aucune délégation.
+   */
+  async getDelegations(address: Hex): Promise<Delegation[]> {
+    return this.#call<Delegation[]>("sango_getDelegations", [address]);
+  }
+
+  /**
+   * Événements d'unbonding en attente pour une adresse.
+   *
+   * Retourne un tableau vide si aucun unbonding en cours.
+   */
+  async getPendingUnbondings(address: Hex): Promise<PendingUnbonding[]> {
+    return this.#call<PendingUnbonding[]>("sango_getPendingUnbondings", [address]);
   }
 
   // --- Interne -------------------------------------------------------------

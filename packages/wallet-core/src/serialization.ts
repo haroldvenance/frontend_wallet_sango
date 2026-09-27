@@ -96,17 +96,17 @@ export class Reader {
 
   u8(): number {
     this.#ensure(1);
-    return this.#bytes[this.#offset++];
+    return this.#bytes[this.#offset++]!;
   }
 
   u32(): number {
     this.#ensure(4);
     const o = this.#offset;
     const v =
-      this.#bytes[o] |
-      (this.#bytes[o + 1] << 8) |
-      (this.#bytes[o + 2] << 16) |
-      (this.#bytes[o + 3] << 24);
+      this.#bytes[o]! |
+      (this.#bytes[o + 1]! << 8) |
+      (this.#bytes[o + 2]! << 16) |
+      (this.#bytes[o + 3]! << 24);
     this.#offset += 4;
     return v >>> 0;
   }
@@ -115,7 +115,7 @@ export class Reader {
     this.#ensure(8);
     let v = 0n;
     for (let i = 0; i < 8; i += 1) {
-      v |= BigInt(this.#bytes[this.#offset + i]) << BigInt(8 * i);
+      v |= BigInt(this.#bytes[this.#offset + i]!) << BigInt(8 * i);
     }
     this.#offset += 8;
     return v;
@@ -125,7 +125,7 @@ export class Reader {
     this.#ensure(16);
     let v = 0n;
     for (let i = 0; i < 16; i += 1) {
-      v |= BigInt(this.#bytes[this.#offset + i]) << BigInt(8 * i);
+      v |= BigInt(this.#bytes[this.#offset + i]!) << BigInt(8 * i);
     }
     this.#offset += 16;
     return v;

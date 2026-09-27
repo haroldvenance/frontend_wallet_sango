@@ -1,7 +1,9 @@
 import {
   ArrowLeftRight,
+  History,
   LayoutDashboard,
   Settings,
+  ShieldCheck,
   Wifi,
   WifiOff,
 } from "lucide-react";
@@ -68,6 +70,8 @@ export function AppShell({ children }: AppShellProps) {
   const navigation = [
     { to: "/", label: t.nav.dashboard, icon: LayoutDashboard, end: true },
     { to: "/send", label: t.nav.send, icon: ArrowLeftRight, end: false },
+    { to: "/history", label: t.nav.history, icon: History, end: false },
+    { to: "/validators", label: t.nav.validators, icon: ShieldCheck, end: false },
   ];
 
   return (

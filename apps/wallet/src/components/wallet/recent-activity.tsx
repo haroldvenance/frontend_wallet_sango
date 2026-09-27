@@ -10,56 +10,32 @@ import { useTransactions } from "@/hooks/use-transactions";
 import { useTranslation } from "@/i18n/use-translation";
 import { useWalletStore } from "@/stores/wallet-store";
 import { formatSango, shortenAddress } from "@/lib/format";
+import { classifyTx, displayAmount, txKindLabel, type TxDirection } from "@/lib/tx-classify";
 
-const TX_KIND = {
-  Transfer: 0x01,
-  Bond: 0x04,
-  Unbond: 0x05,
-  Delegate: 0x06,
-  Undelegate: 0x07,
-  ClaimRewards: 0x08,
-  RegisterValidator: 0x09,
-  UpdateCommission: 0x0a,
-  Unjail: 0x0b,
-} as const;
-
-function txDirection(tx: Tx, selfAddress: string): "in" | "out" | "stake" | "pending" {
-  if (tx.blockHeight === null) return "pending";
-  const isStaking = (
-    [
-      TX_KIND.Bond,
-      TX_KIND.Unbond,
-      TX_KIND.Delegate,
-      TX_KIND.Undelegate,
-      TX_KIND.ClaimRewards,
-      TX_KIND.RegisterValidator,
-      TX_KIND.UpdateCommission,
-      TX_KIND.Unjail,
-    ] as readonly number[]
-  ).includes(tx.txKind);
-  if (isStaking) return "stake";
-  if (tx.sender.toLowerCase() === selfAddress.toLowerCase()) return "out";
-  return "in";
-}
-
-function kindLabelKey(direction: string): string {
-  if (direction === "in") return "received";
-  if (direction === "out") return "sent";
-  if (direction === "stake") return "staked";
-  return "pending";
-}
-
-function iconFor(direction: string) {
+function iconFor(direction: TxDirection) {
   switch (direction) {
     case "in":
       return { Icon: ArrowDownLeft, cls: "bg-emerald-500/10 text-emerald-500" };
     case "out":
       return { Icon: ArrowUpRight, cls: "bg-primary/10 text-primary" };
-    case "stake":
+    case "neutral":
       return { Icon: ShieldCheck, cls: "bg-primary/10 text-primary" };
     default:
       return { Icon: Clock3, cls: "bg-amber-500/10 text-amber-500" };
   }
+}
+
+// Label par TxKind, avec prefix directionnel pour les Transferts.
+function labelForTx(
+  tx: { txKind: number },
+  direction: TxDirection,
+  t: unknown,
+): string {
+  if (direction === "pending") return "En attente";
+  if (tx.txKind === 0x01) {
+    return direction === "in" ? "Transfert reçu" : "Transfert envoyé";
+  }
+  return txKindLabel(tx.txKind, t);
 }
 
 export function RecentActivity() {
@@ -105,17 +81,22 @@ export function RecentActivity() {
         )}
 
         {items.map((tx, index) => {
-          const direction = txDirection(tx, self);
+          const { direction, counterparty: cp, isStaking } = classifyTx(tx, self);
           const { Icon, cls } = iconFor(direction);
-          const kindKey = kindLabelKey(direction) as
-            | "received"
-            | "sent"
-            | "staked"
-            | "pending";
-          const amount = formatSango(tx.value);
-          const sign = direction === "out" || direction === "stake" ? "-" : "+";
-          const counterparty =
-            direction === "out" ? tx.recipient : tx.sender;
+          const label = labelForTx(tx, direction, t);
+          const value = displayAmount(tx.value);
+          const amount = value === null ? "—" : formatSango(value);
+          const sign = direction === "in" ? "+" : direction === "out" ? "-" : "";
+          const counterparty = cp;
+
+          // Pour les staking, le "counterparty" est le validateur, sinon
+          // on retombe sur le hash de la tx.
+          const line =
+            counterparty
+              ? `${direction === "in" ? t.activity.from : t.activity.to}: ${shortenAddress(counterparty, 5)}`
+              : `Block #${tx.blockHeight ?? "pending"}`;
+          // `isStaking` garde pour usage futur
+          void isStaking;
 
           return (
             <div
@@ -131,19 +112,31 @@ export function RecentActivity() {
 
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">
-                  {t.activity[kindKey]}
+                  {label}
                 </p>
                 <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                  {counterparty
-                    ? `${t.activity.from}: ${shortenAddress(counterparty, 5)}`
-                    : `Block #${tx.blockHeight ?? "pending"}`}
+                  {line}
                 </p>
               </div>
 
               <div className="shrink-0 text-right">
                 <p className="font-mono text-xs font-medium sm:text-sm">
-                  {sign}
-                  {amount} SANGO
+                  {amount === "—" ? (
+                    <span className="text-muted-foreground">—</span>
+                  ) : (
+                    <>
+                      <span className={
+                        direction === "in"
+                          ? "text-emerald-500"
+                          : direction === "out"
+                            ? "text-foreground"
+                            : "text-muted-foreground"
+                      }>
+                        {sign}{amount}
+                      </span>
+                      <span className="ml-1 text-muted-foreground">SANGO</span>
+                    </>
+                  )}
                 </p>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
                   {tx.blockHeight !== null
