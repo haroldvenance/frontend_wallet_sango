@@ -363,4 +363,18 @@ export const fr: TranslationSchema = {
     data: "Data",
     viewInExplorer: "Voir dans l'explorateur",
   },
+  keyfile: {
+    title: "Keyfile",
+    subtitle: "Exporte ou importe ton wallet chiffre",
+    warning:
+      "Le fichier exporte est chiffre avec ton mot de passe. Personne ne peut le lire sans lui. Garde-le hors ligne.",
+    export: "Exporter (.json)",
+    exportUnavailable: "Aucun wallet a exporter",
+    exported: "Keyfile exporte",
+    exportFailed: "Export echoue",
+    import: "Importer un keyfile",
+    imported: "Keyfile importe",
+    importFailed: "Import echoue",
+    footer: "Le seed n'est JAMAIS ecrit en clair. Uniquement le blob chiffre.",
+  },
 };

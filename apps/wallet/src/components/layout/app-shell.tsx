@@ -7,13 +7,14 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 
 import { LocaleToggle } from "@/components/settings/locale-toggle";
 import { NetworkSelector } from "@/components/settings/network-selector";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { KeyfileModal } from "@/components/settings/keyfile-modal";
 import { useChainInfo } from "@/hooks/use-chain-info";
 import { useTranslation } from "@/i18n/use-translation";
 import { shortenHash } from "@/lib/format";
@@ -66,6 +67,7 @@ function NetworkBadge() {
 
 export function AppShell({ children }: AppShellProps) {
   const t = useTranslation();
+  const [keyfileOpen, setKeyfileOpen] = useState(false);
   const { data, isError } = useChainInfo();
 
   const navigation = [
@@ -116,6 +118,7 @@ export function AppShell({ children }: AppShellProps) {
           <div className="border-t p-3">
             <button
               type="button"
+              onClick={() => setKeyfileOpen(true)}
               className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
               <Settings className="size-4" />
@@ -169,6 +172,8 @@ export function AppShell({ children }: AppShellProps) {
           </main>
         </div>
       </div>
+
+      <KeyfileModal open={keyfileOpen} onClose={() => setKeyfileOpen(false)} />
     </div>
   );
 }

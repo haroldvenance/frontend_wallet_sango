@@ -358,6 +358,20 @@ export const en = {
     data: "Data",
     viewInExplorer: "View in explorer",
   },
+  keyfile: {
+    title: "Keyfile",
+    subtitle: "Export or import your encrypted wallet",
+    warning:
+      "The exported file is encrypted with your password. Nobody can read it without it. Keep it offline.",
+    export: "Export (.json)",
+    exportUnavailable: "No wallet to export",
+    exported: "Keyfile exported",
+    exportFailed: "Export failed",
+    import: "Import a keyfile",
+    imported: "Keyfile imported",
+    importFailed: "Import failed",
+    footer: "The seed is NEVER stored in clear. Only the encrypted blob.",
+  },
 } as const;
 
 /**
