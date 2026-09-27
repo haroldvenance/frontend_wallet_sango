@@ -3,3 +3,7 @@ node_modules/
 .vite/
 *.tsbuildinfo
 packages/*/node_modules/
+node_modules/
+.vite/
+*.tsbuildinfo
+packages/*/node_modules/
