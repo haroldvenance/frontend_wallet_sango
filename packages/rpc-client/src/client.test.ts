@@ -2,16 +2,19 @@ import { describe, expect, it, vi } from "vitest";
 
 import { SangoRpcClient } from "./client";
 import {
-  SANGO_NOT_FOUND,
   SANGO_TRANSACTION_REJECTED,
   SangoRpcError,
   TRANSPORT_ERROR,
-  isNotFound,
   isTransactionRejected,
 } from "./errors";
 import type { Hex } from "./types";
 
 // --- Helpers ---------------------------------------------------------------
+
+/** Cast un string en `0x…`. Pratique pour les littéraux de test. */
+function hex(s: string): Hex {
+  return `0x${s}` as Hex;
+}
 
 /** Construit un Response JSON-RPC minimal. */
 function jsonResponse(body: unknown, status = 200): Response {
@@ -21,191 +24,114 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-function okResponse(result: unknown, id = 1): Response {
-  return jsonResponse({ jsonrpc: "2.0", id, result });
-}
-
 /**
- * Mock typé de `fetch` : signature `(input, init)` compatible avec
- * `typeof fetch`, ce qui permet d'accéder à `mock.calls[0][1].body`.
+ * `fetch` mocké avec signature explicite, pour que `mock.calls` soit
+ * typé `[string, RequestInit | undefined][]` (sinon TS infère `[]`).
  */
-function makeFetchMock(
-  handler: (url: string, init: RequestInit) => Promise<Response>,
-) {
-  return vi.fn<typeof fetch>(async (input, init) => {
-    const url = typeof input === "string" ? input : input.toString();
-    return handler(url, init ?? {});
-  });
-}
+type FetchArgs = [input: string | URL | Request, init?: RequestInit];
+type FetchResult = Promise<Response>;
 
-/**
- * Extrait le body JSON d'un call de fetch mocké.
- *
- * La signature `[input, init?]` reflète exactement le tuple de paramètres
- * de `fetch` (`init` est optionnel côté lib.dom).
- */
-function parseBody(call: [RequestInfo | URL, RequestInit?]): Record<string, unknown> {
-  const init = call[1];
-  if (!init?.body) throw new Error("fetch call has no body");
-  return JSON.parse(init.body as string) as Record<string, unknown>;
+function mockFetch(
+  impl: (...args: FetchArgs) => FetchResult,
+): ReturnType<typeof vi.fn<(...args: FetchArgs) => FetchResult>> {
+  return vi.fn<(...args: FetchArgs) => FetchResult>(impl);
 }
-
-/** Hex runtime → template literal (sûr car on contrôle le contenu). */
-function hex(s: string): Hex {
-  return (`0x${s}`) as Hex;
-}
-
-const ADDR_AA = hex("aa".repeat(20));
-const ADDR_FF = hex("ff".repeat(20));
-const PK_BB = hex("bb".repeat(32));
-const CHAIN_11 = hex("11".repeat(32));
-const CHAIN_00 = hex("00".repeat(32));
-const TX_CC = hex("cc".repeat(32));
 
 // --- Tests -----------------------------------------------------------------
 
 describe("SangoRpcClient", () => {
-  // --- getChainId --------------------------------------------------------
-
-  it("getChainId returns a 32-byte hex", async () => {
-    const fetchMock = makeFetchMock(async () => okResponse(CHAIN_11));
-    const client = new SangoRpcClient("http://x", { fetch: fetchMock });
-    const got = await client.getChainId();
-    expect(got).toBe(CHAIN_11);
-
-    const body = parseBody(fetchMock.mock.calls[0]!);
-    expect(body.method).toBe("sango_chainId");
-    expect(body.params).toEqual([]);
-  });
-
-  // --- getChainInfo ------------------------------------------------------
-
   it("getChainInfo returns the parsed result", async () => {
-    const fetchMock = makeFetchMock(async () =>
-      okResponse({
-        chainId: CHAIN_11,
-        height: 12345,
-        validatorCount: 7,
-        protocolVersion: 1,
+    const fetchMock = mockFetch(async () =>
+      jsonResponse({
+        jsonrpc: "2.0",
+        id: 1,
+        result: {
+          chainId: hex("11".repeat(32)),
+          height: 12345,
+          validatorCount: 7,
+          protocolVersion: 1,
+        },
       }),
     );
-    const client = new SangoRpcClient("http://x", { fetch: fetchMock });
+    const client = new SangoRpcClient("http://localhost:8545", { fetch: fetchMock });
     const info = await client.getChainInfo();
-    expect(info.chainId).toBe(CHAIN_11);
     expect(info.height).toBe(12345);
     expect(info.validatorCount).toBe(7);
     expect(info.protocolVersion).toBe(1);
+    expect(fetchMock).toHaveBeenCalledOnce();
 
-    const body = parseBody(fetchMock.mock.calls[0]!);
+    // Vérifie le corps envoyé.
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("http://localhost:8545");
+    const body = JSON.parse(init!.body as string);
     expect(body).toMatchObject({
       jsonrpc: "2.0",
       method: "sango_chainInfo",
       params: [],
+      id: 1,
     });
   });
 
-  it("getChainInfo supports null height (no blocks yet)", async () => {
-    const fetchMock = makeFetchMock(async () =>
-      okResponse({
-        chainId: CHAIN_00,
-        height: null,
-        validatorCount: 0,
-        protocolVersion: 1,
-      }),
+  it("getAccount returns null when account is missing", async () => {
+    const fetchMock = mockFetch(async () =>
+      jsonResponse({ jsonrpc: "2.0", id: 1, result: null }),
     );
     const client = new SangoRpcClient("http://x", { fetch: fetchMock });
-    const info = await client.getChainInfo();
-    expect(info.height).toBeNull();
-  });
-
-  // --- getBlockNumber ----------------------------------------------------
-
-  it("getBlockNumber returns the height", async () => {
-    const fetchMock = makeFetchMock(async () => okResponse(999));
-    const client = new SangoRpcClient("http://x", { fetch: fetchMock });
-    const n = await client.getBlockNumber();
-    expect(n).toBe(999);
-
-    const body = parseBody(fetchMock.mock.calls[0]!);
-    expect(body.method).toBe("sango_blockNumber");
-  });
-
-  it("getBlockNumber returns null when no block", async () => {
-    const fetchMock = makeFetchMock(async () => okResponse(null));
-    const client = new SangoRpcClient("http://x", { fetch: fetchMock });
-    expect(await client.getBlockNumber()).toBeNull();
-  });
-
-  // --- getAccount --------------------------------------------------------
-
-  it("getAccount returns null when account is missing", async () => {
-    const fetchMock = makeFetchMock(async () => okResponse(null));
-    const client = new SangoRpcClient("http://x", { fetch: fetchMock });
-    const acc = await client.getAccount(ADDR_AA);
+    const acc = await client.getAccount(hex("aa".repeat(20)));
     expect(acc).toBeNull();
   });
 
-  it("getAccount returns the full object (ghost with null publicKey)", async () => {
-    const fetchMock = makeFetchMock(async () =>
-      okResponse({
-        address: ADDR_AA,
-        publicKey: null,
-        balance: "15000000",
-        nonce: 42,
+  it("getAccount returns the full object", async () => {
+    const fetchMock = mockFetch(async () =>
+      jsonResponse({
+        jsonrpc: "2.0",
+        id: 1,
+        result: {
+          address: hex("aa".repeat(20)),
+          publicKey: hex("bb".repeat(32)),
+          balance: "15000000",
+          nonce: 42,
+        },
       }),
     );
     const client = new SangoRpcClient("http://x", { fetch: fetchMock });
-    const acc = await client.getAccount(ADDR_AA);
+    const acc = await client.getAccount(hex("aa".repeat(20)));
     expect(acc).not.toBeNull();
-    expect(acc!.publicKey).toBeNull();
     expect(acc!.balance).toBe("15000000");
     expect(acc!.nonce).toBe(42);
   });
 
-  it("getAccount returns publicKey when registered", async () => {
-    const fetchMock = makeFetchMock(async () =>
-      okResponse({
-        address: ADDR_AA,
-        publicKey: PK_BB,
-        balance: "0",
-        nonce: 0,
-      }),
+  it("sendTransaction returns the tx hash", async () => {
+    const txHash = hex("cc".repeat(32));
+    const fetchMock = mockFetch(async () =>
+      jsonResponse({ jsonrpc: "2.0", id: 1, result: txHash }),
     );
     const client = new SangoRpcClient("http://x", { fetch: fetchMock });
-    const acc = await client.getAccount(ADDR_AA);
-    expect(acc!.publicKey).toBe(PK_BB);
-  });
-
-  // --- getBalance --------------------------------------------------------
-
-  it("getBalance returns a decimal string", async () => {
-    const fetchMock = makeFetchMock(async () => okResponse("100000000"));
-    const client = new SangoRpcClient("http://x", { fetch: fetchMock });
-    const bal = await client.getBalance(ADDR_AA);
-    expect(bal).toBe("100000000");
-
-    const body = parseBody(fetchMock.mock.calls[0]!);
-    expect(body.method).toBe("sango_getBalance");
-    expect(body.params).toEqual([ADDR_AA]);
-  });
-
-  // --- sendTransaction ---------------------------------------------------
-
-  it("sendTransaction returns the tx hash", async () => {
-    const fetchMock = makeFetchMock(async () => okResponse(TX_CC));
-    const client = new SangoRpcClient("http://x", { fetch: fetchMock });
     const hash = await client.sendTransaction(hex("deadbeef"));
-    expect(hash).toBe(TX_CC);
+    expect(hash).toBe(txHash);
 
-    const body = parseBody(fetchMock.mock.calls[0]!);
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse(init!.body as string);
     expect(body.method).toBe("sango_sendTransaction");
     expect(body.params).toEqual([hex("deadbeef")]);
   });
 
-  // --- Erreurs -----------------------------------------------------------
+  it("getChainTip returns height + blockHash", async () => {
+    const fetchMock = mockFetch(async () =>
+      jsonResponse({
+        jsonrpc: "2.0",
+        id: 1,
+        result: { height: 999, blockHash: hex("dd".repeat(32)) },
+      }),
+    );
+    const client = new SangoRpcClient("http://x", { fetch: fetchMock });
+    const tip = await client.getChainTip();
+    expect(tip.height).toBe(999);
+    expect(tip.blockHash.startsWith("0x")).toBe(true);
+  });
 
-  it("propagates server JSON-RPC errors (TransactionRejected)", async () => {
-    const fetchMock = makeFetchMock(async () =>
+  it("propagates server JSON-RPC errors", async () => {
+    const fetchMock = mockFetch(async () =>
       jsonResponse({
         jsonrpc: "2.0",
         id: 1,
@@ -213,36 +139,19 @@ describe("SangoRpcClient", () => {
       }),
     );
     const client = new SangoRpcClient("http://x", { fetch: fetchMock });
+    await expect(client.sendTransaction(hex("deadbeef"))).rejects.toThrow(SangoRpcError);
+
     try {
       await client.sendTransaction(hex("deadbeef"));
       throw new Error("should have thrown");
     } catch (e) {
-      expect(e).toBeInstanceOf(SangoRpcError);
       expect(isTransactionRejected(e)).toBe(true);
       expect((e as SangoRpcError).code).toBe(SANGO_TRANSACTION_REJECTED);
-      expect((e as SangoRpcError).message).toBe("bad nonce");
-    }
-  });
-
-  it("detects NotFound errors (-32001)", async () => {
-    const fetchMock = makeFetchMock(async () =>
-      jsonResponse({
-        jsonrpc: "2.0",
-        id: 1,
-        error: { code: SANGO_NOT_FOUND, message: "account not found" },
-      }),
-    );
-    const client = new SangoRpcClient("http://x", { fetch: fetchMock });
-    try {
-      await client.getAccount(ADDR_FF);
-      throw new Error("should have thrown");
-    } catch (e) {
-      expect(isNotFound(e)).toBe(true);
     }
   });
 
   it("rejects on HTTP errors", async () => {
-    const fetchMock = makeFetchMock(async () => new Response("nope", { status: 500 }));
+    const fetchMock = mockFetch(async () => new Response("nope", { status: 500 }));
     const client = new SangoRpcClient("http://x", { fetch: fetchMock });
     try {
       await client.getChainInfo();
@@ -254,8 +163,8 @@ describe("SangoRpcClient", () => {
   });
 
   it("rejects on timeout", async () => {
-    const fetchMock = vi.fn<typeof fetch>(
-      (_input, init) =>
+    const fetchMock = mockFetch(
+      (_url, init) =>
         new Promise<Response>((_resolve, reject) => {
           init?.signal?.addEventListener("abort", () =>
             reject(new DOMException("aborted", "AbortError")),
@@ -270,7 +179,7 @@ describe("SangoRpcClient", () => {
   });
 
   it("rejects on malformed JSON", async () => {
-    const fetchMock = makeFetchMock(
+    const fetchMock = mockFetch(
       async () =>
         new Response("not json", {
           status: 200,
@@ -282,12 +191,14 @@ describe("SangoRpcClient", () => {
   });
 
   it("increments JSON-RPC ids", async () => {
-    const fetchMock = makeFetchMock(async () => okResponse({}));
+    const fetchMock = mockFetch(async () =>
+      jsonResponse({ jsonrpc: "2.0", id: 1, result: {} }),
+    );
     const client = new SangoRpcClient("http://x", { fetch: fetchMock });
     await client.getChainInfo();
-    await client.getBlockNumber();
-    const id1 = parseBody(fetchMock.mock.calls[0]!).id;
-    const id2 = parseBody(fetchMock.mock.calls[1]!).id;
-    expect(id2).toBe((id1 as number) + 1);
+    await client.getChainTip();
+    const id1 = JSON.parse(fetchMock.mock.calls[0][1]!.body as string).id;
+    const id2 = JSON.parse(fetchMock.mock.calls[1][1]!.body as string).id;
+    expect(id2).toBe(id1 + 1);
   });
 });

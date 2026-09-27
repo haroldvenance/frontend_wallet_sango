@@ -28,21 +28,15 @@ export const RPC_INTERNAL_ERROR = -32603;
 
 // --- Codes spécifiques Sango ------------------------------------------------
 
-/** Ressource non trouvée (compte inexistant, bloc inconnu, etc.). */
-export const SANGO_NOT_FOUND = -32001;
-
 /** Le serveur a rejeté la transaction (validation échouée). */
 export const SANGO_TRANSACTION_REJECTED = -32010;
 
 /** Code interne utilisé pour les erreurs de transport (non-JSON-RPC). */
 export const TRANSPORT_ERROR = -1;
 
-/** Vrai si l'erreur correspond à un « not found ». */
-export function isNotFound(err: unknown): err is SangoRpcError {
-  return err instanceof SangoRpcError && err.code === SANGO_NOT_FOUND;
-}
-
-/** Vrai si l'erreur correspond à un rejet de transaction. */
+/**
+ * Vrai si l'erreur correspond à un rejet de transaction.
+ */
 export function isTransactionRejected(err: unknown): err is SangoRpcError {
   return err instanceof SangoRpcError && err.code === SANGO_TRANSACTION_REJECTED;
 }

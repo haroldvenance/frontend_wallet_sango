@@ -5,19 +5,12 @@ export type Hex = `0x${string}`;
 
 /**
  * Informations de chaîne.
- *
- * Retour de `sango_chainInfo`.
- *
- * ⚠️ `chainId` est le **ChainId32 natif** (32 bytes hex), pas le chain ID
- *    EVM (`u64`). Pour l'EVM, voir `eth_chainId` (autre module).
- *
- * ⚠️ `height` peut être `null` si aucun bloc n'a encore été appliqué.
  */
 export interface ChainInfo {
-  /** ChainId32 natif (32 bytes, hex, lowercase). */
+  /** Chain ID natif (32 bytes, hex). */
   readonly chainId: Hex;
-  /** Hauteur courante, ou `null` si aucun bloc. */
-  readonly height: number | null;
+  /** Hauteur courante. */
+  readonly height: number;
   /** Nombre de validateurs actifs. */
   readonly validatorCount: number;
   /** Version du protocole (V1 = 1). */
@@ -25,25 +18,30 @@ export interface ChainInfo {
 }
 
 /**
- * Compte natif, retour de `sango_getAccount`.
+ * Compte natif.
  *
  * ⚠️ `balance` est en **base units** (u128 en string décimale).
  *    Diviser par 10_000_000 pour l'affichage utilisateur.
- *
- * ⚠️ `nonce` est un **number JSON** (u64), pas une string.
- *
- * ⚠️ `publicKey` est `null` si le compte est « ghost » (crédité sans clé
- *    enregistrée). Sinon 32 bytes hex.
  */
 export interface Account {
-  /** Adresse native (20 bytes, hex lowercase). */
+  /** Adresse native (20 bytes, hex). */
   readonly address: Hex;
-  /** Clé publique Ed25519 (32 bytes hex) ou `null` si non enregistrée. */
+  /** Clé publique Ed25519 (32 bytes, hex) ou `null` si non enregistrée. */
   readonly publicKey: Hex | null;
   /** Balance en base units, string décimale (u128). */
   readonly balance: string;
-  /** Nonce courant (u64). */
+  /** Nonce courant. */
   readonly nonce: number;
+}
+
+/**
+ * Pointeur vers le dernier bloc appliqué.
+ */
+export interface ChainTip {
+  /** Hauteur du dernier bloc. */
+  readonly height: number;
+  /** Hash du dernier bloc (32 bytes, hex). */
+  readonly blockHash: Hex;
 }
 
 /**

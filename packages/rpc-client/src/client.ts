@@ -7,6 +7,7 @@ import {
 import type {
   Account,
   ChainInfo,
+  ChainTip,
   Hex,
   SangoRpcClientOptions,
 } from "./types";
@@ -36,20 +37,6 @@ const DEFAULT_TIMEOUT_MS = 10_000;
  *
  * Le client est **sans état** : chaque appel est une requête HTTP POST
  * indépendante. Le seul état interne est le compteur d'`id` JSON-RPC.
- *
- * Méthodes Rust exposées (cf. `sango-rpc`) :
- *
- *  - `sango_chainId`         → `0x…` (32 bytes)
- *  - `sango_chainInfo`       → `{ chainId, height, validatorCount, protocolVersion }`
- *  - `sango_blockNumber`     → u64 décimal ou null
- *  - `sango_getBlock`        → `{ height, hash, bytes }` ou null
- *  - `sango_getAccount`      → `{ address, publicKey, balance, nonce }` ou null
- *  - `sango_getBalance`      → string décimale
- *  - `sango_getValidators`   → array
- *  - `sango_sendTransaction` → `0x<tx_hash>` (32 bytes)
- *
- * ⚠️ Il n'y a **pas** de `sango_chainTip` côté Rust. Pour la hauteur du
- *    tip, utiliser `getBlockNumber()`.
  */
 export class SangoRpcClient {
   readonly #endpoint: string;
@@ -77,29 +64,9 @@ export class SangoRpcClient {
 
   // --- Méthodes publiques --------------------------------------------------
 
-  /**
-   * ChainId32 natif (32 bytes hex). Aligné sur `ChainInfo.chainId`.
-   */
-  async getChainId(): Promise<Hex> {
-    return this.#call<Hex>("sango_chainId", []);
-  }
-
-  /**
-   * Informations de chaîne (chainId natif + hauteur + validateurs + version).
-   *
-   * `height` peut être `null` si aucun bloc n'a encore été appliqué.
-   */
+  /** Récupère les informations de chaîne. */
   async getChainInfo(): Promise<ChainInfo> {
     return this.#call<ChainInfo>("sango_chainInfo", []);
-  }
-
-  /**
-   * Hauteur du dernier bloc appliqué.
-   *
-   * Retourne `null` si la chaîne n'a pas encore produit de bloc.
-   */
-  async getBlockNumber(): Promise<number | null> {
-    return this.#call<number | null>("sango_blockNumber", []);
   }
 
   /**
@@ -108,17 +75,8 @@ export class SangoRpcClient {
    * Retourne `null` si le compte n'existe pas.
    */
   async getAccount(address: Hex): Promise<Account | null> {
-    return this.#call<Account | null>("sango_getAccount", [address]);
-  }
-
-  /**
-   * Balance en base units (string décimale).
-   *
-   * Préférer `getAccount` qui retourne balance + nonce + publicKey en un
-   * seul appel. `getBalance` reste utile pour un polling léger.
-   */
-  async getBalance(address: Hex): Promise<string> {
-    return this.#call<string>("sango_getBalance", [address]);
+    const result = await this.#call<Account | null>("sango_getAccount", [address]);
+    return result;
   }
 
   /**
@@ -132,11 +90,21 @@ export class SangoRpcClient {
     return this.#call<Hex>("sango_sendTransaction", [fullHex]);
   }
 
+  /** Récupère le dernier bloc appliqué. */
+  async getChainTip(): Promise<ChainTip> {
+    return this.#call<ChainTip>("sango_chainTip", []);
+  }
+
   // --- Interne -------------------------------------------------------------
 
   async #call<T>(method: string, params: unknown[]): Promise<T> {
     const id = this.#nextId++;
-    const body = JSON.stringify({ jsonrpc: "2.0", method, params, id });
+    const body = JSON.stringify({
+      jsonrpc: "2.0",
+      method,
+      params,
+      id,
+    });
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.#timeoutMs);
@@ -151,9 +119,10 @@ export class SangoRpcClient {
       });
     } catch (cause) {
       clearTimeout(timer);
-      const reason = controller.signal.aborted
-        ? `Request timed out after ${this.#timeoutMs} ms`
-        : `Transport error: ${(cause as Error).message}`;
+      const reason =
+        controller.signal.aborted
+          ? `Request timed out after ${this.#timeoutMs} ms`
+          : `Transport error: ${(cause as Error).message}`;
       throw new SangoRpcError(TRANSPORT_ERROR, reason, cause);
     }
     clearTimeout(timer);
