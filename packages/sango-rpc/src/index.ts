@@ -19,4 +19,6 @@ export type {
   ChainInfo,
   Hex,
   SangoRpcClientOptions,
+  Tx,
+  TxPage,
 } from "./types";

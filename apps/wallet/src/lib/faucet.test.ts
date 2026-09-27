@@ -2,7 +2,9 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { FaucetError, getFaucetHealth, requestFaucet } from "./faucet";
 
-const FAUCET = "http://127.0.0.1:3000";
+import { FAUCET_ENDPOINT } from "./config";
+
+const FAUCET = FAUCET_ENDPOINT;
 
 function mockFetch(handler: (url: string, init?: RequestInit) => Response | Promise<Response>) {
   const fn = vi.fn<typeof fetch>(async (input, init) => {

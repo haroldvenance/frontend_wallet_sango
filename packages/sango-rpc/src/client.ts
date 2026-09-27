@@ -4,11 +4,14 @@ import {
   SangoRpcError,
   TRANSPORT_ERROR,
 } from "./errors";
+import { decodeTransaction } from "@sango/wallet-core";
+
 import type {
   Account,
   ChainInfo,
   Hex,
   SangoRpcClientOptions,
+  Tx,
 } from "./types";
 
 interface JsonRpcSuccess<T> {
@@ -139,6 +142,70 @@ export class SangoRpcClient {
   }
 
   /**
+   * Récupère une transaction par son hash.
+   *
+   * V1 (actuel) : le backend renvoie `{ hash, tx }` où `tx` est la
+   * transaction encodée en hex. On la décode via `decodeTransaction`
+   * (wallet-core) puis on enrichit avec des champs vides (blockHeight
+   * etc.) en attendant P3.2.c.
+   *
+   * P3.2.c : le backend renverra directement les champs enrichis, le
+   * client basculera sans changer la signature publique.
+   */
+  async getTransactionByHash(hash: Hex): Promise<Tx | null> {
+    const raw = await this.#call<{ hash: Hex; tx: Hex } | null>(
+      "sango_getTransactionByHash",
+      [hash],
+    );
+    if (!raw) return null;
+
+    // Décode la tx brute.
+    const bytes = hexToBytes(raw.tx);
+    const tx = decodeTransaction(bytes);
+
+    return {
+      hash: raw.hash,
+      blockHeight: null,
+      blockHash: null,
+      txIndex: null,
+      version: tx.version,
+      chainId: bytesToHex(tx.chainId) as Hex,
+      nonce: Number(tx.nonce),
+      sender: bytesToHex(tx.sender) as Hex,
+      publicKey: tx.publicKey ? (bytesToHex(tx.publicKey) as Hex) : null,
+      gasLimit: Number(tx.gasLimit),
+      maxFee: tx.maxFee.toString(),
+      priorityFee: tx.priorityFee.toString(),
+      value: tx.value.toString(),
+      txKind: tx.txKind,
+      recipient: tx.recipient ? (bytesToHex(tx.recipient) as Hex) : null,
+      data: bytesToHex(tx.data) as Hex,
+      signature: bytesToHex(tx.signature) as Hex,
+      success: true, // inconnu tant que P3.2.c ne livre pas le receipt
+      gasUsed: 0,
+    };
+  }
+
+  /**
+   * Liste paginée des transactions d'une adresse.
+   *
+   * ⚠️ Nécessite `sango_getTransactionsByAddress` (P3.2.c, pas encore
+   *    livré). Tant que la méthode n'existe pas côté nœud, l'appel
+   *    échouera avec `-32601 MethodNotFound`.
+   */
+  async getTransactionsByAddress(
+    address: Hex,
+    limit = 20,
+    offset = 0,
+  ): Promise<{ total: number; offset: number; limit: number; items: Tx[] }> {
+    return this.#call("sango_getTransactionsByAddress", [
+      address,
+      limit,
+      offset,
+    ]);
+  }
+
+  /**
    * Soumet une transaction signée.
    *
    * @param fullHex `0x…` — la transaction **complète** (unsigned || signature),
@@ -213,4 +280,22 @@ function isJsonRpcResponse<T>(v: unknown): v is JsonRpcResponse<T> {
   const hasResult = "result" in o;
   const hasError = "error" in o;
   return hasResult || hasError;
+}
+
+
+// --- Helpers hex internes --------------------------------------------------
+
+function hexToBytes(hex: string): Uint8Array {
+  const clean = hex.startsWith("0x") ? hex.slice(2) : hex;
+  if (clean.length % 2 !== 0) throw new Error("hex must have even length");
+  const out = new Uint8Array(clean.length / 2);
+  for (let i = 0; i < out.length; i += 1) {
+    out[i] = Number.parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+  }
+  return out;
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return ("0x" +
+    Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")) as Hex;
 }
