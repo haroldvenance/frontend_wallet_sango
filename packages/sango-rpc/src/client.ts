@@ -10,8 +10,11 @@ import type {
   Account,
   ChainInfo,
   Hex,
+  RawTxItem,
+  RawTxPage,
   SangoRpcClientOptions,
   Tx,
+  TxPage,
 } from "./types";
 
 interface JsonRpcSuccess<T> {
@@ -144,65 +147,50 @@ export class SangoRpcClient {
   /**
    * Récupère une transaction par son hash.
    *
-   * V1 (actuel) : le backend renvoie `{ hash, tx }` où `tx` est la
-   * transaction encodée en hex. On la décode via `decodeTransaction`
-   * (wallet-core) puis on enrichit avec des champs vides (blockHeight
-   * etc.) en attendant P3.2.c.
+   * Le backend renvoie un `RawTxItem` avec la tx encodée en hex. On
+   * décode localement via `decodeTransaction` (wallet-core) et on
+   * fusionne avec les métadonnées d'enrichissement.
    *
-   * P3.2.c : le backend renverra directement les champs enrichis, le
-   * client basculera sans changer la signature publique.
+   * Retourne `null` si la tx est inconnue.
    */
   async getTransactionByHash(hash: Hex): Promise<Tx | null> {
-    const raw = await this.#call<{ hash: Hex; tx: Hex } | null>(
+    const raw = await this.#call<RawTxItem | null>(
       "sango_getTransactionByHash",
       [hash],
     );
     if (!raw) return null;
-
-    // Décode la tx brute.
-    const bytes = hexToBytes(raw.tx);
-    const tx = decodeTransaction(bytes);
-
-    return {
-      hash: raw.hash,
-      blockHeight: null,
-      blockHash: null,
-      txIndex: null,
-      version: tx.version,
-      chainId: bytesToHex(tx.chainId) as Hex,
-      nonce: Number(tx.nonce),
-      sender: bytesToHex(tx.sender) as Hex,
-      publicKey: tx.publicKey ? (bytesToHex(tx.publicKey) as Hex) : null,
-      gasLimit: Number(tx.gasLimit),
-      maxFee: tx.maxFee.toString(),
-      priorityFee: tx.priorityFee.toString(),
-      value: tx.value.toString(),
-      txKind: tx.txKind,
-      recipient: tx.recipient ? (bytesToHex(tx.recipient) as Hex) : null,
-      data: bytesToHex(tx.data) as Hex,
-      signature: bytesToHex(tx.signature) as Hex,
-      success: true, // inconnu tant que P3.2.c ne livre pas le receipt
-      gasUsed: 0,
-    };
+    return parseRpcTx(raw);
   }
 
   /**
-   * Liste paginée des transactions d'une adresse.
+   * Liste paginée des transactions **émises** par une adresse native.
    *
-   * ⚠️ Nécessite `sango_getTransactionsByAddress` (P3.2.c, pas encore
-   *    livré). Tant que la méthode n'existe pas côté nœud, l'appel
-   *    échouera avec `-32601 MethodNotFound`.
+   * Le backend renvoie un `RawTxPage` ; on décode chaque item localement
+   * puis on retourne un `TxPage` avec des `Tx` enrichis.
+   *
+   * - `limit` : défaut 20, max 100 côté backend.
+   * - `offset` : défaut 0.
+   * - Ordre : décroissant par `(blockHeight, txIndex)`.
+   *
+   * ⚠️ V1 : seules les txs **natives** sont indexées par sender côté
+   *    Rust. Les txs EVM ne remontent pas encore dans cette méthode.
    */
   async getTransactionsByAddress(
     address: Hex,
     limit = 20,
     offset = 0,
-  ): Promise<{ total: number; offset: number; limit: number; items: Tx[] }> {
-    return this.#call("sango_getTransactionsByAddress", [
+  ): Promise<TxPage> {
+    const raw = await this.#call<RawTxPage>("sango_getTransactionsByAddress", [
       address,
       limit,
       offset,
     ]);
+    return {
+      total: raw.total,
+      offset: raw.offset,
+      limit: raw.limit,
+      items: raw.items.map(parseRpcTx),
+    };
   }
 
   /**
@@ -298,4 +286,43 @@ function hexToBytes(hex: string): Uint8Array {
 function bytesToHex(bytes: Uint8Array): string {
   return ("0x" +
     Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")) as Hex;
+}
+
+
+// --- Parser RPC → Tx enrichi ----------------------------------------------
+
+/**
+ * Décode un `RawTxItem` du RPC en `Tx` complet.
+ *
+ * Le champ `tx` du RPC est la transaction canonique complète (hex).
+ * On la décode via `decodeTransaction` (wallet-core, déjà validé contre
+ * le golden vector Rust) et on fusionne avec les métadonnées.
+ */
+function parseRpcTx(raw: RawTxItem): Tx {
+  const bytes = hexToBytes(raw.tx);
+  const tx = decodeTransaction(bytes);
+  return {
+    hash: raw.hash,
+    kind: raw.kind,
+    blockHeight: raw.blockHeight,
+    blockHash: raw.blockHash,
+    txIndex: raw.txIndex,
+    version: tx.version,
+    chainId: bytesToHex(tx.chainId) as Hex,
+    nonce: Number(tx.nonce),
+    sender: bytesToHex(tx.sender) as Hex,
+    publicKey: tx.publicKey ? (bytesToHex(tx.publicKey) as Hex) : null,
+    gasLimit: Number(tx.gasLimit),
+    maxFee: tx.maxFee.toString(),
+    priorityFee: tx.priorityFee.toString(),
+    value: tx.value.toString(),
+    txKind: tx.txKind,
+    recipient: tx.recipient ? (bytesToHex(tx.recipient) as Hex) : null,
+    data: bytesToHex(tx.data) as Hex,
+    signature: bytesToHex(tx.signature) as Hex,
+    // V1 : pas de receipt dans la réponse, on met des valeurs par défaut.
+    // Le suivi d'inclusion passe par le nonce (waitForInclusion).
+    success: true,
+    gasUsed: 0,
+  };
 }

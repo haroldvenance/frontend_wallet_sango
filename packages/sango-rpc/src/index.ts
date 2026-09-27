@@ -18,6 +18,8 @@ export type {
   Account,
   ChainInfo,
   Hex,
+  RawTxItem,
+  RawTxPage,
   SangoRpcClientOptions,
   Tx,
   TxPage,

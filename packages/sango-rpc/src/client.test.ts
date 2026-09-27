@@ -189,6 +189,127 @@ describe("SangoRpcClient", () => {
     expect(body.params).toEqual([ADDR_AA]);
   });
 
+  // --- getTransactionByHash ----------------------------------------------
+
+  it("getTransactionByHash decodes the raw tx", async () => {
+    // Un TxItem minimal : txKind 1 (Transfer), pas de public_key,
+    // recipient 0xbb…bb, value 100, data vide.
+    // On réutilise le golden vector connu (unsigned 147 bytes + signature).
+    const unsignedHex =
+      "01000000" +
+      "11".repeat(32) +
+      "2a00000000000000" +          // nonce = 42
+      "aa".repeat(20) +
+      "00" +                         // publicKey = None
+      "0852000000000000" +          // gasLimit = 21000
+      "14000000000000000000000000000000" + // maxFee = 20
+      "02000000000000000000000000000000" + // priorityFee = 2
+      "64000000000000000000000000000000" + // value = 100
+      "01" +                         // txKind = Transfer
+      "01" +                         // recipient = Some
+      "bb".repeat(20) +
+      "00000000";                    // data = []
+    const signatureHex = "00".repeat(64);
+    const fullHex = "0x" + unsignedHex + signatureHex;
+
+    const fetchMock = makeFetchMock(async () =>
+      okResponse({
+        hash: "0x" + "ee".repeat(32),
+        blockHeight: 42,
+        blockHash: "0x" + "cc".repeat(32),
+        txIndex: 0,
+        kind: "native",
+        txKind: 1,
+        tx: fullHex,
+      }),
+    );
+    const client = new SangoRpcClient("http://x", { fetch: fetchMock });
+    const tx = await client.getTransactionByHash(hex("ee".repeat(32)));
+
+    expect(tx).not.toBeNull();
+    expect(tx!.hash).toBe("0x" + "ee".repeat(32));
+    expect(tx!.kind).toBe("native");
+    expect(tx!.blockHeight).toBe(42);
+    expect(tx!.txIndex).toBe(0);
+    expect(tx!.nonce).toBe(42);
+    expect(tx!.sender).toBe("0x" + "aa".repeat(20));
+    expect(tx!.publicKey).toBeNull();
+    expect(tx!.gasLimit).toBe(21000);
+    expect(tx!.maxFee).toBe("20");
+    expect(tx!.priorityFee).toBe("2");
+    expect(tx!.value).toBe("100");
+    expect(tx!.txKind).toBe(1);
+    expect(tx!.recipient).toBe("0x" + "bb".repeat(20));
+    expect(tx!.data).toBe("0x");
+  });
+
+  it("getTransactionByHash returns null for unknown", async () => {
+    const fetchMock = makeFetchMock(async () => okResponse(null));
+    const client = new SangoRpcClient("http://x", { fetch: fetchMock });
+    const tx = await client.getTransactionByHash(hex("00".repeat(32)));
+    expect(tx).toBeNull();
+  });
+
+  // --- getTransactionsByAddress ------------------------------------------
+
+  it("getTransactionsByAddress decodes each item", async () => {
+    const unsignedHex =
+      "01000000" +
+      "11".repeat(32) +
+      "2a00000000000000" +
+      "aa".repeat(20) +
+      "00" +
+      "0852000000000000" +
+      "14000000000000000000000000000000" +
+      "02000000000000000000000000000000" +
+      "64000000000000000000000000000000" +
+      "01" +
+      "01" +
+      "bb".repeat(20) +
+      "00000000";
+    const fullHex = "0x" + unsignedHex + "00".repeat(64);
+
+    const fetchMock = makeFetchMock(async () =>
+      okResponse({
+        total: 1,
+        offset: 0,
+        limit: 20,
+        items: [
+          {
+            hash: "0x" + "ee".repeat(32),
+            blockHeight: 250,
+            blockHash: "0x" + "cc".repeat(32),
+            txIndex: 0,
+            kind: "native",
+            txKind: 1,
+            tx: fullHex,
+          },
+        ],
+      }),
+    );
+    const client = new SangoRpcClient("http://x", { fetch: fetchMock });
+    const page = await client.getTransactionsByAddress(hex("aa".repeat(20)), 20, 0);
+
+    expect(page.total).toBe(1);
+    expect(page.offset).toBe(0);
+    expect(page.limit).toBe(20);
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0]!.hash).toBe("0x" + "ee".repeat(32));
+    expect(page.items[0]!.blockHeight).toBe(250);
+    expect(page.items[0]!.txKind).toBe(1);
+    expect(page.items[0]!.value).toBe("100");
+  });
+
+  it("getTransactionsByAddress returns empty page for address with no history", async () => {
+    const fetchMock = makeFetchMock(async () =>
+      okResponse({ total: 0, offset: 0, limit: 20, items: [] }),
+    );
+    const client = new SangoRpcClient("http://x", { fetch: fetchMock });
+    const page = await client.getTransactionsByAddress(hex("dd".repeat(20)));
+    expect(page.total).toBe(0);
+    expect(page.items).toEqual([]);
+  });
+
   // --- getBaseFee --------------------------------------------------------
 
   it("getBaseFee returns the decimal string", async () => {

@@ -9,6 +9,7 @@ import type { Hex, Tx } from "./types";
 export const MOCK_TXS: readonly Tx[] = [
   {
     hash: "0x" + "aa".repeat(32) as Hex,
+    kind: "native",
     blockHeight: 42,
     blockHash: "0x" + "bb".repeat(32) as Hex,
     txIndex: 0,
@@ -30,6 +31,7 @@ export const MOCK_TXS: readonly Tx[] = [
   },
   {
     hash: "0x" + "f1".repeat(32) as Hex,
+    kind: "native",
     blockHeight: 40,
     blockHash: "0x" + "f2".repeat(32) as Hex,
     txIndex: 0,

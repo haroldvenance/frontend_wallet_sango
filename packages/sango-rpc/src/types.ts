@@ -27,6 +27,8 @@ export interface Account {
 export interface Tx {
   /** Hash de la transaction (32 bytes hex). */
   readonly hash: Hex;
+  /** Type : `native` (Ed25519) ou `evm` (secp256k1). */
+  readonly kind: "native" | "evm";
   /** Hauteur du bloc contenant la tx, ou null si en mempool. */
   readonly blockHeight: number | null;
   /** Hash du bloc contenant la tx, ou null si en mempool. */
@@ -74,6 +76,33 @@ export interface TxPage {
   readonly offset: number;
   readonly limit: number;
   readonly items: readonly Tx[];
+}
+
+/**
+ * Item de transaction **brut** tel que renvoyé par le RPC.
+ *
+ * Le champ `tx` est l'encodage canonique complet (hex). On le décode
+ * via `decodeTransaction` (wallet-core) puis on fusionne avec les
+ * métadonnées (`hash`, `blockHeight`, `blockHash`, `txIndex`, `kind`)
+ * pour produire un `Tx` enrichi.
+ */
+export interface RawTxItem {
+  readonly hash: Hex;
+  readonly blockHeight: number | null;
+  readonly blockHash: Hex | null;
+  readonly txIndex: number | null;
+  readonly kind: "native" | "evm";
+  readonly txKind: number | null;
+  /** Transaction encodée (hex, `0x…`). */
+  readonly tx: Hex;
+}
+
+/** Page de transactions brutes. */
+export interface RawTxPage {
+  readonly total: number;
+  readonly offset: number;
+  readonly limit: number;
+  readonly items: readonly RawTxItem[];
 }
 
 /** Options du client RPC. */
