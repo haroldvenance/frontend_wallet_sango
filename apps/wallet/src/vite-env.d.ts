@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_SANGO_RPC_URL?: string;
+  readonly VITE_SANGO_FAUCET_URL?: string;
   readonly VITE_SANGO_NETWORK?: "mainnet" | "testnet";
 }
 

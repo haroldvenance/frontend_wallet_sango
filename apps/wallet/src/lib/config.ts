@@ -26,6 +26,15 @@ export const NETWORK_ENDPOINTS: Record<Network, string> = {
   testnet: DEFAULT_ENDPOINT,
 };
 
+/**
+ * Endpoint du faucet HTTP (devnet/testnet).
+ *
+ * Le faucet est un service HTTP distinct du nœud RPC (port séparé).
+ * Surchargeable via `VITE_SANGO_FAUCET_URL`.
+ */
+export const FAUCET_ENDPOINT =
+  import.meta.env.VITE_SANGO_FAUCET_URL ?? "http://127.0.0.1:3000";
+
 /** Auto-lock après inactivité (15 min). */
 export const AUTO_LOCK_MS = 15 * 60 * 1000;
 

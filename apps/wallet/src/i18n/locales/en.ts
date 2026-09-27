@@ -180,6 +180,11 @@ export const en = {
     invalidUrl: "URL must start with http:// or https://",
     clearCustom: "Reset to preset",
   },
+  faucet: {
+    button: "Get testnet SANGO",
+    requesting: "Requesting…",
+    unavailable: "Faucet unavailable",
+  },
   theme: {
     light: "Switch to light mode",
     dark: "Switch to dark mode",

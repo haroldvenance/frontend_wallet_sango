@@ -11,6 +11,7 @@ import { useClipboard } from "@/hooks/use-clipboard";
 import { useTranslation } from "@/i18n/use-translation";
 import { useWalletStore } from "@/stores/wallet-store";
 
+import { FaucetButton } from "./faucet-button";
 import { ReceiveModal } from "./receive-modal";
 
 export function QuickActions() {
@@ -77,6 +78,10 @@ export function QuickActions() {
             </button>
           );
         })}
+      </div>
+
+      <div className="mt-4 flex justify-start">
+        <FaucetButton variant="ghost" />
       </div>
 
       <ReceiveModal

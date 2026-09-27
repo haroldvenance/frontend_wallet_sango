@@ -185,6 +185,11 @@ export const fr: TranslationSchema = {
     invalidUrl: "L'URL doit commencer par http:// ou https://",
     clearCustom: "Revenir au preset",
   },
+  faucet: {
+    button: "Obtenir des SANGO testnet",
+    requesting: "Demande en cours…",
+    unavailable: "Faucet indisponible",
+  },
   theme: {
     light: "Passer en mode clair",
     dark: "Passer en mode sombre",

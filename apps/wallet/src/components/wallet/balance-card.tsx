@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 
 import { useAccount } from "@/hooks/use-account";
 import { useTranslation } from "@/i18n/use-translation";
+
+import { FaucetButton } from "./faucet-button";
 import { useChainInfo } from "@/hooks/use-chain-info";
 import { useClipboard } from "@/hooks/use-clipboard";
 import { formatSango, shortenAddress } from "@/lib/format";
@@ -77,7 +79,7 @@ export function BalanceCard() {
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-2 gap-3 sm:flex sm:w-auto">
+        <div className="mt-8 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:w-auto">
           <button
             type="button"
             onClick={() => navigate("/send")}
@@ -88,12 +90,14 @@ export function BalanceCard() {
           </button>
           <button
             type="button"
-            onClick={() => copy(hex, "Adresse copiée")}
+            onClick={() => copy(hex, t.balance.addressCopied)}
             className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border bg-background px-5 text-sm font-medium transition-all hover:bg-accent active:scale-[0.98]"
           >
             <ArrowDownToLine className="size-4" />
             {t.balance.receive}
           </button>
+
+          <FaucetButton />
         </div>
 
         {account && (
