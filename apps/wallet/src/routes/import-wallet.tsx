@@ -1,11 +1,11 @@
 import { Keyring, Wallet } from "@sango/wallet-core";
-import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { useSdkStore } from "@/stores/sdk-store";
 import { useWalletStore } from "@/stores/wallet-store";
+import { AuthShell } from "@/components/branding/auth-shell";
 
 function hexToBytes(hex: string): Uint8Array {
   const clean = hex.startsWith("0x") ? hex.slice(2) : hex;
@@ -58,17 +58,12 @@ export function ImportWallet() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-6 py-10">
-      <Link to="/welcome" className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="size-3" /> Retour
-      </Link>
-
-      <h1 className="mt-6 text-xl font-semibold tracking-tight">
-        Importer un wallet
-      </h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Colle ton seed Ed25519 (32 bytes, 64 hex chars, avec ou sans 0x).
-      </p>
+    <AuthShell
+      title="Importer un wallet"
+      subtitle="Colle ton seed Ed25519 (32 bytes, 64 hex chars, avec ou sans 0x)."
+      backTo="/welcome"
+      logoSize={56}
+    >
 
       <div className="mt-6 space-y-3">
         <textarea
@@ -101,6 +96,6 @@ export function ImportWallet() {
           {busy ? "Import…" : "Importer"}
         </button>
       </div>
-    </div>
+    </AuthShell>
   );
 }

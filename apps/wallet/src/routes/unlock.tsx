@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { useTranslation } from "@/i18n/use-translation";
 import { useWalletStore } from "@/stores/wallet-store";
+import { AuthShell } from "@/components/branding/auth-shell";
 
 export function Unlock() {
   const t = useTranslation();
@@ -44,13 +45,12 @@ export function Unlock() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-6 py-10">
-      <h1 className="text-xl font-semibold tracking-tight">
-        Restaurer un wallet
-      </h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        {t.unlock.subtitle}
-      </p>
+    <AuthShell
+      title="Restaurer un wallet"
+      subtitle={t.unlock.subtitle}
+      backTo="/welcome"
+      logoSize={56}
+    >
 
       <div className="mt-6 space-y-3">
         <input
@@ -69,6 +69,6 @@ export function Unlock() {
           {busy ? t.unlock.unlocking : t.unlock.button}
         </button>
       </div>
-    </div>
+    </AuthShell>
   );
 }

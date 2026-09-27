@@ -1,56 +1,79 @@
-import { KeyRound, Plus, Upload } from "lucide-react";
+import { ArrowRight, KeyRound, Plus, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { AuthShell } from "@/components/branding/auth-shell";
 import { useTranslation } from "@/i18n/use-translation";
 
 export function Welcome() {
   const t = useTranslation();
 
+  const options = [
+    {
+      to: "/create",
+      icon: Plus,
+      title: t.welcome.create,
+      desc: t.welcome.createDesc,
+      iconCls: "bg-primary/10 text-primary",
+    },
+    {
+      to: "/import",
+      icon: Upload,
+      title: t.welcome.import,
+      desc: t.welcome.importDesc,
+      iconCls: "bg-emerald-500/10 text-emerald-500",
+    },
+    {
+      to: "/unlock",
+      icon: KeyRound,
+      title: t.welcome.restore,
+      desc: t.welcome.restoreDesc,
+      iconCls: "bg-amber-500/10 text-amber-500",
+    },
+  ];
+
   return (
-    <div className="mx-auto flex min-h-svh max-w-md flex-col justify-center px-6">
-      <div className="mb-10 text-center">
-        <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-md">
-          <span className="text-lg font-bold">S</span>
-        </div>
-        <h1 className="mt-6 text-2xl font-semibold tracking-tight">
-          {t.welcome.title}
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {t.welcome.subtitle}
-        </p>
-      </div>
-
-      <div className="space-y-3">
-        <Link to="/create" className="flex items-center gap-4 rounded-2xl border bg-card p-4 transition-colors hover:bg-accent/50">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Plus className="size-5" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium">{t.welcome.create}</p>
-            <p className="text-xs text-muted-foreground">{t.welcome.createDesc}</p>
-          </div>
-        </Link>
-
-        <Link to="/import" className="flex items-center gap-4 rounded-2xl border bg-card p-4 transition-colors hover:bg-accent/50">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Upload className="size-5" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium">{t.welcome.import}</p>
-            <p className="text-xs text-muted-foreground">{t.welcome.importDesc}</p>
-          </div>
-        </Link>
-
-        <Link to="/unlock" className="flex items-center gap-4 rounded-2xl border bg-card p-4 transition-colors hover:bg-accent/50">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <KeyRound className="size-5" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium">{t.welcome.restore}</p>
-            <p className="text-xs text-muted-foreground">{t.welcome.restoreDesc}</p>
-          </div>
-        </Link>
-      </div>
-    </div>
+    <AuthShell
+      title={t.welcome.title}
+      subtitle={t.welcome.subtitle}
+      logoSize={84}
+      footer={
+        <span className="flex items-center justify-center gap-2">
+          <span>Sango Wallet</span>
+          <span className="size-1 rounded-full bg-muted-foreground/40" />
+          <span>Testnet</span>
+        </span>
+      }
+    >
+      <nav className="space-y-3">
+        {options.map((opt) => {
+          const Icon = opt.icon;
+          return (
+            <Link
+              key={opt.to}
+              to={opt.to}
+              className="group flex items-center gap-4 rounded-2xl border bg-card p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+            >
+              <div
+                className={[
+                  "flex size-11 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105",
+                  opt.iconCls,
+                ].join(" ")}
+              >
+                <Icon className="size-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold leading-tight">
+                  {opt.title}
+                </p>
+                <p className="mt-1 text-xs leading-snug text-muted-foreground">
+                  {opt.desc}
+                </p>
+              </div>
+              <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:text-primary" />
+            </Link>
+          );
+        })}
+      </nav>
+    </AuthShell>
   );
 }

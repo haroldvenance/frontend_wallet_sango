@@ -1,12 +1,13 @@
 import { Keyring, Wallet } from "@sango/wallet-core";
-import { ArrowLeft, Check, Copy } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { useClipboard } from "@/hooks/use-clipboard";
 import { useSdkStore } from "@/stores/sdk-store";
 import { useWalletStore } from "@/stores/wallet-store";
+import { AuthShell } from "@/components/branding/auth-shell";
 
 function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
@@ -82,14 +83,11 @@ export function CreateWallet() {
 
   if (step === "reveal" && seedHex) {
     return (
-      <div className="mx-auto max-w-md px-6 py-10">
-        <h1 className="text-xl font-semibold tracking-tight">
-          Sauvegarde ton seed
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Ce seed de 32 bytes est le seul moyen de restaurer ton wallet.
-          Note-le dans un endroit sûr. Il ne sera plus jamais affiché.
-        </p>
+      <AuthShell
+        title="Sauvegarde ton seed"
+        subtitle="Ce seed de 32 bytes est le seul moyen de restaurer ton wallet. Note-le dans un endroit sûr. Il ne sera plus jamais affiché."
+        logoSize={56}
+      >
 
         <div className="mt-6 flex items-start gap-2 rounded-2xl border bg-card p-4">
           <code className="break-all font-mono text-xs leading-6">{seedHex}</code>
@@ -121,25 +119,17 @@ export function CreateWallet() {
             {busy ? "Sauvegarde…" : "J'ai noté mon seed, continuer"}
           </button>
         </div>
-      </div>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="mx-auto max-w-md px-6 py-10">
-      <Link
-        to="/welcome"
-        className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="size-3" /> Retour
-      </Link>
-
-      <h1 className="mt-6 text-xl font-semibold tracking-tight">
-        Créer un wallet
-      </h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Choisis un mot de passe pour chiffrer ton wallet localement (AES-GCM 256).
-      </p>
+    <AuthShell
+      title="Créer un wallet"
+      subtitle="Choisis un mot de passe pour chiffrer ton wallet localement (AES-GCM 256)."
+      backTo="/welcome"
+      logoSize={56}
+    >
 
       <div className="mt-6 space-y-3">
         <input
@@ -165,6 +155,6 @@ export function CreateWallet() {
           {busy ? "Génération…" : "Générer le wallet"}
         </button>
       </div>
-    </div>
+    </AuthShell>
   );
 }
