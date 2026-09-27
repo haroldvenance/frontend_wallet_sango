@@ -181,7 +181,7 @@ export const en = {
     clearCustom: "Reset to preset",
   },
   faucet: {
-    button: "Get testnet SANGO",
+    button: "Get test SANGO",
     requesting: "Requesting…",
     unavailable: "Faucet unavailable",
   },

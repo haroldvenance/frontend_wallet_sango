@@ -186,7 +186,7 @@ export const fr: TranslationSchema = {
     clearCustom: "Revenir au preset",
   },
   faucet: {
-    button: "Obtenir des SANGO testnet",
+    button: "Obtenir des SANGO de test",
     requesting: "Demande en cours…",
     unavailable: "Faucet indisponible",
   },
