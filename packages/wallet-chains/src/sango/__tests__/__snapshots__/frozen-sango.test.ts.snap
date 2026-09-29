@@ -1,0 +1,5 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`🔒 FROZEN — signed bytes (snapshot) > raw complet (unsigned ‖ signature) est stable — 211 bytes > signed-tx-raw-hex 1`] = `"0x0100000011111111111111111111111111111111111111111111111111111111111111112a00000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0008520000000000001400000000000000000000000000000002000000000000000000000000000000640000000000000000000000000000000101bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0000000020fb3620f40a06e8a4048abdc68297863805dc448db7a5f8a999ba1bcd771ca4dd9c6390e4cbe90af1aae5df5d7a946c9b2d54fface0bf3139c157bd32c3fe04"`;
+
+exports[`🔒 FROZEN — signed bytes (snapshot) > signature Ed25519 du payload figé est stable > ed25519-signature-hex 1`] = `"0x20fb3620f40a06e8a4048abdc68297863805dc448db7a5f8a999ba1bcd771ca4dd9c6390e4cbe90af1aae5df5d7a946c9b2d54fface0bf3139c157bd32c3fe04"`;
