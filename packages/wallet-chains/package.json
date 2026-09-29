@@ -17,6 +17,7 @@
     "@sango/wallet-core": "workspace:*"
   },
   "devDependencies": {
+    "@sango/rpc": "workspace:*",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
   }

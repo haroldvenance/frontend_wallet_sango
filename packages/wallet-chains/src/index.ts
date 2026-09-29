@@ -1,7 +1,9 @@
 // @sango/wallet-chains
 //
-// Étape 2 : types + capabilities uniquement.
-// Les adapters (sango/, registry/) seront livrés à l'étape suivante.
+// V0 : types + capabilities + registry (ChainAdapter) + SangoAdapter.
+// Pas d'implémentation d'autres chaînes.
 
 export * from "./types";
 export * from "./capabilities";
+export * from "./registry";
+export * from "./sango";

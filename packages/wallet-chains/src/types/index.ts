@@ -5,5 +5,6 @@ export * from "./token";
 export * from "./address";
 export * from "./balance";
 export * from "./account";
+export * from "./signer";
 export * from "./tx";
 export * from "./history";
