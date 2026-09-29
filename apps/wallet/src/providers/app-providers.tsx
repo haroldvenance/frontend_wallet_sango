@@ -3,6 +3,7 @@ import { useState, type ReactNode } from "react";
 import { Toaster } from "sonner";
 
 import { useApplyTheme } from "@/hooks/use-apply-theme";
+import { WalletSessionProvider } from "./wallet-session-provider";
 
 interface AppProvidersProps {
   children: ReactNode;
@@ -31,7 +32,7 @@ export function AppProviders({ children }: AppProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeRuntime />
-      {children}
+      <WalletSessionProvider>{children}</WalletSessionProvider>
       <Toaster richColors position="top-right" />
     </QueryClientProvider>
   );
