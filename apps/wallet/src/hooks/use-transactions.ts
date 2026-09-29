@@ -1,3 +1,29 @@
+/**
+ * ⚠️ D-SESS-9 — Ce hook reste sur le SDK en V0.
+ *
+ *   La `WalletSession` V0 est **account-centric** (D-SESS-6) et son
+ *   `HistoryItem` est une vue **générique** (txHash, from, to, amount,
+ *   status). Le UI de `/history` a besoin de champs SANGO-spécifiques
+ *   que `HistoryItem` n'expose pas :
+ *
+ *     - `txKind` (icône, label, filtre staking)
+ *     - `nonce`
+ *     - pagination `offset` (useInfiniteTransactions)
+ *
+ *   Et `/history/:hash` est un **transaction viewer** (comme
+ *   Etherscan) : il expose gasLimit, maxFee, priorityFee, signature,
+ *   data, blockHash, txIndex — des champs d'exploration, pas de
+ *   sémantique wallet.
+ *
+ *   Migrer exigerait :
+ *     1. d'ajouter `kind` à `HistoryItem` (pollue l'abstraction) ;
+ *     2. d'ajouter `offset` à `session.getHistory()` ;
+ *     3. un nouveau `TransactionDetailProvider` (sur-ingénierie pour
+ *        un seul réseau sans 2ᵉ cas d'usage).
+ *
+ *   V0.2 : à reprendre quand EVM fournira un 2ᵉ cas d'usage réel.
+ */
+
 import type { Hex, Tx, TxPage } from "@sango/rpc";
 import {
   useInfiniteQuery,

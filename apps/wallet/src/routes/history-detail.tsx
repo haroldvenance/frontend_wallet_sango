@@ -1,4 +1,17 @@
 import {
+
+/**
+ * ⚠️ D-SESS-9 — La page détail reste sur le SDK en V0.
+ *
+ * Cette vue est un **transaction viewer** (gas, signature, data,
+ * blockHash, txIndex) — c'est de l'exploration de données brutes, pas
+ * une sémantique wallet. Elle n'a pas sa place dans `WalletSession`
+ * qui reste account-centric (D-SESS-6).
+ *
+ * Migration prévue en V0.2 dans le cadre d'un futur `TransactionViewer`
+ * générique (EVM aura le même besoin).
+ */
+
   ArrowLeft,
   CheckCircle2,
   Clock3,
