@@ -1,44 +1,21 @@
+import { ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { SangoLogo } from "./sango-logo";
 
 interface Props {
-  /** Titre principal (h1). */
   title: string;
-  /** Sous-titre optionnel. */
   subtitle?: string;
-  /** Contenu de l'écran (formulaire, cartes, etc.). */
   children: ReactNode;
-  /** Affiche un bouton "Retour" en haut à gauche vers cette route. */
   backTo?: string;
-  /** Label du bouton retour. Défaut : "Retour". */
   backLabel?: string;
-  /** Affiche le halo décoratif en haut (défaut : true). */
   halo?: boolean;
-  /** Taille du logo (défaut : 72 pour welcome, 56 pour les autres). */
   logoSize?: number;
-  /** Contenu additionnel en bas de page (footer). */
   footer?: ReactNode;
-  /** Largeur max du contenu (défaut : max-w-md). */
   maxWidth?: "md" | "lg" | "xl";
 }
 
-/**
- * Wrapper pour tous les écrans d'auth (welcome, create, import, unlock).
- *
- * Fournit :
- *  - Fond avec halo violet subtil
- *  - Logo Sango centré
- *  - Titre + sous-titre uniformes
- *  - Bouton "Retour" optionnel
- *  - Espacement vertical cohérent
- *
- * Usage :
- *   <AuthShell title="Créer un wallet" subtitle="..." backTo="/welcome">
- *     <form>...</form>
- *   </AuthShell>
- */
 export function AuthShell({
   title,
   subtitle,
@@ -65,16 +42,18 @@ export function AuthShell({
         />
       )}
 
-      <div className={["w-full", maxW].join(" ")}>
-        {backTo && (
-          <Link
-            to={backTo}
-            className="mb-6 inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-          >
-            ← {backLabel}
-          </Link>
-        )}
+      {/* Bouton Retour — positionné en haut à gauche de la fenêtre */}
+      {backTo && (
+        <Link
+          to={backTo}
+          className="group absolute left-6 top-6 z-10 inline-flex items-center gap-2 rounded-xl border bg-card px-4 py-2.5 text-sm font-medium text-muted-foreground shadow-sm transition-all hover:-translate-x-0.5 hover:border-primary/40 hover:text-foreground hover:shadow-md"
+        >
+          <ArrowLeft className="size-4 transition-transform group-hover:-translate-x-0.5" />
+          {backLabel}
+        </Link>
+      )}
 
+      <div className={["w-full", maxW].join(" ")}>
         <header className="mb-8 flex flex-col items-center text-center">
           <SangoLogo size={logoSize} className="mb-5" />
           <h1 className="text-2xl font-bold tracking-tight">{title}</h1>

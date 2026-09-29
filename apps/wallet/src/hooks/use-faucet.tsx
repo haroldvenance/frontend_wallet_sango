@@ -17,6 +17,7 @@ import {
 import { formatSango } from "@/lib/format";
 import { useSdkStore } from "@/stores/sdk-store";
 import { useWalletStore } from "@/stores/wallet-store";
+import { ExplorerLink } from "@/components/branding/explorer-link";
 
 /**
  * Santé du faucet — poll toutes les 30 s tant que la page est active.
@@ -63,7 +64,13 @@ export function useFaucet(): UseMutationResult<
 
       const amount = BigInt(res.amount_base_units);
       toast.info("Faucet : transaction envoyée", {
-        description: `${formatSango(amount)} SANGO — ${res.tx_hash.slice(0, 12)}…`,
+        description: (
+          <span className="inline-flex items-center gap-2">
+            <span>{formatSango(amount)} SANGO</span>
+            <span className="text-muted-foreground">·</span>
+            <ExplorerLink hash={res.tx_hash} />
+          </span>
+        ),
       });
 
       // 2. Attente d'inclusion via le SDK (déjà utilisé pour Send).
@@ -74,7 +81,13 @@ export function useFaucet(): UseMutationResult<
 
       if (inclusion.status === "included") {
         toast.success("Faucet : fonds reçus", {
-          description: `${formatSango(amount)} SANGO`,
+          description: (
+            <span className="inline-flex items-center gap-2">
+              <span>{formatSango(amount)} SANGO</span>
+              <span className="text-muted-foreground">·</span>
+              <ExplorerLink hash={res.tx_hash} />
+            </span>
+          ),
         });
       } else {
         toast.warning("Faucet : inclusion lente", {

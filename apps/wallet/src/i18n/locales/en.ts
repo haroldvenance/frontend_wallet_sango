@@ -372,7 +372,36 @@ export const en = {
     importFailed: "Import failed",
     footer: "The seed is NEVER stored in clear. Only the encrypted blob.",
   },
-} as const;
+  preferences: {
+    title: "Preferences",
+    fiat: {
+      sectionTitle: "Fiat display",
+      toggleLabel: "Show amounts in € and FCFA",
+      toggleHelp:
+        "Shows an indicative estimate next to SANGO amounts. Off by default.",
+      unavailable: "The indicative rate is not configured in this build.",
+      disclaimer:
+        "Indicative, non-binding value. Not a market price.",
+    },
+  },
+  settings: {
+    title: "Settings",
+    tabs: {
+      security: "Security",
+      preferences: "Preferences",
+      wallet: "Wallet",
+    },
+    security: {
+      autoLock: "Auto-lock",
+      autoLockValue: "15 minutes of inactivity",
+      clipboard: "Clipboard clear",
+      clipboardValue: "30 seconds after copy",
+      lockNow: "Lock now",
+    },
+  },
+  fiat: {
+    indicative: "≈",
+  },} as const;
 
 /**
  * Transforme un objet de traductions en autorisant n'importe quelle chaîne

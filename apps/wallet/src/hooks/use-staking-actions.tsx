@@ -7,6 +7,8 @@ import {
 import { toast } from "sonner";
 
 import { useSdkStore } from "@/stores/sdk-store";
+import { ExplorerLink } from "@/components/branding/explorer-link";
+import { shortenHash } from "@/lib/format";
 
 interface StakingResult {
   txHash: TxHashHex;
@@ -30,12 +32,28 @@ async function runStakingAction(
   label: string,
 ): Promise<StakingResult> {
   const { txHash } = await send();
-  toast.info(`${label} envoyé`, { description: txHash });
+  toast.info(`${label} envoyé`, {
+    description: (
+      <span className="inline-flex items-center gap-2">
+        <span className="font-mono text-[11px]">{shortenHash(txHash, 6)}</span>
+        <span className="text-muted-foreground">·</span>
+        <ExplorerLink hash={txHash} />
+      </span>
+    ),
+  });
   const result = await wait(txHash);
 
   switch (result.status) {
     case "included":
-      toast.success(`${label} inclus`, { description: txHash });
+      toast.success(`${label} inclus`, {
+      description: (
+        <span className="inline-flex items-center gap-2">
+          <span className="font-mono text-[11px]">{shortenHash(txHash, 6)}</span>
+          <span className="text-muted-foreground">·</span>
+          <ExplorerLink hash={txHash} />
+        </span>
+      ),
+    });
       break;
     case "rejected":
       toast.error(`${label} rejeté`, { description: result.error });

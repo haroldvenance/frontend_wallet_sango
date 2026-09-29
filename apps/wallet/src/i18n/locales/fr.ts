@@ -377,4 +377,34 @@ export const fr: TranslationSchema = {
     importFailed: "Import echoue",
     footer: "Le seed n'est JAMAIS ecrit en clair. Uniquement le blob chiffre.",
   },
-};
+  preferences: {
+    title: "Préférences",
+    fiat: {
+      sectionTitle: "Affichage fiat",
+      toggleLabel: "Afficher les montants en € et FCFA",
+      toggleHelp:
+        "Affiche une estimation indicative à côté des montants SANGO. Désactivé par défaut.",
+      unavailable:
+        "Le taux indicatif n'est pas configuré dans ce build.",
+      disclaimer:
+        "Valeur indicative, non contractuelle. Ne reflète pas un prix de marché.",
+    },
+  },
+  settings: {
+    title: "Paramètres",
+    tabs: {
+      security: "Sécurité",
+      preferences: "Préférences",
+      wallet: "Wallet",
+    },
+    security: {
+      autoLock: "Verrouillage automatique",
+      autoLockValue: "15 minutes d'inactivité",
+      clipboard: "Effacement du presse-papiers",
+      clipboardValue: "30 secondes après copie",
+      lockNow: "Verrouiller maintenant",
+    },
+  },
+  fiat: {
+    indicative: "≈",
+  },};

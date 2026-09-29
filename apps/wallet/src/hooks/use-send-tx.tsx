@@ -4,6 +4,8 @@ import { toast } from "sonner";
 
 import { GAS_BY_TX_KIND, DEFAULT_MAX_FEE, DEFAULT_PRIORITY_FEE } from "@/lib/config";
 import { useSdkStore } from "@/stores/sdk-store";
+import { ExplorerLink } from "@/components/branding/explorer-link";
+import { shortenHash } from "@/lib/format";
 
 export interface SendArgs {
   to: AddressHex;
@@ -47,7 +49,15 @@ export function useSendTx(): UseMutationResult<SendResult, Error, SendArgs> {
         priorityFee: DEFAULT_PRIORITY_FEE,
       });
 
-      toast.info("Transaction envoyée", { description: txHash });
+      toast.info("Transaction envoyée", {
+        description: (
+          <span className="inline-flex items-center gap-2">
+            <span className="font-mono text-[11px]">{shortenHash(txHash, 6)}</span>
+            <span className="text-muted-foreground">·</span>
+            <ExplorerLink hash={txHash} />
+          </span>
+        ),
+      });
 
       // 2b. Invalide immédiatement le compte pour rafraîchir le solde
       // dès que le backend a appliqué la tx (sans attendre le polling).
@@ -58,7 +68,15 @@ export function useSendTx(): UseMutationResult<SendResult, Error, SendArgs> {
 
       switch (result.status) {
         case "included":
-          toast.success("Transaction incluse", { description: txHash });
+          toast.success("Transaction incluse", {
+          description: (
+            <span className="inline-flex items-center gap-2">
+              <span className="font-mono text-[11px]">{shortenHash(txHash, 6)}</span>
+              <span className="text-muted-foreground">·</span>
+              <ExplorerLink hash={txHash} />
+            </span>
+          ),
+        });
           break;
         case "rejected":
           toast.error("Transaction rejetée", { description: result.error });

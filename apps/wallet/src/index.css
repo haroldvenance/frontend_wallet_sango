@@ -167,3 +167,9 @@
     -webkit-tap-highlight-color: transparent;
   }
 }
+/* iOS safe area — utilise pour la bottom nav */
+@supports (padding: env(safe-area-inset-bottom)) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

@@ -26,14 +26,6 @@ export const NETWORK_ENDPOINTS: Record<Network, string> = {
   testnet: DEFAULT_ENDPOINT,
 };
 
-/**
- * Endpoint du faucet HTTP (devnet/testnet).
- *
- * Le faucet est un service HTTP distinct du nœud RPC (port séparé).
- * Surchargeable via `VITE_SANGO_FAUCET_URL`.
- */
-export const FAUCET_ENDPOINT =
-  import.meta.env.VITE_SANGO_FAUCET_URL ?? "http://127.0.0.1:3001";
 
 /** Auto-lock après inactivité (15 min). */
 export const AUTO_LOCK_MS = 15 * 60 * 1000;
@@ -68,9 +60,31 @@ export const DEFAULT_MAX_FEE = 1_000n;
 export const DEFAULT_PRIORITY_FEE = 0n;
 
 /**
- * URL de l'explorer web (devnet).
- * Docs officielles : http://127.0.0.1:8090
- * Surchargeable via VITE_SANGO_EXPLORER_URL.
+ * Base URL de l'explorer web.
+ *
+ * Résolution (préférée → fallback) :
+ *   1. VITE_SANGO_EXPLORER_URL (préféré)
+ *   2. VITE_EXPLORER_URL       (legacy, doc backend)
+ *   3. DEFAULT_EXPLORER_URL    (devnet local)
  */
-export const EXPLORER_URL =
-  import.meta.env.VITE_SANGO_EXPLORER_URL ?? "http://127.0.0.1:8090";
+export const DEFAULT_EXPLORER_URL = "http://127.0.0.1:8090";
+
+export const EXPLORER_URL: string =
+  (import.meta.env.VITE_SANGO_EXPLORER_URL as string | undefined) ??
+  (import.meta.env.VITE_EXPLORER_URL as string | undefined) ??
+  DEFAULT_EXPLORER_URL;
+
+/**
+ * Endpoint du faucet HTTP.
+ *
+ * Résolution (préférée → fallback) :
+ *   1. VITE_SANGO_FAUCET_URL (préféré)
+ *   2. VITE_FAUCET_URL       (legacy, doc backend)
+ *   3. DEFAULT_FAUCET_URL    (devnet local)
+ */
+export const DEFAULT_FAUCET_URL = "http://127.0.0.1:3001";
+
+export const FAUCET_ENDPOINT: string =
+  (import.meta.env.VITE_SANGO_FAUCET_URL as string | undefined) ??
+  (import.meta.env.VITE_FAUCET_URL as string | undefined) ??
+  DEFAULT_FAUCET_URL;

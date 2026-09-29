@@ -1,12 +1,13 @@
-import { ArrowDownToLine, ArrowUpFromLine, Copy, Wallet } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, Copy } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-import { useAccount } from "@/hooks/use-account";
-import { useTranslation } from "@/i18n/use-translation";
-
+import { FiatLine } from "@/components/branding/fiat-line";
+import { SangoCoinIcon } from "@/components/branding/sango-coin-icon";
 import { FaucetButton } from "./faucet-button";
+import { useAccount } from "@/hooks/use-account";
 import { useChainInfo } from "@/hooks/use-chain-info";
 import { useClipboard } from "@/hooks/use-clipboard";
+import { useTranslation } from "@/i18n/use-translation";
 import { formatSango, shortenAddress } from "@/lib/format";
 import { useWalletStore } from "@/stores/wallet-store";
 
@@ -26,9 +27,10 @@ export function BalanceCard() {
       ? "…"
       : "0.0000000";
 
-  const networkLabel = chainInfo?.chainId === wallet?.identity.network
-    ? wallet?.identity.network ?? "unknown"
-    : wallet?.identity.network ?? "unknown";
+  const networkLabel =
+    chainInfo?.chainId === wallet?.identity.network
+      ? wallet?.identity.network ?? "unknown"
+      : wallet?.identity.network ?? "unknown";
 
   return (
     <section className="relative overflow-hidden rounded-3xl border bg-card p-6 shadow-sm sm:p-8">
@@ -38,12 +40,10 @@ export function BalanceCard() {
       <div className="relative">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <Wallet className="size-5" />
-            </div>
+            <SangoCoinIcon size={44} />
             <div>
               <p className="text-sm font-medium">{t.balance.totalBalance}</p>
-              <p className="text-xs text-muted-foreground">SangoCoin · SANGO</p>
+              <p className="text-xs text-muted-foreground">{t.assets.sangoName}</p>
             </div>
           </div>
 
@@ -60,8 +60,17 @@ export function BalanceCard() {
             <span className="text-4xl font-semibold tracking-tight sm:text-5xl">
               {balanceDisplay}
             </span>
-            <span className="text-sm font-medium text-muted-foreground">SANGO</span>
+            <span className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+              <SangoCoinIcon size={18} />
+              SANGO
+            </span>
           </div>
+
+          {account && (
+            <p className="mt-2 text-sm">
+              <FiatLine baseUnits={account.balance} />
+            </p>
+          )}
 
           <div className="mt-4 inline-flex items-center gap-2 rounded-full border bg-muted/50 px-3 py-1.5">
             <span className="size-2 rounded-full bg-emerald-500" />
@@ -79,7 +88,7 @@ export function BalanceCard() {
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:w-auto">
+        <div className="mt-8 grid grid-cols-1 gap-3 sm:flex sm:w-auto sm:flex-wrap">
           <button
             type="button"
             onClick={() => navigate("/send")}
@@ -102,7 +111,10 @@ export function BalanceCard() {
 
         {account && (
           <p className="mt-5 text-[11px] text-muted-foreground">
-            {t.balance.nonce} : {account.nonce} · {account.publicKey ? t.balance.keyRegistered : t.balance.keyNotRegistered}
+            {t.balance.nonce} : {account.nonce} ·{" "}
+            {account.publicKey
+              ? t.balance.keyRegistered
+              : t.balance.keyNotRegistered}
           </p>
         )}
       </div>

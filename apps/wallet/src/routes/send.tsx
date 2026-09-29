@@ -8,6 +8,8 @@ import { useAccount } from "@/hooks/use-account";
 import { useTranslation } from "@/i18n/use-translation";
 import { useSendTx } from "@/hooks/use-send-tx";
 import { formatSango, parseSango } from "@/lib/format";
+import { SangoCoinIcon } from "@/components/branding/sango-coin-icon";
+import { FiatLine } from "@/components/branding/fiat-line";
 
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 
@@ -53,7 +55,9 @@ export function SendRoute() {
       <h1 className="mt-6 text-xl font-semibold tracking-tight">Envoyer</h1>
       {account && (
         <p className="mt-2 text-xs text-muted-foreground">
-          {t.send.available} : {formatSango(account.balance)} SANGO
+          {t.send.available} : {formatSango(account.balance)} 
+            <SangoCoinIcon size={14} className="inline-block align-text-bottom" />
+            <span>SANGO</span>
         </p>
       )}
 
@@ -78,6 +82,17 @@ export function SendRoute() {
             placeholder={t.send.amountPlaceholder}
             className="mt-1 flex h-10 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
+          {amount && (() => {
+            try {
+              return (
+                <p className="mt-1.5 text-xs">
+                  <FiatLine baseUnits={parseSango(amount).toString()} />
+                </p>
+              );
+            } catch {
+              return null;
+            }
+          })()}
         </label>
 
         <button

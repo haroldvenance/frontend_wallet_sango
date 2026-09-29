@@ -1,9 +1,10 @@
-import { Coins, ShieldCheck, Timer } from "lucide-react";
+import {ShieldCheck, Timer} from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { useMyDelegations, useMyPendingUnbondings } from "@/hooks/use-my-delegations";
 import { useTranslation } from "@/i18n/use-translation";
 import { formatSango, shortenAddress } from "@/lib/format";
+import { SangoCoinIcon } from "@/components/branding/sango-coin-icon";
 
 export function MyStakingCard() {
   const t = useTranslation();
@@ -44,7 +45,7 @@ export function MyStakingCard() {
                 className="flex items-center gap-3 border-b p-4 last:border-b-0 hover:bg-accent/40"
               >
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <Coins className="size-4" />
+                  <SangoCoinIcon size={28} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">

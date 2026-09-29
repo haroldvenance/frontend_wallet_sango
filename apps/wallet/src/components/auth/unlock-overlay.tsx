@@ -6,6 +6,7 @@ import { Keyring, Wallet } from "@sango/wallet-core";
 
 import { useTranslation } from "@/i18n/use-translation";
 import { useWalletStore } from "@/stores/wallet-store";
+import { SangoLogo } from "@/components/branding/sango-logo";
 
 /**
  * Overlay modal affiché quand un wallet existe dans le keyring mais que
@@ -48,6 +49,10 @@ export function UnlockOverlay() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md bg-background/60">
       <div className="w-full max-w-sm rounded-2xl border bg-card p-6 shadow-lg">
+        <div className="mb-5 flex justify-center">
+          <SangoLogo size={56} />
+        </div>
+
         <div className="flex items-center gap-3">
           <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <Lock className="size-5" />

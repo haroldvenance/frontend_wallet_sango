@@ -16,7 +16,7 @@ interface Props {
 export function SangoLogo({ size = 48, className = "", flat = false }: Props) {
   return (
     <img
-      src="/sango-logo.svg"
+      src="/sango-logo.png"
       alt="Sango"
       width={size}
       height={size}

@@ -2,6 +2,7 @@ import {
   ArrowLeftRight,
   History,
   LayoutDashboard,
+  ExternalLink,
   Settings,
   ShieldCheck,
   Wifi,
@@ -14,10 +15,12 @@ import { LocaleToggle } from "@/components/settings/locale-toggle";
 import { NetworkSelector } from "@/components/settings/network-selector";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { ErrorBoundary } from "@/components/error-boundary";
-import { KeyfileModal } from "@/components/settings/keyfile-modal";
+import { SettingsModal } from "@/components/settings/settings-modal";
 import { useChainInfo } from "@/hooks/use-chain-info";
 import { useTranslation } from "@/i18n/use-translation";
 import { shortenHash } from "@/lib/format";
+import { EXPLORER_URL } from "@/lib/config";
+import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 
 interface AppShellProps {
   children: ReactNode;
@@ -82,9 +85,12 @@ export function AppShell({ children }: AppShellProps) {
       <div className="flex min-h-svh">
         <aside className="hidden w-64 shrink-0 border-r bg-sidebar lg:flex lg:flex-col">
           <div className="flex h-16 items-center gap-3 border-b px-5">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-              <span className="text-sm font-bold">S</span>
-            </div>
+            <img
+              src="/sango-logo.png"
+              alt="Sango"
+              className="size-9 rounded-xl shadow-sm"
+              draggable={false}
+            />
             <div>
               <p className="text-sm font-semibold tracking-tight">Sango</p>
               <p className="text-[11px] text-muted-foreground">Wallet</p>
@@ -124,6 +130,16 @@ export function AppShell({ children }: AppShellProps) {
               <Settings className="size-4" />
               {t.nav.settings}
             </button>
+            <a
+              href={EXPLORER_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              <ExternalLink className="size-4" />
+              Explorer
+            </a>
+
             <div className="mt-3">
               <NetworkSelector />
             </div>
@@ -134,9 +150,12 @@ export function AppShell({ children }: AppShellProps) {
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex h-16 items-center justify-between border-b px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3 lg:hidden">
-              <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                <span className="text-sm font-bold">S</span>
-              </div>
+              <img
+                src="/sango-logo.png"
+                alt="Sango"
+                className="size-9 rounded-xl shadow-sm"
+                draggable={false}
+              />
               <span className="text-sm font-semibold">Sango</span>
             </div>
 
@@ -164,16 +183,26 @@ export function AppShell({ children }: AppShellProps) {
               </div>
               <LocaleToggle />
               <ThemeToggle />
+              <button
+                type="button"
+                onClick={() => setKeyfileOpen(true)}
+                aria-label="Paramètres"
+                className="inline-flex size-9 items-center justify-center rounded-xl border bg-card text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:hidden"
+              >
+                <Settings className="size-4" />
+              </button>
             </div>
           </header>
 
-          <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
+          <main className="min-w-0 flex-1 px-4 py-6 pb-24 sm:px-6 lg:px-8 lg:pb-6">
             <ErrorBoundary scope="Route">{children}</ErrorBoundary>
           </main>
         </div>
       </div>
 
-      <KeyfileModal open={keyfileOpen} onClose={() => setKeyfileOpen(false)} />
+      <MobileBottomNav />
+
+      <SettingsModal open={keyfileOpen} onClose={() => setKeyfileOpen(false)} />
     </div>
   );
 }
