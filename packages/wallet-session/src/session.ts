@@ -1,5 +1,6 @@
 import type {
   AccountRef,
+  AccountState,
   AssetRef,
   Balance,
   ChainRegistry,
@@ -25,6 +26,16 @@ export interface WalletSession {
   readonly assets: AssetList;
   readonly chainRegistry: ChainRegistry;
   readonly signer: Signer;
+
+  /**
+   * État complet d'un compte (adresse + publicKey + balance + nonce).
+   *
+   * Retourne `null` si le compte n'existe pas encore on-chain
+   * (compte "ghost"). L'UI décide de l'affichage.
+   *
+   * D-SESS-4.
+   */
+  getAccount(account: AccountRef): Promise<AccountState | null>;
 
   /**
    * Solde d'un asset pour un compte.
@@ -87,6 +98,19 @@ export class WalletSessionImpl implements WalletSession {
     this.assets = config.assets;
     this.chainRegistry = config.chainRegistry;
     this.signer = config.signer;
+  }
+
+  async getAccount(account: AccountRef): Promise<AccountState | null> {
+    const adapter = this.#adapter(account.networkId);
+
+    if (!adapter.accountProvider) {
+      throw new Error(
+        `WalletSession: no account provider for network "${account.networkId}"`,
+      );
+    }
+
+    const address = await adapter.addressProvider.deriveAddress(account);
+    return adapter.accountProvider.getAccount(address);
   }
 
   async getBalance(account: AccountRef, assetRef: AssetRef): Promise<Balance> {

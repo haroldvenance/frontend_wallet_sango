@@ -1,5 +1,6 @@
 import type { ChainAdapter } from "../registry/chain-adapter";
 import type { Signer } from "../types/signer";
+import { SangoAccountProvider } from "./account-provider";
 import { SangoAddressProvider } from "./address-provider";
 import { SangoBalanceProvider } from "./balance-provider";
 import { SangoBroadcaster } from "./broadcaster";
@@ -14,7 +15,6 @@ import { SangoTransactionSigner } from "./transaction-signer";
  * Dépendances injectées à l'adaptateur SANGO.
  *
  * D-RPC-1 : pas de `ProviderDeps` générique en V0 (un seul transport).
- * La forme évoluera quand un `RpcPool` réel sera nécessaire.
  */
 export interface SangoAdapterDeps {
   readonly rpc: SangoRpc;
@@ -34,6 +34,7 @@ export function sangoAdapterFactory(
   return {
     network,
     addressProvider: new SangoAddressProvider(deps.signer),
+    accountProvider: new SangoAccountProvider(deps.rpc),
     balanceProvider: new SangoBalanceProvider(deps.rpc, network.id),
     historyProvider: new SangoHistoryProvider(deps.rpc, network.id),
     transactionBuilder: new SangoTransactionBuilder(
@@ -45,6 +46,6 @@ export function sangoAdapterFactory(
     transactionSigner: new SangoTransactionSigner(),
     broadcaster: new SangoBroadcaster(deps.rpc),
     feeEstimator: new SangoFeeEstimator(deps.rpc, network.id),
-    // tokenProvider : absent en V0 (pas de tokens natifs SANGO).
+    // tokenProvider : absent en V0.
   };
 }

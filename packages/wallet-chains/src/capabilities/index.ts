@@ -1,4 +1,5 @@
 export * from "./address-provider";
+export * from "./account-provider";
 export * from "./balance-provider";
 export * from "./history-provider";
 export * from "./transaction-builder";

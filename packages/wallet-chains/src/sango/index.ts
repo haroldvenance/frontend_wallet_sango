@@ -1,6 +1,7 @@
 export * from "./config";
 export * from "./rpc";
 export * from "./adapter";
+export * from "./account-provider";
 export * from "./address-provider";
 export * from "./balance-provider";
 export * from "./history-provider";

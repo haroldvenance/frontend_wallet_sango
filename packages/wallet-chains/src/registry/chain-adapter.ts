@@ -1,3 +1,4 @@
+import type { AccountProvider } from "../capabilities/account-provider";
 import type { AddressProvider } from "../capabilities/address-provider";
 import type { BalanceProvider } from "../capabilities/balance-provider";
 import type { Broadcaster } from "../capabilities/broadcaster";
@@ -21,6 +22,9 @@ export interface ChainAdapter {
   readonly addressProvider: AddressProvider;
   readonly balanceProvider: BalanceProvider;
   readonly historyProvider: HistoryProvider;
+
+  /** État complet d'un compte (nonce + publicKey + balance). */
+  readonly accountProvider?: AccountProvider;
 
   readonly transactionBuilder?: TransactionBuilder;
   readonly transactionSigner?: TransactionSigner;
