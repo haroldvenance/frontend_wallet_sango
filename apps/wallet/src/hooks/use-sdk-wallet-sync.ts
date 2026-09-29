@@ -7,12 +7,14 @@
  * n'ont plus besoin du wallet attaché au client : la session signe via
  * le `Signer` dérivé du `Wallet` directement.
  *
- * Mais les hooks staking appellent toujours `client.send(...)` :
- *      - use-staking-actions.tsx (Bond, Delegate, ClaimRewards, ...)
+ * Mais les hooks staking appellent toujours les méthodes dédiées du
+ * `SangoClient` (bond, delegate, undelegate, claimRewards, unjail,
+ * updateCommission). Ces méthodes exigent un wallet attaché (sinon
+ * "No wallet attached"). Ce hook doit donc rester monté tant que le
+ * staking n'a pas migré vers WalletSession (V0.2).
  *
- * Et `SangoClient.send` exige un wallet attaché (sinon "No wallet
- * attached"). Ce hook doit donc rester monté tant que le staking n'a
- * pas migré vers WalletSession (V0.2).
+ * Note : `client.send()` — la méthode générique du SDK — n'est plus
+ * utilisée depuis la migration de `use-send-tx` (D-SESS-8).
  *
  * Migration future : quand WalletSession exposera un `StakingProvider`,
  * retirer ce hook et le montage dans `App.tsx`.

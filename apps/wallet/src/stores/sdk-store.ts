@@ -3,40 +3,55 @@
  *
  * ⚠️ V0.1 — migration partielle vers WalletSession.
  *
- * Ce store est encore **actif** pour 4 catégories d'usages. Ne PAS
+ * Ce store est encore **actif** pour 5 catégories d'usages. Ne PAS
  * supprimer tant que ces cas n'ont pas migré (V0.2+).
  *
  * 1. Métadonnées réseau SANGO-spécifiques (D-SESS-6) :
- *      - hooks/use-chain-info.ts       (height, validators, version)
- *      - hooks/use-recent-blocks.ts    (blocs EVM via eth_*)
+ *      - hooks/use-chain-info.ts        (height, validators, version)
+ *      - hooks/use-recent-blocks.ts     (blocs EVM via eth_*)
  *
  *    Ces primitives n'ont pas d'équivalent multi-chaîne et n'ont pas
  *    leur place dans WalletSession (account-centric).
  *
  * 2. Historique détaillé (D-SESS-9) :
- *      - hooks/use-transactions.ts     (Tx[] : txKind, nonce, gas,
- *                                       signature, pagination offset)
+ *      - hooks/use-transactions.ts      (Tx[] : txKind, nonce, gas,
+ *                                        signature, pagination offset)
  *      - routes/history.tsx
- *      - routes/history-detail.tsx     (transaction viewer)
+ *      - routes/history-detail.tsx      (transaction viewer)
  *
  *    HistoryItem (session) ne couvre pas ces champs SANGO-spécifiques.
  *
  * 3. Staking / validateurs (V0.2 — pas encore migré) :
  *      - hooks/use-validators.ts
- *      - hooks/use-staking-actions.tsx  (Bond, Delegate, ClaimRewards,
- *                                        Unjail, UpdateCommission)
+ *      - hooks/use-staking-actions.tsx  (bond, delegate, claimRewards,
+ *                                        unjail, updateCommission — tous
+ *                                        via les méthodes dédiées du
+ *                                        SangoClient, pas client.send)
  *      - hooks/use-my-delegations.ts
  *
  *    V0.2 : étendre WalletSession avec un `StakingProvider` puis
  *    migrer.
  *
- * 4. Configuration réseau (lecture seule : network, endpoint) :
+ * 4. Polling d'inclusion de tx (D-SESS-7 — reste sur SDK) :
+ *      - hooks/use-send-tx.tsx          (client.waitForInclusion)
+ *      - hooks/use-faucet.tsx           (client.waitForInclusion)
+ *
+ *    `waitForInclusion` est un observer réseau (détection de rejets
+ *    silencieux via streak `notFound`), pas une action wallet.
+ *
+ * 5. Configuration réseau (lecture seule : network, endpoint) :
+ *      - hooks/use-network-query-context.ts (endpoint)
+ *      - providers/wallet-session-provider.tsx (endpoint)
+ *      - components/settings/network-selector.tsx (network)
  *      - routes/create-wallet.tsx, import-wallet.tsx, unlock.tsx
- *      - components/settings/network-selector.tsx
  *
  * Le `client` reste la source de vérité pour ces primitives. Toutes
  * les **actions wallet universelles** (solde, envoi, signature) sont
  * passées à WalletSession (use-account, use-send-tx).
+ *
+ * ⚠️ `client.send()` (SDK high-level) n'est **plus appelé** depuis
+ *    V0.1. Il est conservé sur le SangoClient pour compat, mais aucun
+ *    code applicatif ne l'utilise.
  *
  * Voir docs/design/v0-architecture.md (§10 décisions D-SESS-*).
  */
