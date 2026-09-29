@@ -1,11 +1,16 @@
 import type { AddressHex, TxHashHex } from "@sango/types";
-import { useMutation, useQueryClient, type UseMutationResult } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  type UseMutationResult,
+} from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { GAS_BY_TX_KIND, DEFAULT_MAX_FEE, DEFAULT_PRIORITY_FEE } from "@/lib/config";
-import { useSdkStore } from "@/stores/sdk-store";
 import { ExplorerLink } from "@/components/branding/explorer-link";
 import { shortenHash } from "@/lib/format";
+import { useWalletSession } from "@/providers/wallet-session-context";
+import { useSdkStore } from "@/stores/sdk-store";
+import { useNetworkQueryContext } from "./use-network-query-context";
 
 export interface SendArgs {
   to: AddressHex;
@@ -20,63 +25,76 @@ export interface SendResult {
 /**
  * Signe + broadcast une tx Transfer, puis poll jusqu'à inclusion.
  *
- * Le `maxFee` est calculé dynamiquement à partir de `sango_baseFee`
- * (recommandation backend : `baseFee * 2`). Fallback sur `DEFAULT_MAX_FEE`
- * si l'appel échoue (nœud ancien, endpoint custom).
+ * **Migration V0.1 (stratégie B)** :
+ * - Le pipeline build/sign/broadcast est délégué à `WalletSession.send()`
+ *   (D-SESS-5/8). Le hook ne connaît plus le SDK pour l'envoi.
+ * - `waitForInclusion` reste sur le SDK (D-SESS-7 — primitive réseau,
+ *   pas une action wallet).
+ * - Le fallback `getBaseFee → DEFAULT_MAX_FEE` est **supprimé** : une
+ *   erreur de calcul de fee remonte au caller (meilleur diagnostic,
+ *   cf. §4.3 du design doc).
  */
 export function useSendTx(): UseMutationResult<SendResult, Error, SendArgs> {
+  const session = useWalletSession();
   const { client } = useSdkStore();
+  const { account } = useNetworkQueryContext();
   const qc = useQueryClient();
 
   return useMutation<SendResult, Error, SendArgs>({
     mutationFn: async ({ to, amountBaseUnits }) => {
-      // 1. Récupère la base fee courante (avec fallback silencieux).
-      let maxFee = DEFAULT_MAX_FEE;
-      try {
-        const baseFeeStr = await client.getBaseFee();
-        const baseFee = BigInt(baseFeeStr);
-        maxFee = baseFee * 2n;
-      } catch {
-        // Nœud ancien ou endpoint custom sans sango_baseFee → fallback.
+      if (!session) {
+        throw new Error(
+          "useSendTx: WalletSession indisponible (wallet verrouillé ?)",
+        );
       }
 
-      // 2. Signe + broadcast.
-      const { txHash } = await client.send({
-        to,
-        amountBaseUnits,
-        gasLimit: GAS_BY_TX_KIND[0x01],
-        maxFee,
-        priorityFee: DEFAULT_PRIORITY_FEE,
-      });
+      // 1. Pipeline complet via la session.
+      const txHashStr = await session.send(
+        {
+          to,
+          assetRef: {
+            kind: "native",
+            assetId: "sango",
+            networkId: account.networkId,
+          },
+          amount: amountBaseUnits,
+        },
+        account,
+      );
+      const txHash = txHashStr as TxHashHex;
 
       toast.info("Transaction envoyée", {
         description: (
           <span className="inline-flex items-center gap-2">
-            <span className="font-mono text-[11px]">{shortenHash(txHash, 6)}</span>
+            <span className="font-mono text-[11px]">
+              {shortenHash(txHash, 6)}
+            </span>
             <span className="text-muted-foreground">·</span>
             <ExplorerLink hash={txHash} />
           </span>
         ),
       });
 
-      // 2b. Invalide immédiatement le compte pour rafraîchir le solde
+      // 2. Invalide immédiatement le compte pour rafraîchir le solde
       // dès que le backend a appliqué la tx (sans attendre le polling).
       void qc.invalidateQueries({ queryKey: ["account"] });
 
-      // 3. Poll jusqu'à inclusion.
+      // 3. Poll d'inclusion (D-SESS-7 : reste sur le SDK).
       const result = await client.waitForInclusion(txHash);
 
       switch (result.status) {
         case "included":
           toast.success("Transaction incluse", {
-          description: (
-            <span className="inline-flex items-center gap-2">
-              <span className="font-mono text-[11px]">{shortenHash(txHash, 6)}</span>
-              <span className="text-muted-foreground">·</span>
-              <ExplorerLink hash={txHash} />
-            </span>
-          ),
-        });
+            description: (
+              <span className="inline-flex items-center gap-2">
+                <span className="font-mono text-[11px]">
+                  {shortenHash(txHash, 6)}
+                </span>
+                <span className="text-muted-foreground">·</span>
+                <ExplorerLink hash={txHash} />
+              </span>
+            ),
+          });
           break;
         case "rejected":
           toast.error("Transaction rejetée", { description: result.error });
@@ -90,6 +108,7 @@ export function useSendTx(): UseMutationResult<SendResult, Error, SendArgs> {
             description: "Pas encore incluse après 15 s",
           });
       }
+
       return { txHash, included: result.status === "included" };
     },
     onSuccess: () => {

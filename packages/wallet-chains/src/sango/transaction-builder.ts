@@ -59,6 +59,16 @@ export class SangoTransactionBuilder implements TransactionBuilder {
   async build(params: SendParams): Promise<ChainsUnsignedTx> {
     assertNativeSango(params, this.#networkId);
 
+    // D-SESS-8 : `from` est optionnel côté type (WalletSession l'injecte),
+    // mais requis ici. Erreur explicite pour guider le caller.
+    if (!params.from) {
+      throw new Error(
+        "SangoTransactionBuilder.build: 'from' is required when calling " +
+          "build() directly. Use WalletSession.send(params, account) to " +
+          "have the source derived from the account.",
+      );
+    }
+
     const fromHex = normalizeToHex(params.from, this.#bech32Network);
     const toBytes = toAddressBytes(params.to, this.#bech32Network);
     const fromBytes = hexToBytes(fromHex);

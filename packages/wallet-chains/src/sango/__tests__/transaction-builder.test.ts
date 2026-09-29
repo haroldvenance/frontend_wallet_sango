@@ -85,4 +85,16 @@ describe("SangoTransactionBuilder", () => {
       }),
     ).rejects.toThrow(/native SANGO/);
   });
+
+  it("throws an explicit error when `from` is omitted (D-SESS-8)", async () => {
+    const b = new SangoTransactionBuilder(mockRpc(), "sango-devnet", SANGO_CHAIN_ID_HEX, "testnet");
+    await expect(
+      b.build({
+        // pas de `from`
+        to: TO,
+        assetRef: NATIVE,
+        amount: 1n,
+      }),
+    ).rejects.toThrow(/'from' is required/);
+  });
 });
