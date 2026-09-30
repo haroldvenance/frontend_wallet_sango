@@ -3,7 +3,7 @@ import type { AssetRef } from "../types/asset";
 import type { UnsignedTransaction } from "../types/tx";
 
 /**
- * Paramètres d'une opération wallet (transfert, staking…).
+ * Paramètres d'une opération wallet.
  *
  * **D-SESS-10** — Union discriminée keyed on `kind`.
  *
@@ -20,22 +20,72 @@ import type { UnsignedTransaction } from "../types/tx";
  *           ↓
  *     bytes
  *
- * **Aucune adresse source.** La source (`sender`) est une propriété du
- * `AccountRef` fourni à `WalletSession.send(params, account)`. Le
- * builder reçoit le sender en 2ᵉ argument, déjà résolu par la session.
+ * **Aucune adresse source.** La source (`sender`) est passée par
+ * `WalletSession.send(params, account)` en 2ᵉ argument au builder,
+ * déjà résolue depuis l'`AccountRef`.
  *
- * En V0.2, seul le variant `"transfer"` est supporté par le builder
- * SANGO. Les variants staking (`bond`, `delegate`…) seront ajoutés au
- * fur et à mesure que le builder les prend en charge — pas d'API qui
- * prétend supporter ce qu'elle ne sait pas construire.
+ * **V0.2** — Tous les variants staking SANGO sont supportés (le
+ * backend les construit déjà via `@sango/sdk`). Ajouter un variant à
+ * cette union **exige** d'ajouter le `case` correspondant dans
+ * `SangoTransactionBuilder#encodeParams` (exhaustive check).
  */
-export type SendParams = {
-  readonly kind: "transfer";
-  readonly to: Address;
-  readonly assetRef: AssetRef;
-  readonly amount: bigint;
-  readonly memo?: Uint8Array;
-};
+export type SendParams =
+  // --- Transfert natif ---
+  | {
+      readonly kind: "transfer";
+      readonly to: Address;
+      readonly assetRef: AssetRef;
+      readonly amount: bigint;
+      readonly memo?: Uint8Array;
+    }
+  // --- Staking : self-stake ---
+  | {
+      readonly kind: "bond";
+      readonly assetRef: AssetRef;
+      readonly amount: bigint;
+    }
+  | {
+      readonly kind: "unbond";
+      readonly assetRef: AssetRef;
+      readonly amount: bigint;
+    }
+  // --- Staking : délégation ---
+  | {
+      readonly kind: "delegate";
+      readonly validator: Address;
+      readonly assetRef: AssetRef;
+      readonly amount: bigint;
+    }
+  | {
+      readonly kind: "undelegate";
+      readonly validator: Address;
+      readonly assetRef: AssetRef;
+      readonly amount: bigint;
+    }
+  | {
+      readonly kind: "claimRewards";
+      readonly validator: Address;
+      readonly assetRef: AssetRef;
+    }
+  // --- Staking : validateur ---
+  | {
+      readonly kind: "registerValidator";
+      /** 0..1000 (basis points ; 700 = 7 %). */
+      readonly commissionBps: number;
+      /** Self-stake initial (base units). ≥ 100 000 SANGO. */
+      readonly selfStake: bigint;
+      readonly assetRef: AssetRef;
+    }
+  | {
+      readonly kind: "updateCommission";
+      /** 0..1000 (basis points). Prend effet après 7 jours. */
+      readonly newCommissionBps: number;
+      readonly assetRef: AssetRef;
+    }
+  | {
+      readonly kind: "unjail";
+      readonly assetRef: AssetRef;
+    };
 
 /**
  * Capacité optionnelle : construire une transaction non signée.
@@ -43,8 +93,7 @@ export type SendParams = {
  * @param params  L'intention wallet à encoder.
  * @param sender  Adresse source (hex `0x…` ou bech32m), résolue par la
  *                session via `AddressProvider.deriveAddress(account)`.
- *                Le builder ne reçoit jamais l'`AccountRef` — il ne
- *                connaît que des adresses.
+ *                Le builder ne reçoit jamais l'`AccountRef`.
  */
 export interface TransactionBuilder {
   build(params: SendParams, sender: Address): Promise<UnsignedTransaction>;

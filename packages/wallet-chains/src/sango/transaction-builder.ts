@@ -18,27 +18,42 @@ import { bytesToHex, hexToBytes } from "./hex";
 import type { SangoRpc } from "./rpc";
 
 const SANGO_TX_VERSION = 1;
-const DEFAULT_GAS_LIMIT = 21_000n;
 const DEFAULT_PRIORITY_FEE = 0n;
+const MAX_FEE_MULTIPLIER = 2n;
 
 /**
- * Multiplicateur appliqué à `baseFee` pour obtenir `maxFee`.
- * Recommandation doc backend : `maxFee = baseFee * 2`.
+ * Gas par `kind` — miroir exact de `@sango/sdk` `DEFAULT_GAS_BY_TX_KIND`.
+ *
+ * ⚠️ Ces valeurs sont la **source de vérité**. `apps/wallet/src/lib/config.ts`
+ *    contient une ancienne table (`GAS_BY_TX_KIND`) avec des valeurs
+ *    divergentes (ex. Delegate 80 000 vs 300 000). Elle sera nettoyée
+ *    au patch 6 de V0.2 — d'ici là elle n'est plus utilisée pour le
+ *    calcul réel.
  */
-const MAX_FEE_MULTIPLIER = 2n;
+const GAS_BY_KIND: Readonly<Record<SendParams["kind"], bigint>> = {
+  transfer: 21_000n,
+  bond: 50_000n,
+  unbond: 50_000n,
+  delegate: 300_000n,
+  undelegate: 300_000n,
+  claimRewards: 40_000n,
+  registerValidator: 200_000n,
+  updateCommission: 30_000n,
+  unjail: 30_000n,
+};
 
 /**
  * Construction d'une tx native SANGO.
  *
  * **D-SESS-10** — `SendParams` est une union discriminée. Ce builder
  * dispatche sur `params.kind` et produit le `txKind` SANGO + payload
- * correspondant. La source (sender) est fournie par la session, déjà
- * résolue depuis l'`AccountRef`.
+ * correspondant.
  *
- * V0.2 : seul `"transfer"` est supporté. Ajouter un variant à
- * `SendParams` **exige** d'ajouter le `case` correspondant ici — le
- * `default:` contient un check `never` qui provoque une erreur TS
- * sinon.
+ * Toutes les opérations ont le même pipeline :
+ *   1. résoudre sender → hex, lire nonce + publicKey (bootstrap) ;
+ *   2. lire `baseFee` → calculer `maxFee` ;
+ *   3. encoder le payload selon `kind` ;
+ *   4. assembler la `WalletCoreUnsignedTx`.
  */
 export class SangoTransactionBuilder implements TransactionBuilder {
   readonly #rpc: SangoRpc;
@@ -61,34 +76,8 @@ export class SangoTransactionBuilder implements TransactionBuilder {
   async build(params: SendParams, sender: Address): Promise<ChainsUnsignedTx> {
     assertNativeSango(params, this.#networkId);
 
-    switch (params.kind) {
-      case "transfer":
-        return this.#buildTransfer(params, sender);
-      default: {
-        // Exhaustive check : `params.kind` est narrow à `never` ici
-        // (tous les variants de SendParams ont été épuisés par les
-        // cases ci-dessus). Ajouter un variant sans case → erreur TS
-        // sur l'assignation ci-dessous.
-        //
-        // Note : `params` (objet) n'est pas narrow à `never` par TS
-        // car SendParams n'est pas une vraie union en V0.2 (un seul
-        // variant). C'est `params.kind` qui porte le narrowing.
-        const _kind: never = params.kind;
-        throw new Error(
-          `SangoTransactionBuilder: unsupported send kind "${String(_kind)}"`,
-        );
-      }
-    }
-  }
-
-  async #buildTransfer(
-    params: Extract<SendParams, { kind: "transfer" }>,
-    sender: Address,
-  ): Promise<ChainsUnsignedTx> {
     const fromHex = normalizeToHex(sender, this.#bech32Network);
-    const toBytes = toAddressBytes(params.to, this.#bech32Network);
     const fromBytes = hexToBytes(fromHex);
-
     const account = await this.#rpc.getAccount(fromHex);
     const nonce = BigInt(account?.nonce ?? 0);
     const publicKey = account?.publicKey ? hexToBytes(account.publicKey) : null;
@@ -96,34 +85,182 @@ export class SangoTransactionBuilder implements TransactionBuilder {
     const baseFee = BigInt(await this.#rpc.getBaseFee());
     const maxFee = baseFee * MAX_FEE_MULTIPLIER;
 
+    const encoded = this.#encodeParams(params);
+
     const concrete: WalletCoreUnsignedTx = {
       version: SANGO_TX_VERSION,
       chainId: this.#chainId,
       nonce,
       sender: fromBytes,
       publicKey,
-      gasLimit: DEFAULT_GAS_LIMIT,
+      gasLimit: encoded.gasLimit,
       maxFee,
       priorityFee: DEFAULT_PRIORITY_FEE,
-      value: params.amount,
-      txKind: TX_KIND.Transfer,
-      recipient: toBytes,
-      data: params.memo ?? new Uint8Array(0),
-    };
-
-    const meta: TxMeta = {
-      from: sender,
-      to: params.to,
-      assetRef: params.assetRef,
-      amount: params.amount,
+      value: encoded.value,
+      txKind: encoded.txKind,
+      recipient: encoded.recipient,
+      data: encoded.data,
     };
 
     return {
       family: "sango",
       networkId: this.#networkId,
       payload: concrete,
-      meta,
+      meta: buildMeta(params, sender),
     };
+  }
+
+  #encodeParams(params: SendParams): EncodedParams {
+    switch (params.kind) {
+      case "transfer":
+        return {
+          txKind: TX_KIND.Transfer,
+          value: params.amount,
+          recipient: toAddressBytes(params.to, this.#bech32Network),
+          data: params.memo ?? new Uint8Array(0),
+          gasLimit: GAS_BY_KIND.transfer,
+        };
+      case "bond":
+        return {
+          txKind: TX_KIND.Bond,
+          value: params.amount,
+          recipient: null,
+          data: new Uint8Array(0),
+          gasLimit: GAS_BY_KIND.bond,
+        };
+      case "unbond":
+        return {
+          txKind: TX_KIND.Unbond,
+          value: params.amount,
+          recipient: null,
+          data: new Uint8Array(0),
+          gasLimit: GAS_BY_KIND.unbond,
+        };
+      case "delegate":
+        return {
+          txKind: TX_KIND.Delegate,
+          value: params.amount,
+          recipient: toAddressBytes(params.validator, this.#bech32Network),
+          data: new Uint8Array(0),
+          gasLimit: GAS_BY_KIND.delegate,
+        };
+      case "undelegate":
+        return {
+          txKind: TX_KIND.Undelegate,
+          value: params.amount,
+          recipient: toAddressBytes(params.validator, this.#bech32Network),
+          data: new Uint8Array(0),
+          gasLimit: GAS_BY_KIND.undelegate,
+        };
+      case "claimRewards":
+        return {
+          txKind: TX_KIND.ClaimRewards,
+          value: 0n,
+          recipient: toAddressBytes(params.validator, this.#bech32Network),
+          data: new Uint8Array(0),
+          gasLimit: GAS_BY_KIND.claimRewards,
+        };
+      case "registerValidator":
+        assertCommissionBps(params.commissionBps, "commissionBps");
+        return {
+          txKind: TX_KIND.RegisterValidator,
+          value: params.selfStake,
+          recipient: null,
+          data: u32BE(params.commissionBps),
+          gasLimit: GAS_BY_KIND.registerValidator,
+        };
+      case "updateCommission":
+        assertCommissionBps(params.newCommissionBps, "newCommissionBps");
+        return {
+          txKind: TX_KIND.UpdateCommission,
+          value: 0n,
+          recipient: null,
+          data: u32BE(params.newCommissionBps),
+          gasLimit: GAS_BY_KIND.updateCommission,
+        };
+      case "unjail":
+        return {
+          txKind: TX_KIND.Unjail,
+          value: 0n,
+          recipient: null,
+          data: new Uint8Array(0),
+          gasLimit: GAS_BY_KIND.unjail,
+        };
+      default: {
+        // Exhaustive check : `params` est narrow à `never` ici (tous
+        // les variants de SendParams ont été épuisés par les cases
+        // ci-dessus). Ajouter un variant sans case → erreur TS sur
+        // l'assignation ci-dessous.
+        const _exhaustive: never = params;
+        throw new Error(
+          `SangoTransactionBuilder: unsupported send params ${JSON.stringify(_exhaustive)}`,
+        );
+      }
+    }
+  }
+}
+
+// --- Types internes -------------------------------------------------------
+
+interface EncodedParams {
+  readonly txKind: number;
+  readonly value: bigint;
+  readonly recipient: Uint8Array | null;
+  readonly data: Uint8Array;
+  readonly gasLimit: bigint;
+}
+
+// --- Helpers --------------------------------------------------------------
+
+/**
+ * Construit la `TxMeta` lisible à partir des `SendParams`.
+ *
+ * `to` et `amount` sont optionnels selon le variant (voir types/tx.ts).
+ */
+function buildMeta(params: SendParams, sender: Address): TxMeta {
+  switch (params.kind) {
+    case "transfer":
+      return {
+        from: sender,
+        to: params.to,
+        assetRef: params.assetRef,
+        amount: params.amount,
+      };
+    case "bond":
+    case "unbond":
+      return {
+        from: sender,
+        assetRef: params.assetRef,
+        amount: params.amount,
+      };
+    case "delegate":
+    case "undelegate":
+      return {
+        from: sender,
+        to: params.validator,
+        assetRef: params.assetRef,
+        amount: params.amount,
+      };
+    case "claimRewards":
+      return {
+        from: sender,
+        to: params.validator,
+        assetRef: params.assetRef,
+        amount: 0n,
+      };
+    case "registerValidator":
+      return {
+        from: sender,
+        assetRef: params.assetRef,
+        amount: params.selfStake,
+      };
+    case "updateCommission":
+    case "unjail":
+      return {
+        from: sender,
+        assetRef: params.assetRef,
+        amount: 0n,
+      };
   }
 }
 
@@ -142,6 +279,22 @@ function normalizeToHex(
   bech32Network: "mainnet" | "testnet",
 ): string {
   return bytesToHex(toAddressBytes(input, bech32Network));
+}
+
+/** u32 big-endian (aligné sur `@sango/sdk` helper `u32BE`). */
+function u32BE(n: number): Uint8Array {
+  const out = new Uint8Array(4);
+  out[0] = (n >>> 24) & 0xff;
+  out[1] = (n >>> 16) & 0xff;
+  out[2] = (n >>> 8) & 0xff;
+  out[3] = n & 0xff;
+  return out;
+}
+
+function assertCommissionBps(bps: number, name: string): void {
+  if (!Number.isInteger(bps) || bps < 0 || bps > 1_000) {
+    throw new Error(`${name} must be an integer in [0, 1000]`);
+  }
 }
 
 function assertNativeSango(params: SendParams, networkId: string): void {
