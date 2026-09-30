@@ -7,3 +7,4 @@ export * from "./transaction-signer";
 export * from "./broadcaster";
 export * from "./fee-estimator";
 export * from "./token-provider";
+export * from "./staking-provider";

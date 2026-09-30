@@ -5,6 +5,7 @@ export * from "./account-provider";
 export * from "./address-provider";
 export * from "./balance-provider";
 export * from "./history-provider";
+export * from "./staking-provider";
 export * from "./transaction-builder";
 export * from "./transaction-signer";
 export * from "./broadcaster";

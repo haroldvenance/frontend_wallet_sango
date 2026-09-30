@@ -4,6 +4,7 @@ import type { Signer } from "../../types/signer";
 
 export function mockRpc(overrides: Partial<SangoRpc> = {}): SangoRpc {
   return {
+    // Compte / tx
     getChainId: vi.fn(async () => "0x" + "11".repeat(32)),
     getAccount: vi.fn(async () => null),
     getBaseFee: vi.fn(async () => "0"),
@@ -14,6 +15,11 @@ export function mockRpc(overrides: Partial<SangoRpc> = {}): SangoRpc {
       items: [],
     })),
     sendTransaction: vi.fn(async () => "0x" + "00".repeat(32)),
+    // Staking (lecture)
+    getValidators: vi.fn(async () => []),
+    getValidatorInfo: vi.fn(async () => null),
+    getDelegations: vi.fn(async () => []),
+    getPendingUnbondings: vi.fn(async () => []),
     ...overrides,
   };
 }

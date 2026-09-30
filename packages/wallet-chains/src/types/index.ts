@@ -8,3 +8,4 @@ export * from "./account";
 export * from "./signer";
 export * from "./tx";
 export * from "./history";
+export * from "./staking";

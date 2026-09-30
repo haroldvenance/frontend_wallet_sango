@@ -4,11 +4,14 @@ import type {
   AssetRef,
   Balance,
   ChainRegistry,
+  Delegation,
   FeeEstimate,
   FeeParams,
+  PendingUnbonding,
   SendParams,
   Signer,
   TxHistory,
+  ValidatorInfo,
 } from "@sango/wallet-chains";
 
 import type { AccountList } from "./accounts";
@@ -72,6 +75,38 @@ export interface WalletSession {
    *          confirmé par le nœud).
    */
   send(params: SendParams, account: AccountRef): Promise<string>;
+
+  /**
+   * Délégations émises par le compte. Tableau vide si aucune.
+   *
+   * D-SESS-11 — `StakingProvider` (lecture seule). L'adresse du
+   * délégateur est dérivée de l'`AccountRef`, comme pour `getBalance`.
+   */
+  getDelegations(account: AccountRef): Promise<readonly Delegation[]>;
+
+  /**
+   * Événements d'unbonding en attente de maturation pour le compte.
+   */
+  getPendingUnbondings(
+    account: AccountRef,
+  ): Promise<readonly PendingUnbonding[]>;
+
+  /**
+   * Liste complète des validateurs enregistrés (tableau vide si aucun).
+   *
+   * Pas d'`AccountRef` : c'est une lecture réseau.
+   */
+  listValidators(networkId: string): Promise<readonly ValidatorInfo[]>;
+
+  /**
+   * Info d'un validateur précis, ou `null` s'il n'est pas enregistré.
+   *
+   * Pas d'`AccountRef` : c'est une lecture réseau.
+   */
+  getValidatorInfo(
+    networkId: string,
+    validator: string,
+  ): Promise<ValidatorInfo | null>;
 
   /**
    * Lien vers l'explorateur pour une tx, ou `undefined` si le réseau
@@ -184,11 +219,52 @@ export class WalletSessionImpl implements WalletSession {
     return adapter.broadcaster.broadcast(signed);
   }
 
+  async getDelegations(account: AccountRef): Promise<readonly Delegation[]> {
+    const adapter = this.#adapter(account.networkId);
+    const provider = this.#stakingProvider(account.networkId);
+    const address = await adapter.addressProvider.deriveAddress(account);
+    return provider.getDelegations(address);
+  }
+
+  async getPendingUnbondings(
+    account: AccountRef,
+  ): Promise<readonly PendingUnbonding[]> {
+    const adapter = this.#adapter(account.networkId);
+    const provider = this.#stakingProvider(account.networkId);
+    const address = await adapter.addressProvider.deriveAddress(account);
+    return provider.getPendingUnbondings(address);
+  }
+
+  async listValidators(networkId: string): Promise<readonly ValidatorInfo[]> {
+    const adapter = this.#adapter(networkId);
+    const provider = this.#stakingProvider(networkId);
+    return provider.listValidators();
+  }
+
+  async getValidatorInfo(
+    networkId: string,
+    validator: string,
+  ): Promise<ValidatorInfo | null> {
+    const adapter = this.#adapter(networkId);
+    const provider = this.#stakingProvider(networkId);
+    return provider.getValidatorInfo(validator);
+  }
+
   explorerLink(account: AccountRef, txHash: string): string | undefined {
     const network = this.#network(account.networkId);
     if (!network.explorer) return undefined;
     const { baseUrl, txPath } = network.explorer;
     return `${baseUrl}${txPath.replace("{hash}", txHash)}`;
+  }
+
+  #stakingProvider(networkId: string) {
+    const adapter = this.#adapter(networkId);
+    if (!adapter.stakingProvider) {
+      throw new Error(
+        `WalletSession: no staking provider for network "${networkId}"`,
+      );
+    }
+    return adapter.stakingProvider;
   }
 
   #adapter(networkId: string) {

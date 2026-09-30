@@ -8,25 +8,15 @@ import type { SangoNetwork } from "./config";
 import { SangoFeeEstimator } from "./fee-estimator";
 import { SangoHistoryProvider } from "./history-provider";
 import type { SangoRpc } from "./rpc";
+import { SangoStakingProvider } from "./staking-provider";
 import { SangoTransactionBuilder } from "./transaction-builder";
 import { SangoTransactionSigner } from "./transaction-signer";
 
-/**
- * Dépendances injectées à l'adaptateur SANGO.
- *
- * D-RPC-1 : pas de `ProviderDeps` générique en V0 (un seul transport).
- */
 export interface SangoAdapterDeps {
   readonly rpc: SangoRpc;
   readonly signer: Signer;
 }
 
-/**
- * Fabrique l'adaptateur SANGO complet.
- *
- * V0-D2 : le `Signer` est injecté dans `SangoAddressProvider` via
- * constructeur. Le provider ne peut pas exister sans signer.
- */
 export function sangoAdapterFactory(
   network: SangoNetwork,
   deps: SangoAdapterDeps,
@@ -37,6 +27,7 @@ export function sangoAdapterFactory(
     accountProvider: new SangoAccountProvider(deps.rpc),
     balanceProvider: new SangoBalanceProvider(deps.rpc, network.id),
     historyProvider: new SangoHistoryProvider(deps.rpc, network.id),
+    stakingProvider: new SangoStakingProvider(deps.rpc),
     transactionBuilder: new SangoTransactionBuilder(
       deps.rpc,
       network.id,
