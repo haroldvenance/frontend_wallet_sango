@@ -34,21 +34,19 @@ export const AUTO_LOCK_MS = 15 * 60 * 1000;
 export const CLIPBOARD_CLEAR_MS = 30 * 1000;
 
 /**
- * Table des gas fixes par TxKind (Freeze).
+ * Table des gas fixes par TxKind — SUPPRIMÉE en V0.2.
+ *
+ * Elle était dupliquée avec le SDK SANGO (@sango/sdk
+ * DEFAULT_GAS_BY_TX_KIND) et divergeait sur Delegate/Undelegate
+ * (80_000 ici, 300_000 dans le SDK).
+ *
+ * Le SangoTransactionBuilder utilise désormais sa propre table
+ * GAS_BY_KIND (miroir du SDK) — voir
+ * packages/wallet-chains/src/sango/transaction-builder.ts.
+ *
+ * Reste supprimé pour éviter la tentation de réintroduire une
+ * troisième source de vérité.
  */
-export const GAS_BY_TX_KIND: Record<number, bigint> = {
-  0x01: 21_000n, // Transfer
-  0x02: 21_000n, // ContractCall
-  0x03: 21_000n, // ContractCreate
-  0x04: 50_000n, // Bond
-  0x05: 50_000n, // Unbond
-  0x06: 80_000n, // Delegate
-  0x07: 80_000n, // Undelegate
-  0x08: 40_000n, // ClaimRewards
-  0x09: 200_000n, // RegisterValidator
-  0x0a: 30_000n, // UpdateCommission
-  0x0b: 30_000n, // Unjail
-};
 
 /**
  * Max fee par défaut (base units / gas).
