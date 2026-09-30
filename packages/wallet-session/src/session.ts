@@ -236,7 +236,6 @@ export class WalletSessionImpl implements WalletSession {
   }
 
   async listValidators(networkId: string): Promise<readonly ValidatorInfo[]> {
-    const adapter = this.#adapter(networkId);
     const provider = this.#stakingProvider(networkId);
     return provider.listValidators();
   }
@@ -245,7 +244,6 @@ export class WalletSessionImpl implements WalletSession {
     networkId: string,
     validator: string,
   ): Promise<ValidatorInfo | null> {
-    const adapter = this.#adapter(networkId);
     const provider = this.#stakingProvider(networkId);
     return provider.getValidatorInfo(validator);
   }

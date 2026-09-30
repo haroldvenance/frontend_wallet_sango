@@ -1,4 +1,5 @@
 import type { AddressHex, TxHashHex } from "@sango/types";
+import type { AssetRef } from "@sango/wallet-chains";
 import {
   useMutation,
   useQueryClient,
@@ -6,9 +7,25 @@ import {
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { useSdkStore } from "@/stores/sdk-store";
 import { ExplorerLink } from "@/components/branding/explorer-link";
+import { useWalletSession } from "@/providers/wallet-session-context";
+import { useSdkStore } from "@/stores/sdk-store";
 import { shortenHash } from "@/lib/format";
+import { useNetworkQueryContext } from "./use-network-query-context";
+
+/**
+ * Actions de staking SANGO.
+ *
+ * **V0.2 (patch 4)** — Migration vers WalletSession.
+ *
+ * Le pipeline build/sign/broadcast est délégué à `session.send()` avec
+ * un `SendParams` discriminé (D-SESS-10). Le hook ne connaît plus les
+ * méthodes dédiées du SDK (`client.bond`, `client.delegate`…) —
+ * seulement `session.send` + `client.waitForInclusion` (D-SESS-7).
+ *
+ * Le SDK reste utilisé pour `waitForInclusion` (observer réseau, pas
+ * une action wallet).
+ */
 
 interface StakingResult {
   txHash: TxHashHex;
@@ -46,14 +63,14 @@ async function runStakingAction(
   switch (result.status) {
     case "included":
       toast.success(`${label} inclus`, {
-      description: (
-        <span className="inline-flex items-center gap-2">
-          <span className="font-mono text-[11px]">{shortenHash(txHash, 6)}</span>
-          <span className="text-muted-foreground">·</span>
-          <ExplorerLink hash={txHash} />
-        </span>
-      ),
-    });
+        description: (
+          <span className="inline-flex items-center gap-2">
+            <span className="font-mono text-[11px]">{shortenHash(txHash, 6)}</span>
+            <span className="text-muted-foreground">·</span>
+            <ExplorerLink hash={txHash} />
+          </span>
+        ),
+      });
       break;
     case "rejected":
       toast.error(`${label} rejeté`, { description: result.error });
@@ -69,17 +86,57 @@ async function runStakingAction(
   return { txHash, included: result.status === "included" };
 }
 
+/**
+ * Contexte partagé par les 8 mutations staking.
+ *
+ * - `session` : pour `session.send(params, account)`.
+ * - `account` : `AccountRef` (networkId courant, accountIndex = 0).
+ * - `assetRef` : assetRef natif SANGO pour le networkId courant.
+ * - `client`  : SDK pour `waitForInclusion` (D-SESS-7).
+ */
+function useStakingContext() {
+  const session = useWalletSession();
+  const { account, networkId } = useNetworkQueryContext();
+  const { client } = useSdkStore();
+
+  const assetRef: AssetRef = {
+    kind: "native",
+    assetId: "sango",
+    networkId,
+  };
+
+  return { session, account, assetRef, client };
+}
+
+function assertSession(
+  session: ReturnType<typeof useWalletSession>,
+): asserts session is NonNullable<typeof session> {
+  if (!session) {
+    throw new Error("WalletSession indisponible (wallet verrouillé ?)");
+  }
+}
+
+// --- Mutations --------------------------------------------------------------
+
 /** Bond (self-stake). */
 export function useBond(): UseMutationResult<StakingResult, Error, { amountBaseUnits: bigint }> {
-  const { client } = useSdkStore();
+  const { session, account, assetRef, client } = useStakingContext();
   const invalidate = useInvalidateStaking();
   return useMutation<StakingResult, Error, { amountBaseUnits: bigint }>({
-    mutationFn: ({ amountBaseUnits }) =>
-      runStakingAction(
-        () => client.bond(amountBaseUnits),
+    mutationFn: ({ amountBaseUnits }) => {
+      assertSession(session);
+      return runStakingAction(
+        () =>
+          session
+            .send(
+              { kind: "bond", assetRef, amount: amountBaseUnits },
+              account,
+            )
+            .then((txHash) => ({ txHash: txHash as TxHashHex })),
         (h) => client.waitForInclusion(h),
         "Bond",
-      ),
+      );
+    },
     onSuccess: invalidate,
     onError: (e) => toast.error("Échec Bond", { description: e.message }),
   });
@@ -87,15 +144,23 @@ export function useBond(): UseMutationResult<StakingResult, Error, { amountBaseU
 
 /** Unbond (retrait self-stake). */
 export function useUnbond(): UseMutationResult<StakingResult, Error, { amountBaseUnits: bigint }> {
-  const { client } = useSdkStore();
+  const { session, account, assetRef, client } = useStakingContext();
   const invalidate = useInvalidateStaking();
   return useMutation<StakingResult, Error, { amountBaseUnits: bigint }>({
-    mutationFn: ({ amountBaseUnits }) =>
-      runStakingAction(
-        () => client.unbond(amountBaseUnits),
+    mutationFn: ({ amountBaseUnits }) => {
+      assertSession(session);
+      return runStakingAction(
+        () =>
+          session
+            .send(
+              { kind: "unbond", assetRef, amount: amountBaseUnits },
+              account,
+            )
+            .then((txHash) => ({ txHash: txHash as TxHashHex })),
         (h) => client.waitForInclusion(h),
         "Unbond",
-      ),
+      );
+    },
     onSuccess: invalidate,
     onError: (e) => toast.error("Échec Unbond", { description: e.message }),
   });
@@ -107,15 +172,23 @@ export function useDelegate(): UseMutationResult<
   Error,
   { validator: AddressHex; amountBaseUnits: bigint }
 > {
-  const { client } = useSdkStore();
+  const { session, account, assetRef, client } = useStakingContext();
   const invalidate = useInvalidateStaking();
   return useMutation<StakingResult, Error, { validator: AddressHex; amountBaseUnits: bigint }>({
-    mutationFn: ({ validator, amountBaseUnits }) =>
-      runStakingAction(
-        () => client.delegate(validator, amountBaseUnits),
+    mutationFn: ({ validator, amountBaseUnits }) => {
+      assertSession(session);
+      return runStakingAction(
+        () =>
+          session
+            .send(
+              { kind: "delegate", validator, assetRef, amount: amountBaseUnits },
+              account,
+            )
+            .then((txHash) => ({ txHash: txHash as TxHashHex })),
         (h) => client.waitForInclusion(h),
         "Délégation",
-      ),
+      );
+    },
     onSuccess: invalidate,
     onError: (e) => toast.error("Échec délégation", { description: e.message }),
   });
@@ -127,15 +200,23 @@ export function useUndelegate(): UseMutationResult<
   Error,
   { validator: AddressHex; amountBaseUnits: bigint }
 > {
-  const { client } = useSdkStore();
+  const { session, account, assetRef, client } = useStakingContext();
   const invalidate = useInvalidateStaking();
   return useMutation<StakingResult, Error, { validator: AddressHex; amountBaseUnits: bigint }>({
-    mutationFn: ({ validator, amountBaseUnits }) =>
-      runStakingAction(
-        () => client.undelegate(validator, amountBaseUnits),
+    mutationFn: ({ validator, amountBaseUnits }) => {
+      assertSession(session);
+      return runStakingAction(
+        () =>
+          session
+            .send(
+              { kind: "undelegate", validator, assetRef, amount: amountBaseUnits },
+              account,
+            )
+            .then((txHash) => ({ txHash: txHash as TxHashHex })),
         (h) => client.waitForInclusion(h),
         "Retrait délégation",
-      ),
+      );
+    },
     onSuccess: invalidate,
     onError: (e) => toast.error("Échec retrait", { description: e.message }),
   });
@@ -143,15 +224,20 @@ export function useUndelegate(): UseMutationResult<
 
 /** ClaimRewards. */
 export function useClaimRewards(): UseMutationResult<StakingResult, Error, { validator: AddressHex }> {
-  const { client } = useSdkStore();
+  const { session, account, assetRef, client } = useStakingContext();
   const invalidate = useInvalidateStaking();
   return useMutation<StakingResult, Error, { validator: AddressHex }>({
-    mutationFn: ({ validator }) =>
-      runStakingAction(
-        () => client.claimRewards(validator),
+    mutationFn: ({ validator }) => {
+      assertSession(session);
+      return runStakingAction(
+        () =>
+          session
+            .send({ kind: "claimRewards", validator, assetRef }, account)
+            .then((txHash) => ({ txHash: txHash as TxHashHex })),
         (h) => client.waitForInclusion(h),
         "Réclamation",
-      ),
+      );
+    },
     onSuccess: invalidate,
     onError: (e) => toast.error("Échec réclamation", { description: e.message }),
   });
@@ -163,19 +249,32 @@ export function useRegisterValidator(): UseMutationResult<
   Error,
   { commissionBps: number; selfStakeBaseUnits: bigint }
 > {
-  const { client } = useSdkStore();
+  const { session, account, assetRef, client } = useStakingContext();
   const invalidate = useInvalidateStaking();
   return useMutation<
     StakingResult,
     Error,
     { commissionBps: number; selfStakeBaseUnits: bigint }
   >({
-    mutationFn: ({ commissionBps, selfStakeBaseUnits }) =>
-      runStakingAction(
-        () => client.registerValidator(commissionBps, selfStakeBaseUnits),
+    mutationFn: ({ commissionBps, selfStakeBaseUnits }) => {
+      assertSession(session);
+      return runStakingAction(
+        () =>
+          session
+            .send(
+              {
+                kind: "registerValidator",
+                commissionBps,
+                selfStake: selfStakeBaseUnits,
+                assetRef,
+              },
+              account,
+            )
+            .then((txHash) => ({ txHash: txHash as TxHashHex })),
         (h) => client.waitForInclusion(h),
         "Enregistrement",
-      ),
+      );
+    },
     onSuccess: invalidate,
     onError: (e) => toast.error("Échec enregistrement", { description: e.message }),
   });
@@ -187,15 +286,23 @@ export function useUpdateCommission(): UseMutationResult<
   Error,
   { newCommissionBps: number }
 > {
-  const { client } = useSdkStore();
+  const { session, account, assetRef, client } = useStakingContext();
   const invalidate = useInvalidateStaking();
   return useMutation<StakingResult, Error, { newCommissionBps: number }>({
-    mutationFn: ({ newCommissionBps }) =>
-      runStakingAction(
-        () => client.updateCommission(newCommissionBps),
+    mutationFn: ({ newCommissionBps }) => {
+      assertSession(session);
+      return runStakingAction(
+        () =>
+          session
+            .send(
+              { kind: "updateCommission", newCommissionBps, assetRef },
+              account,
+            )
+            .then((txHash) => ({ txHash: txHash as TxHashHex })),
         (h) => client.waitForInclusion(h),
         "Modification commission",
-      ),
+      );
+    },
     onSuccess: invalidate,
     onError: (e) => toast.error("Échec modification", { description: e.message }),
   });
@@ -203,15 +310,20 @@ export function useUpdateCommission(): UseMutationResult<
 
 /** Unjail. */
 export function useUnjail(): UseMutationResult<StakingResult, Error, void> {
-  const { client } = useSdkStore();
+  const { session, account, assetRef, client } = useStakingContext();
   const invalidate = useInvalidateStaking();
   return useMutation<StakingResult, Error, void>({
-    mutationFn: () =>
-      runStakingAction(
-        () => client.unjail(),
+    mutationFn: () => {
+      assertSession(session);
+      return runStakingAction(
+        () =>
+          session
+            .send({ kind: "unjail", assetRef }, account)
+            .then((txHash) => ({ txHash: txHash as TxHashHex })),
         (h) => client.waitForInclusion(h),
         "Unjail",
-      ),
+      );
+    },
     onSuccess: invalidate,
     onError: (e) => toast.error("Échec Unjail", { description: e.message }),
   });
