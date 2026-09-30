@@ -1,3 +1,5 @@
+import { asPublicKey } from "@sango/wallet-chains";
+import { asAddress } from "@sango/wallet-chains";
 import { describe, expect, it, vi } from "vitest";
 import type {
   AccountRef,
@@ -19,14 +21,14 @@ const ACCOUNT: AccountRef = {
   networkId: "sango-devnet",
 };
 
-const ADDRESS = "0x" + "aa".repeat(20);
-const VALIDATOR = "0x" + "bb".repeat(20);
+const ADDRESS = asAddress("aa".repeat(20));
+const VALIDATOR = asAddress("bb".repeat(20));
 
 const NETWORK: Network = {
   id: "sango-devnet",
   family: "sango",
   name: "Sango Devnet",
-  chainId: "0x" + "11".repeat(32),
+  chainId: asPublicKey("11".repeat(32)),
   nativeAsset: "sango",
   defaultRpcEndpoints: ["http://127.0.0.1:8545"],
 };
@@ -50,7 +52,7 @@ const PENDING: PendingUnbonding = {
 
 const VALIDATOR_INFO: ValidatorInfo = {
   address: VALIDATOR,
-  publicKey: "0x" + "cc".repeat(32),
+  publicKey: asPublicKey("cc".repeat(32)),
   selfStake: "1000000000000",
   totalDelegated: "5000000000000",
   votingPower: "6000000000000",

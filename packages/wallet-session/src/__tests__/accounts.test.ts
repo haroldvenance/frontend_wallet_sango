@@ -1,3 +1,4 @@
+import { asAddress } from "@sango/wallet-chains";
 import { describe, expect, it } from "vitest";
 import {
   KeyringBackedAccountList,
@@ -20,26 +21,26 @@ describe("KeyringBackedAccountList", () => {
 
   it("persist() then list() returns the summary", async () => {
     const a = new KeyringBackedAccountList(new FakeKeyring());
-    await a.persist(fakeEntry("0x" + "aa".repeat(20), "Alice"));
+    await a.persist(fakeEntry(asAddress("aa".repeat(20)), "Alice"));
     const summaries: readonly StoredAccountSummary[] = await a.list();
     expect(summaries).toHaveLength(1);
-    expect(summaries[0]!.id).toBe("0x" + "aa".repeat(20));
+    expect(summaries[0]!.id).toBe(asAddress("aa".repeat(20)));
     expect(summaries[0]!.label).toBe("Alice");
     expect(summaries[0]!.network).toBe("testnet");
   });
 
   it("list() sorts by createdAt ascending", async () => {
     const a = new KeyringBackedAccountList(new FakeKeyring());
-    await a.persist(fakeEntry("0x" + "aa".repeat(20), "Z", 3000));
-    await a.persist(fakeEntry("0x" + "bb".repeat(20), "A", 1000));
-    await a.persist(fakeEntry("0x" + "cc".repeat(20), "M", 2000));
+    await a.persist(fakeEntry(asAddress("aa".repeat(20)), "Z", 3000));
+    await a.persist(fakeEntry(asAddress("bb".repeat(20)), "A", 1000));
+    await a.persist(fakeEntry(asAddress("cc".repeat(20)), "M", 2000));
     const ids = (await a.list()).map((s) => s.label);
     expect(ids).toEqual(["A", "M", "Z"]);
   });
 
   it("forget() removes the wallet", async () => {
     const a = new KeyringBackedAccountList(new FakeKeyring());
-    const id = "0x" + "aa".repeat(20);
+    const id = asAddress("aa".repeat(20));
     await a.persist(fakeEntry(id));
     await a.forget(id);
     expect(await a.list()).toEqual([]);

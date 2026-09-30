@@ -1,3 +1,5 @@
+import { asPublicKey } from "@sango/wallet-chains";
+import { asAddress } from "@sango/wallet-chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -13,16 +15,16 @@ import { useRecentBlocks } from "./use-recent-blocks";
 const FIXTURE_BLOCKS: EvmBlock[] = [
   {
     number: "0x1",
-    hash: ("0x" + "aa".repeat(32)) as EvmBlock["hash"],
-    parentHash: ("0x" + "00".repeat(32)) as EvmBlock["parentHash"],
+    hash: (asPublicKey("aa".repeat(32))) as EvmBlock["hash"],
+    parentHash: (asPublicKey("00".repeat(32))) as EvmBlock["parentHash"],
     timestamp: "0x0",
     gasLimit: "0x0",
     gasUsed: "0x0",
-    miner: ("0x" + "00".repeat(20)) as EvmBlock["miner"],
+    miner: (asAddress("00".repeat(20))) as EvmBlock["miner"],
     transactions: [],
-    transactionsRoot: ("0x" + "00".repeat(32)) as EvmBlock["transactionsRoot"],
-    stateRoot: ("0x" + "00".repeat(32)) as EvmBlock["stateRoot"],
-    receiptsRoot: ("0x" + "00".repeat(32)) as EvmBlock["receiptsRoot"],
+    transactionsRoot: (asPublicKey("00".repeat(32))) as EvmBlock["transactionsRoot"],
+    stateRoot: (asPublicKey("00".repeat(32))) as EvmBlock["stateRoot"],
+    receiptsRoot: (asPublicKey("00".repeat(32))) as EvmBlock["receiptsRoot"],
   },
 ];
 

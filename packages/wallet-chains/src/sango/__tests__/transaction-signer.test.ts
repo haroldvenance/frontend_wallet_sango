@@ -1,3 +1,4 @@
+import { asAddress } from "../../types/address";
 import { describe, expect, it, vi } from "vitest";
 import { SangoTransactionSigner } from "../transaction-signer";
 import { mockSigner } from "./_helpers";
@@ -30,8 +31,8 @@ function unsigned(): UnsignedTransaction {
       data: new Uint8Array(0),
     },
     meta: {
-      from: "0x" + "aa".repeat(20),
-      to: "0x" + "bb".repeat(20),
+      from: asAddress("aa".repeat(20)),
+      to: asAddress("bb".repeat(20)),
       assetRef: { kind: "native", assetId: "sango", networkId: "sango-devnet" },
       amount: 1000n,
     },

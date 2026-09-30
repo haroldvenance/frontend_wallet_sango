@@ -1,3 +1,5 @@
+import { asPublicKey } from "@sango/wallet-chains";
+import { asAddress } from "@sango/wallet-chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -12,13 +14,13 @@ import { useSdkStore } from "@/stores/sdk-store";
 import { useWalletStore } from "@/stores/wallet-store";
 import { useValidatorInfo, useValidators } from "./use-validators";
 
-const VALIDATOR = ("0x" + "dd".repeat(20)) as AddressHex;
+const VALIDATOR = (asAddress("dd".repeat(20))) as AddressHex;
 
 const FIXTURE_VALIDATOR: ValidatorInfo = {
   address: VALIDATOR,
   // Caster car `@sango/rpc.PublicKeyHex` est `\`0x${string}\`` et
   // l'expression ci-dessous produit `string`. Le runtime est identique.
-  publicKey: ("0x" + "cc".repeat(32)) as ValidatorInfo["publicKey"],
+  publicKey: (asPublicKey("cc".repeat(32))) as ValidatorInfo["publicKey"],
   selfStake: "1000000000000",
   totalDelegated: "5000000000000",
   votingPower: "6000000000000",

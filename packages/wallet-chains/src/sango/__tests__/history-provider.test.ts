@@ -1,20 +1,22 @@
+import { asPublicKey } from "../../types/address";
+import { asAddress } from "../../types/address";
 import { describe, expect, it, vi } from "vitest";
 import { SangoHistoryProvider } from "../history-provider";
 import { mockRpc } from "./_helpers";
 import type { SangoRpcTx } from "../rpc";
 
-const ADDR = "0x" + "aa".repeat(20);
+const ADDR = asAddress("aa".repeat(20));
 
 function tx(overrides: Partial<SangoRpcTx> = {}): SangoRpcTx {
   return {
-    hash: "0x" + "ee".repeat(32),
+    hash: asPublicKey("ee".repeat(32)),
     blockHeight: 42,
-    blockHash: "0x" + "cc".repeat(32),
+    blockHash: asPublicKey("cc".repeat(32)),
     txIndex: 0,
     kind: "native",
     nonce: 0,
     sender: ADDR,
-    recipient: "0x" + "bb".repeat(20),
+    recipient: asAddress("bb".repeat(20)),
     value: "1000",
     txKind: 1,
     gasLimit: 21000,

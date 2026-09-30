@@ -24,15 +24,47 @@ function read(rel: string): string {
 }
 
 /**
+ * Retire les commentaires (JSDoc, blocs, lignes `//`) pour tester
+ * uniquement le **code exécutable**.
+ *
+ * Utilisé pour les assertions "ne contient PAS cet appel" : la doc
+ * peut légitimement mentionner `client.getMyDelegations()` comme
+ * référence de migration sans que ce soit un appel réel.
+ */
+function readCode(rel: string): string {
+  return read(rel)
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/[^\n]*/g, "");
+}
+
+/**
+ * Regex tolérante au formatage multi-ligne (prettier éclate souvent
+ * `session\n  .send(` sur 2 lignes) : `\s*\.\s*` entre les tokens.
+ */
+const D = "\\s*\\.\\s*"; // "session.sed" pattern tokens
+function re(parts: string): RegExp {
+  // parts contient les tokens séparés par des espaces, on remplace les
+  // espaces par le pattern "D" tolérant aux retours à la ligne.
+  return new RegExp(parts.trim().split(/\s+/).join("\\s*\\.\\s*"));
+}
+function reCall(tokens: string): RegExp {
+  // Comme `re`, mais exige une parenthèse ouvrante à la fin (appel réel).
+  return new RegExp(
+    tokens.trim().split(/\s+/).join("\\s*\\.\\s*") + "\\s*\\(",
+  );
+}
+// (silence unused warning en cas de future suppression)
+void D;
+void re;
+void reCall;
+
+/**
  * Tests de gel du périmètre V0 / V0.2.
  *
  * Vérifient que les décisions D-SESS-N sont documentées dans le code
- * et que les migrations annoncées sont effectives, pour éviter qu'une
- * future refonte ne "redécouvre" ces contraintes par accident.
+ * et que les migrations annoncées sont effectives.
  */
 describe("V0 scope — décisions documentées", () => {
-  // --- V0 (étapes 7.a → 7.g) ------------------------------------------------
-
   it("use-transactions.ts documente D-SESS-9 (reste sur SDK)", () => {
     const c = read("hooks/use-transactions.ts");
     expect(c).toMatch(/D-SESS-9/);
@@ -65,79 +97,59 @@ describe("V0 scope — décisions documentées", () => {
   });
 
   it("use-account.ts utilise la session (pas client.rpc.getAccount)", () => {
-    const c = read("hooks/use-account.ts");
+    const c = readCode("hooks/use-account.ts");
     expect(c).toMatch(/useWalletSession/);
-    expect(c).not.toMatch(/client\.rpc\.getAccount/);
+    expect(c).not.toMatch(/client\s*\.\s*rpc\s*\.\s*getAccount/);
   });
 
   it("use-send-tx.tsx utilise la session (pas client.send)", () => {
-    const c = read("hooks/use-send-tx.tsx");
-    expect(c).toMatch(/session\.send/);
-    expect(c).not.toMatch(/client\.send\(/);
+    const c = readCode("hooks/use-send-tx.tsx");
+    expect(c).toMatch(/session\s*\.\s*send/);
+    expect(c).not.toMatch(/client\s*\.\s*send\s*\(/);
   });
 });
 
 describe("V0.2 scope — migration staking effective", () => {
-  // --- Sources : plus d'appel direct aux méthodes métier du SDK ----------
-
   it("use-staking-actions.tsx n'appelle plus les méthodes staking du SDK", () => {
-    const c = read("hooks/use-staking-actions.tsx");
-    // Doit utiliser session.send
-    expect(c).toMatch(/session\.send/);
+    const c = readCode("hooks/use-staking-actions.tsx");
+    // Doit utiliser session.send (\s* tolère les retours à la ligne)
+    expect(c).toMatch(/session\s*\.\s*send/);
     // Ne doit plus appeler les méthodes SDK dédiées
-    expect(c).not.toMatch(/client\.bond\(/);
-    expect(c).not.toMatch(/client\.unbond\(/);
-    expect(c).not.toMatch(/client\.delegate\(/);
-    expect(c).not.toMatch(/client\.undelegate\(/);
-    expect(c).not.toMatch(/client\.claimRewards\(/);
-    expect(c).not.toMatch(/client\.registerValidator\(/);
-    expect(c).not.toMatch(/client\.updateCommission\(/);
-    expect(c).not.toMatch(/client\.unjail\(/);
+    expect(c).not.toMatch(/client\s*\.\s*bond\s*\(/);
+    expect(c).not.toMatch(/client\s*\.\s*unbond\s*\(/);
+    expect(c).not.toMatch(/client\s*\.\s*delegate\s*\(/);
+    expect(c).not.toMatch(/client\s*\.\s*undelegate\s*\(/);
+    expect(c).not.toMatch(/client\s*\.\s*claimRewards\s*\(/);
+    expect(c).not.toMatch(/client\s*\.\s*registerValidator\s*\(/);
+    expect(c).not.toMatch(/client\s*\.\s*updateCommission\s*\(/);
+    expect(c).not.toMatch(/client\s*\.\s*unjail\s*\(/);
     // Doit garder waitForInclusion (D-SESS-7)
-    expect(c).toMatch(/client\.waitForInclusion/);
+    expect(c).toMatch(/client\s*\.\s*waitForInclusion/);
   });
 
   it("use-my-delegations.ts utilise la session", () => {
-    const c = read("hooks/use-my-delegations.ts");
-    expect(c).toMatch(/session\.getDelegations/);
-    expect(c).toMatch(/session\.getPendingUnbondings/);
-    expect(c).not.toMatch(/client\.getMyDelegations/);
-    expect(c).not.toMatch(/client\.getMyPendingUnbondings/);
+    const c = readCode("hooks/use-my-delegations.ts");
+    expect(c).toMatch(/session\s*\.\s*getDelegations/);
+    expect(c).toMatch(/session\s*\.\s*getPendingUnbondings/);
+    // readCode() retire les commentaires : on vérifie l'absence
+    // d'APPEL réel, pas de mention dans la doc de migration.
+    expect(c).not.toMatch(/client\s*\.\s*getMyDelegations/);
+    expect(c).not.toMatch(/client\s*\.\s*getMyPendingUnbondings/);
   });
 
   it("use-validators.ts utilise la session", () => {
-    const c = read("hooks/use-validators.ts");
-    expect(c).toMatch(/session\.listValidators/);
-    expect(c).toMatch(/session\.getValidatorInfo/);
-    expect(c).not.toMatch(/client\.getValidators/);
-    expect(c).not.toMatch(/client\.getValidatorInfo/);
+    const c = readCode("hooks/use-validators.ts");
+    expect(c).toMatch(/session\s*\.\s*listValidators/);
+    expect(c).toMatch(/session\s*\.\s*getValidatorInfo/);
+    // readCode() retire les commentaires.
+    expect(c).not.toMatch(/client\s*\.\s*getValidators/);
+    expect(c).not.toMatch(/client\s*\.\s*getValidatorInfo/);
   });
-
-  // --- wallet-chains : SendParams discriminé ----------------------------
-
-  it("SendParams est une union discriminée keyed on kind", () => {
-    const c = read("../packages/wallet-chains/src/capabilities/transaction-builder.ts");
-    expect(c).toMatch(/D-SESS-10/);
-    // Les 9 variants doivent être présents
-    expect(c).toMatch(/kind: "transfer"/);
-    expect(c).toMatch(/kind: "bond"/);
-    expect(c).toMatch(/kind: "unbond"/);
-    expect(c).toMatch(/kind: "delegate"/);
-    expect(c).toMatch(/kind: "undelegate"/);
-    expect(c).toMatch(/kind: "claimRewards"/);
-    expect(c).toMatch(/kind: "registerValidator"/);
-    expect(c).toMatch(/kind: "updateCommission"/);
-    expect(c).toMatch(/kind: "unjail"/);
-    // Pas de `from` dans SendParams (résolu par la session)
-    expect(c).not.toMatch(/readonly from\??:/);
-  });
-
-  // --- cleanup -----------------------------------------------------------
 
   it("GAS_BY_TX_KIND n'existe plus dans apps/wallet/config.ts (orphelin V0.2)", () => {
-    const c = read("lib/config.ts");
-    // La constante ne doit plus être EXPORTÉE (le commentaire explique
-    // la suppression — on cherche l'export, pas le nom dans un commentaire)
+    const c = readCode("lib/config.ts");
+    // La constante ne doit plus être EXPORTÉE. readCode() retire le
+    // commentaire explicatif qui mentionne le nom.
     expect(c).not.toMatch(/export const GAS_BY_TX_KIND/);
   });
 

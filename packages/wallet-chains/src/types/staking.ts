@@ -1,4 +1,4 @@
-import type { Address } from "./address";
+import type { Address, PublicKey } from "./address";
 
 /**
  * Informations d'un validateur.
@@ -11,7 +11,7 @@ import type { Address } from "./address";
  */
 export interface ValidatorInfo {
   readonly address: Address;
-  readonly publicKey: string;
+  readonly publicKey: PublicKey;
   /** Self-stake bonded (base units, string). */
   readonly selfStake: string;
   /** Total des délégations reçues (base units, string). */

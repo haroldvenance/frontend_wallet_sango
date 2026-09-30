@@ -31,8 +31,10 @@ export function useValidators(): UseQueryResult<ValidatorInfo[], Error> {
     queryKey: networkQueryKey(["validators"], endpoint, networkId),
     queryFn: async () => {
       if (!session) return [];
-      const result = await session.listValidators(networkId);
-      return result as ValidatorInfo[];
+      // `session.listValidators` retourne `readonly ValidatorInfo[]` ;
+      // spread pour satisfaire la signature mutable attendue par les
+      // composants (ValidatorActionsPanel, validators.tsx).
+      return [...(await session.listValidators(networkId))];
     },
     enabled: Boolean(session),
     refetchInterval: POLL_MS,
@@ -56,8 +58,7 @@ export function useValidatorInfo(
     queryKey: networkQueryKey(["validator"], endpoint, networkId, address),
     queryFn: async () => {
       if (!session || !address) return null;
-      const result = await session.getValidatorInfo(networkId, address);
-      return result as ValidatorInfo | null;
+      return session.getValidatorInfo(networkId, address);
     },
     enabled: Boolean(session) && Boolean(address),
     refetchInterval: POLL_MS,

@@ -6,6 +6,7 @@ import {
 
 import type { AddressProvider } from "../capabilities/address-provider";
 import type { AccountRef } from "../types/account";
+import type { Address } from "../types/address";
 import type { Signer } from "../types/signer";
 
 /**
@@ -23,10 +24,12 @@ export class SangoAddressProvider implements AddressProvider {
     this.#signer = signer;
   }
 
-  async deriveAddress(account: AccountRef): Promise<string> {
+  async deriveAddress(account: AccountRef): Promise<Address> {
     const publicKey = await this.#signer.getPublicKey(account);
     const addressBytes = deriveNativeAddress(publicKey);
-    return nativeAddressToHex(addressBytes);
+    // `nativeAddressToHex` (wallet-core) retourne `string`, mais le
+    // format est toujours `0x…` — cast vers le brand Address (D-SESS-12).
+    return nativeAddressToHex(addressBytes) as Address;
   }
 
   validateAddress(address: string): boolean {

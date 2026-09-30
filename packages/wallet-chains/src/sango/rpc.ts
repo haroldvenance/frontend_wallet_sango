@@ -1,3 +1,5 @@
+import type { Address, PublicKey } from "../types/address";
+
 /**
  * Interface structurelle minimale du client RPC SANGO.
  *
@@ -10,7 +12,7 @@
  */
 
 export interface SangoRpcAccount {
-  readonly address: string;
+  readonly address: Address;
   readonly publicKey: string | null;
   readonly balance: string;
   readonly nonce: number;
@@ -48,8 +50,8 @@ export interface SangoRpcTxPage {
  * `@sango/rpc`) satisfasse l'interface sans transformation.
  */
 export interface SangoRpcValidatorInfo {
-  readonly address: string;
-  readonly publicKey: string;
+  readonly address: Address;
+  readonly publicKey: PublicKey;
   readonly selfStake: string;
   readonly totalDelegated: string;
   readonly votingPower: string;
@@ -63,8 +65,8 @@ export interface SangoRpcValidatorInfo {
 }
 
 export interface SangoRpcDelegation {
-  readonly delegator: string;
-  readonly validator: string;
+  readonly delegator: Address;
+  readonly validator: Address;
   readonly bonded: string;
   readonly unbonding: string;
   readonly unbondingUntil: number | null;
@@ -73,8 +75,8 @@ export interface SangoRpcDelegation {
 
 export interface SangoRpcPendingUnbonding {
   readonly id: number;
-  readonly delegator: string;
-  readonly validator: string;
+  readonly delegator: Address;
+  readonly validator: Address;
   readonly amount: string;
   readonly matureAt: number;
 }

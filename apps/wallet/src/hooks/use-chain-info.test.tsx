@@ -1,3 +1,4 @@
+import { asPublicKey } from "@sango/wallet-chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -11,7 +12,7 @@ import { useWalletStore } from "@/stores/wallet-store";
 import { useChainInfo } from "./use-chain-info";
 
 const FIXTURE_CHAIN_INFO: ChainInfo = {
-  chainId: ("0x" + "11".repeat(32)) as ChainInfo["chainId"],
+  chainId: (asPublicKey("11".repeat(32))) as ChainInfo["chainId"],
   height: 100,
   validatorCount: 3,
   protocolVersion: 1,

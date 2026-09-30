@@ -1,3 +1,5 @@
+import { asPublicKey } from "@sango/wallet-chains";
+import { asAddress } from "@sango/wallet-chains";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { FaucetError, getFaucetHealth, requestFaucet } from "./faucet";
@@ -25,20 +27,20 @@ describe("faucet client", () => {
       expect(url).toBe(`${FAUCET}/faucet`);
       return new Response(
         JSON.stringify({
-          tx_hash: "0x" + "ab".repeat(32),
+          tx_hash: asPublicKey("ab".repeat(32)),
           amount_base_units: "1000000000",
-          to: "0x" + "11".repeat(20),
+          to: asAddress("11".repeat(20)),
         }),
         { status: 200, headers: { "content-type": "application/json" } },
       );
     });
 
-    const res = await requestFaucet("0x" + "11".repeat(20));
-    expect(res.tx_hash).toBe("0x" + "ab".repeat(32));
+    const res = await requestFaucet(asAddress("11".repeat(20)));
+    expect(res.tx_hash).toBe(asPublicKey("ab".repeat(32)));
     expect(res.amount_base_units).toBe("1000000000");
 
     const body = JSON.parse(fetchMock.mock.calls[0]![1]!.body as string);
-    expect(body).toEqual({ address: "0x" + "11".repeat(20) });
+    expect(body).toEqual({ address: asAddress("11".repeat(20)) });
   });
 
   it("requestFaucet throws FaucetError on 429", async () => {
@@ -55,7 +57,7 @@ describe("faucet client", () => {
     );
 
     try {
-      await requestFaucet("0x" + "11".repeat(20));
+      await requestFaucet(asAddress("11".repeat(20)));
       throw new Error("should have thrown");
     } catch (e) {
       expect(e).toBeInstanceOf(FaucetError);
@@ -84,7 +86,7 @@ describe("faucet client", () => {
         new Response(
           JSON.stringify({
             status: "ok",
-            faucet_address: "0x" + "ff".repeat(20),
+            faucet_address: asAddress("ff".repeat(20)),
             balance_base_units: "999999999999",
           }),
           { status: 200, headers: { "content-type": "application/json" } },

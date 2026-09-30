@@ -1,3 +1,5 @@
+import { asPublicKey } from "@sango/wallet-chains";
+import { asAddress } from "@sango/wallet-chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -12,8 +14,8 @@ import { useSdkStore } from "@/stores/sdk-store";
 import { useWalletStore } from "@/stores/wallet-store";
 import { useAccount } from "./use-account";
 
-const ADDRESS_HEX = "0x" + "aa".repeat(20);
-const PUBKEY_HEX = "0x" + "cc".repeat(32);
+const ADDRESS_HEX = asAddress("aa".repeat(20));
+const PUBKEY_HEX = asPublicKey("cc".repeat(32));
 
 const fakeWallet = {
   identity: {

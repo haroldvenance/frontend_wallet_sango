@@ -1,13 +1,15 @@
+import { asPublicKey } from "../../types/address";
+import { asAddress } from "../../types/address";
 import { describe, expect, it, vi } from "vitest";
 import { SangoStakingProvider } from "../staking-provider";
 import { mockRpc } from "./_helpers";
 
-const ADDR = "0x" + "aa".repeat(20);
-const VALIDATOR = "0x" + "bb".repeat(20);
+const ADDR = asAddress("aa".repeat(20));
+const VALIDATOR = asAddress("bb".repeat(20));
 
 const FIXTURE_VALIDATOR = {
   address: VALIDATOR,
-  publicKey: "0x" + "cc".repeat(32),
+  publicKey: asPublicKey("cc".repeat(32)),
   selfStake: "1000000000000",
   totalDelegated: "5000000000000",
   votingPower: "6000000000000",

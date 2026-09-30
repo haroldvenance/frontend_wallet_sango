@@ -1,6 +1,9 @@
+import { asPublicKey } from "@sango/wallet-chains";
+import { asAddress } from "@sango/wallet-chains";
 import { describe, expect, it, vi } from "vitest";
 import type {
   AccountRef,
+  Address,
   AssetRef,
   ChainAdapter,
   ChainRegistry,
@@ -26,13 +29,13 @@ const NATIVE: AssetRef = {
   networkId: "sango-devnet",
 };
 
-const ADDRESS = "0x" + "aa".repeat(20);
+const ADDRESS = asAddress("aa".repeat(20));
 
 const NETWORK: Network = {
   id: "sango-devnet",
   family: "sango",
   name: "Sango Devnet",
-  chainId: "0x" + "11".repeat(32),
+  chainId: asPublicKey("11".repeat(32)),
   nativeAsset: "sango",
   defaultRpcEndpoints: ["http://127.0.0.1:8545"],
   explorer: {
@@ -50,7 +53,7 @@ function fakeSigner(): Signer {
 }
 
 interface AdapterOverrides {
-  deriveAddress?: (a: AccountRef) => Promise<string>;
+  deriveAddress?: (a: AccountRef) => Promise<Address>;
   getBalance?: (...args: unknown[]) => Promise<unknown>;
   getHistory?: (...args: unknown[]) => Promise<unknown>;
   estimate?: (...args: unknown[]) => Promise<unknown>;
@@ -63,7 +66,8 @@ function makeAdapter(o: AdapterOverrides = {}): ChainAdapter {
   return {
     network: NETWORK,
     addressProvider: {
-      deriveAddress: o.deriveAddress ?? (async () => ADDRESS),
+      deriveAddress:
+        o.deriveAddress ?? (async () => ADDRESS as Address),
       validateAddress: () => true,
     },
     balanceProvider: {
@@ -101,11 +105,11 @@ function makeAdapter(o: AdapterOverrides = {}): ChainAdapter {
         (async (unsigned: unknown) => ({
           unsigned,
           raw: new Uint8Array([1, 2, 3]),
-          txHash: "0x" + "ee".repeat(32),
+          txHash: asPublicKey("ee".repeat(32)),
         })),
     },
     broadcaster: {
-      broadcast: (o.broadcast as never) ?? (async () => "0x" + "ee".repeat(32)),
+      broadcast: (o.broadcast as never) ?? (async () => asPublicKey("ee".repeat(32))),
     },
     feeEstimator: {
       estimate:
@@ -198,12 +202,12 @@ describe("WalletSession", () => {
         return {
           unsigned: u as never,
           raw: new Uint8Array([1]),
-          txHash: "0x" + "ee".repeat(32),
+          txHash: asPublicKey("ee".repeat(32)),
         };
       },
       broadcast: async () => {
         calls.push("broadcast");
-        return "0x" + "ee".repeat(32);
+        return asPublicKey("ee".repeat(32));
       },
     });
     const session = makeSession(adapter);
@@ -211,7 +215,7 @@ describe("WalletSession", () => {
       { kind: "transfer", to: ADDRESS, assetRef: NATIVE, amount: 1n },
       ACCOUNT,
     );
-    expect(hash).toBe("0x" + "ee".repeat(32));
+    expect(hash).toBe(asPublicKey("ee".repeat(32)));
     expect(calls).toEqual(["build", "sign", "broadcast"]);
   });
 
@@ -231,7 +235,7 @@ describe("WalletSession", () => {
 
   it("explorerLink() formats the URL from network.explorer", () => {
     const session = makeSession(makeAdapter());
-    const url = session.explorerLink(ACCOUNT, "0x" + "ee".repeat(32));
+    const url = session.explorerLink(ACCOUNT, asPublicKey("ee".repeat(32)));
     expect(url).toBe(`http://127.0.0.1:8090/tx/0x${"ee".repeat(32)}`);
   });
 

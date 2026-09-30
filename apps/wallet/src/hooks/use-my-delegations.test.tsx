@@ -1,3 +1,4 @@
+import { asAddress } from "@sango/wallet-chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -13,8 +14,8 @@ import { useSdkStore } from "@/stores/sdk-store";
 import { useWalletStore } from "@/stores/wallet-store";
 import { useMyDelegations, useMyPendingUnbondings } from "./use-my-delegations";
 
-const ADDRESS_HEX = "0x" + "aa".repeat(20);
-const VALIDATOR = ("0x" + "dd".repeat(20)) as AddressHex;
+const ADDRESS_HEX = asAddress("aa".repeat(20));
+const VALIDATOR = (asAddress("dd".repeat(20))) as AddressHex;
 
 const fakeWallet = {
   identity: {

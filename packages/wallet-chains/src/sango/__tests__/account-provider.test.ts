@@ -1,9 +1,11 @@
+import { asPublicKey } from "../../types/address";
+import { asAddress } from "../../types/address";
 import { describe, expect, it, vi } from "vitest";
 import { SangoAccountProvider } from "../account-provider";
 import { mockRpc } from "./_helpers";
 
-const ADDR = "0x" + "aa".repeat(20);
-const PK = "0x" + "cc".repeat(32);
+const ADDR = asAddress("aa".repeat(20));
+const PK = asPublicKey("cc".repeat(32));
 
 describe("SangoAccountProvider", () => {
   it("returns AccountState with hex publicKey when registered", async () => {

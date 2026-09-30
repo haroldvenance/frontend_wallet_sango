@@ -1,3 +1,4 @@
+import type { Address } from "./address";
 import type { ChainFamily } from "./chain";
 
 /**
@@ -27,7 +28,7 @@ export interface AccountRef {
  *    **hex** (`0x…`, 32 bytes Ed25519 pour SANGO) ou `null`.
  */
 export interface AccountState {
-  readonly address: string;
+  readonly address: Address;
   readonly publicKey: string | null;
   readonly balance: bigint;
   readonly nonce: number;

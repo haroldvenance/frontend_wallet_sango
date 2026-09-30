@@ -1,9 +1,10 @@
+import { asAddress } from "../../types/address";
 import { describe, expect, it, vi } from "vitest";
 import { SangoBalanceProvider } from "../balance-provider";
 import { mockRpc } from "./_helpers";
 import type { AssetRef } from "../../types/asset";
 
-const ADDR = "0x" + "aa".repeat(20);
+const ADDR = asAddress("aa".repeat(20));
 const NATIVE: AssetRef = {
   kind: "native",
   assetId: "sango",

@@ -1,20 +1,23 @@
+import { asPublicKey } from "../../types/address";
+import { asAddress } from "../../types/address";
 import { describe, expect, it, vi } from "vitest";
 import { SangoTransactionBuilder } from "../transaction-builder";
 import { SANGO_CHAIN_ID_HEX } from "../config";
 import { mockRpc } from "./_helpers";
 import type { SendParams } from "../../capabilities/transaction-builder";
+import type { Address } from "../../types/address";
 import type { AssetRef } from "../../types/asset";
 
-const SENDER = "0x" + "aa".repeat(20);
-const TO = "0x" + "bb".repeat(20);
-const VALIDATOR = "0x" + "dd".repeat(20);
+const SENDER = asAddress("aa".repeat(20));
+const TO = asAddress("bb".repeat(20));
+const VALIDATOR = asAddress("dd".repeat(20));
 const NATIVE: AssetRef = {
   kind: "native",
   assetId: "sango",
   networkId: "sango-devnet",
 };
 
-const PUBKEY_HEX = "0x" + "cc".repeat(32);
+const PUBKEY_HEX = asPublicKey("cc".repeat(32));
 
 function makeBuilder(rpc = mockRpc()): SangoTransactionBuilder {
   return new SangoTransactionBuilder(
@@ -72,7 +75,10 @@ describe("SangoTransactionBuilder — transfer", () => {
 
   it("accepts bech32 for `to`", async () => {
     const b = makeBuilder(rpcWithAccount());
-    const bech32To = "tsango1qg53upurn4c45nrchpv9gjdhudn65qdtv3xlde";
+    // Test défensif : le builder SANGO sait décoder bech32 (path
+    // historique), mais SendParams.to est typé Address (`0x…`).
+    // Cast pour vérifier que le path runtime fonctionne toujours.
+    const bech32To = "tsango1qg53upurn4c45nrchpv9gjdhudn65qdtv3xlde" as unknown as Address;
     const tx = await b.build(
       { kind: "transfer", to: bech32To, assetRef: NATIVE, amount: 1n },
       SENDER,

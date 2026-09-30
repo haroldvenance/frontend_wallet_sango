@@ -1,6 +1,7 @@
 import type {
   AccountRef,
   AccountState,
+  Address,
   AssetRef,
   Balance,
   ChainRegistry,
@@ -105,7 +106,7 @@ export interface WalletSession {
    */
   getValidatorInfo(
     networkId: string,
-    validator: string,
+    validator: Address,
   ): Promise<ValidatorInfo | null>;
 
   /**
@@ -242,7 +243,7 @@ export class WalletSessionImpl implements WalletSession {
 
   async getValidatorInfo(
     networkId: string,
-    validator: string,
+    validator: Address,
   ): Promise<ValidatorInfo | null> {
     const provider = this.#stakingProvider(networkId);
     return provider.getValidatorInfo(validator);

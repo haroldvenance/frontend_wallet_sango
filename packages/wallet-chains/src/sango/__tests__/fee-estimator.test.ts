@@ -1,3 +1,4 @@
+import { asAddress } from "../../types/address";
 import { describe, expect, it, vi } from "vitest";
 import { SangoFeeEstimator } from "../fee-estimator";
 import { mockRpc } from "./_helpers";
@@ -14,8 +15,8 @@ describe("SangoFeeEstimator", () => {
     const rpc = mockRpc({ getBaseFee: vi.fn(async () => "100") });
     const f = new SangoFeeEstimator(rpc, "sango-devnet");
     const est = await f.estimate({
-      from: "0x" + "aa".repeat(20),
-      to: "0x" + "bb".repeat(20),
+      from: asAddress("aa".repeat(20)),
+      to: asAddress("bb".repeat(20)),
       assetRef: NATIVE,
       amount: 1n,
     });
@@ -29,8 +30,8 @@ describe("SangoFeeEstimator", () => {
     const f = new SangoFeeEstimator(mockRpc(), "sango-devnet");
     await expect(
       f.estimate({
-        from: "0x" + "aa".repeat(20),
-        to: "0x" + "bb".repeat(20),
+        from: asAddress("aa".repeat(20)),
+        to: asAddress("bb".repeat(20)),
         assetRef: { kind: "token", networkId: "sango-devnet", contract: "0x" },
         amount: 1n,
       }),

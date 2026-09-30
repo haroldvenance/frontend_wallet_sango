@@ -1,3 +1,4 @@
+import { asAddress } from "../../types/address";
 import { describe, expect, it } from "vitest";
 import {
   DOMAINS,
@@ -212,7 +213,7 @@ describe("🔒 FROZEN — signed bytes (snapshot)", () => {
       payload: frozenUnsigned(),
       meta: {
         from: FROZEN_ADDRESS_HEX,
-        to: "0x" + "bb".repeat(20),
+        to: asAddress("bb".repeat(20)),
         assetRef: {
           kind: "native",
           assetId: "sango",
@@ -248,7 +249,7 @@ describe("🔒 FROZEN — pipeline integrity", () => {
       payload: frozenUnsigned(),
       meta: {
         from: FROZEN_ADDRESS_HEX,
-        to: "0x" + "bb".repeat(20),
+        to: asAddress("bb".repeat(20)),
         assetRef: {
           kind: "native",
           assetId: "sango",
