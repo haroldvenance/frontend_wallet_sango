@@ -14,7 +14,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@sango/wallet-core": "workspace:*"
+    "@sango/wallet-core": "workspace:*",
+    "viem": "^2.57.1"
   },
   "devDependencies": {
     "@sango/rpc": "workspace:*",

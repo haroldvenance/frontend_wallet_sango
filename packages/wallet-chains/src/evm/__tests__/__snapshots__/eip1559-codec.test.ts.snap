@@ -1,0 +1,7 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`eip1559-codec — snapshot > raw RLP bytes for a fixed tx are stable > raw-1559-hex 1`] = `"0x02f87683aa36a7808459682f008504a817c8008252089470997970c51812dc3a010c7d01b50e0d17dc79c8880de0b6b3a764000080c001a01111111111111111111111111111111111111111111111111111111111111111a02222222222222222222222222222222222222222222222222222222222222222"`;
+
+exports[`eip1559-codec — snapshot > raw RLP bytes for a fixed tx are stable > tx-hash-hex 1`] = `"0xc1124d424fa4e7fcb5d34b7927622346dbd934e587a05620d9afbac5c1d39f0b"`;
+
+exports[`eip1559-codec — snapshot > raw RLP bytes for a fixed tx are stable > unsigned-digest-hex 1`] = `"0x5de26e4aa1b6c2ed089370f5be270054c464e8b97bd7274d41b7fc4b880cbb28"`;
