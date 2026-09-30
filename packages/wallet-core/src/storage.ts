@@ -30,10 +30,26 @@ export interface StoredWalletV1 {
  * D-HD-1 : nouveau format, distinct du V1 legacy SANGO. Le `secret`
  * chiffré fait **64 bytes** (BIP-39 seed) au lieu de 32 (Ed25519).
  *
- * ⚠️ `network` est fixé à "testnet" par défaut pour la compatibilité
- *    avec `KeyringEntry.network` (Network = "mainnet" | "testnet").
- *    La vraie sélection de réseau multi-chaîne viendra au patch 5
- *    (app + registre). À réviser.
+ * ⚠️ D-NET-2 (reporté au patch 5) — le champ `network` est un
+ *    **placeholder** :
+ *
+ *      Le type `@sango/types.Network = "mainnet" | "testnet"` est un
+ *      discriminant SANGO pour le HRP bech32m (`sango` vs `tsango`).
+ *      Un wallet BIP-39 (EVM) n'a pas de réseau SANGO — il utilise
+ *      `wallet-chains.Network` (`"ethereum-sepolia"` etc.), qui est
+ *      un objet descripteur multi-chaîne.
+ *
+ *      Ces deux `Network` coexistent. En V2, on stocke `"testnet"`
+ *      pour satisfaire `KeyringEntry.network` (obligatoire) et
+ *      permettre l'indexation keyring. Aucun code ne lit cette valeur
+ *      pour un choix fonctionnel.
+ *
+ *      Le patch 5 (app intégration) introduira :
+ *        - soit un `WalletNetwork` discriminant (`format: "sango-legacy"
+ *          | "bip39"` + `networkId: string`),
+ *        - soit une refonte du `KeyringEntry`.
+ *
+ *      En attendant, `"testnet"` est l'équivalent d'un `null` typé.
  */
 export interface StoredWalletV2 {
   readonly version: 2;
