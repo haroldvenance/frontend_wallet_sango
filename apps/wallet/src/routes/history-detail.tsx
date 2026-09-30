@@ -1,15 +1,12 @@
 import {
 
 /**
- * ⚠️ D-SESS-9 — La page détail reste sur le SDK en V0.
+ * Page détail transaction (transaction viewer).
  *
- * Cette vue est un **transaction viewer** (gas, signature, data,
- * blockHash, txIndex) — c'est de l'exploration de données brutes, pas
- * une sémantique wallet. Elle n'a pas sa place dans `WalletSession`
- * qui reste account-centric (D-SESS-6).
- *
- * Migration prévue en V0.2 dans le cadre d'un futur `TransactionViewer`
- * générique (EVM aura le même besoin).
+ * V0.3 — D-SESS-9 résolu : `use-transaction` passe désormais par
+ * `WalletSession.getTransactionByHash(networkId, hash)`. L'API publique
+ * reste `Tx` de `@sango/rpc` (via un adaptateur explicite) — cette
+ * page n'a pas eu à changer.
  */
 
   ArrowLeft,

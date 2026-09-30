@@ -65,20 +65,15 @@ void reCall;
  * et que les migrations annoncées sont effectives.
  */
 describe("V0 scope — décisions documentées", () => {
-  it("use-transactions.ts documente D-SESS-9 (reste sur SDK)", () => {
-    const c = read("hooks/use-transactions.ts");
-    expect(c).toMatch(/D-SESS-9/);
-    expect(c).toMatch(/V0\.2/);
-  });
-
-  it("history.tsx documente D-SESS-9", () => {
-    const c = read("routes/history.tsx");
-    expect(c).toMatch(/D-SESS-9/);
-  });
-
-  it("history-detail.tsx documente D-SESS-9", () => {
-    const c = read("routes/history-detail.tsx");
-    expect(c).toMatch(/D-SESS-9/);
+  it("use-transactions.ts utilise la session (D-SESS-9 résolu en V0.3)", () => {
+    const c = readCode("hooks/use-transactions.ts");
+    expect(c).toMatch(/session\s*\.\s*getTransactionPage/);
+    expect(c).toMatch(/session\s*\.\s*getTransactionByHash/);
+    expect(c).not.toMatch(/client\s*\.\s*rpc\s*\.\s*getTransactionsByAddress/);
+    expect(c).not.toMatch(/client\s*\.\s*rpc\s*\.\s*getTransactionByHash/);
+    // Adaptateurs explicites de frontière
+    expect(c).toMatch(/function toTx\b/);
+    expect(c).toMatch(/function toTxPage\b/);
   });
 
   it("use-chain-info.ts documente D-SESS-6", () => {

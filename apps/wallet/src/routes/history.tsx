@@ -1,12 +1,12 @@
 import type { Tx } from "@sango/rpc";
 
 /**
- * ⚠️ D-SESS-9 — La page historique reste sur le SDK en V0.
+ * Page historique.
  *
- * Voir `hooks/use-transactions.ts` pour la justification complète :
- * `HistoryItem` (session) ne couvre pas `txKind`, `nonce` ni la
- * pagination `offset` dont cette page a besoin. Migration prévue en
- * V0.2 avec un 2ᵉ cas d'usage multi-chaîne.
+ * V0.3 — D-SESS-9 résolu : `use-infinite-transactions` passe
+ * désormais par `WalletSession.getTransactionPage()`. L'API publique
+ * du hook reste `TxPage` de `@sango/rpc` (via un adaptateur explicite
+ * de frontière) — cette page n'a pas eu à changer.
  */
 
 import {
