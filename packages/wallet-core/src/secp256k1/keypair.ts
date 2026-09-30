@@ -71,6 +71,62 @@ export function secp256k1SignMessage(
   return secp256k1SignDigest(keypair, keccak_256(message));
 }
 
+/**
+ * Signature secp256k1 **recoverable** — utile pour Ethereum (EIP-1559
+ * yParity 0 | 1) et Bitcoin (v 27..34).
+ *
+ * Retourne la signature compacte (r || s, 64 bytes) + le recovery bit.
+ * Le format de sortie ne présume pas du protocole (EVM veut yParity,
+ * BTC veut 27+recovery) — c'est au caller de mapper.
+ */
+export interface RecoverableSignature {
+  readonly compact: Uint8Array;
+  readonly recovery: 0 | 1;
+}
+
+/**
+ * Signe un digest de 32 bytes et calcule le recovery bit.
+ *
+ * noble v2 expose nativement `format: "recovered"` qui produit une
+ * signature 65 bytes (r || s || recovery). On en extrait le recovery
+ * bit et on normalise la forme : `{ compact: 64 bytes, recovery }`.
+ *
+ * Le recovery bit est garanti ∈ {0, 1} — c'est ce qu'EIP-1559 attend
+ * pour yParity.
+ */
+export function secp256k1SignDigestRecoverable(
+  keypair: Secp256k1Keypair,
+  digest: Uint8Array,
+): RecoverableSignature {
+  assertLength(digest, 32, "digest");
+
+  const sig = secp256k1.sign(digest, keypair.privateKey, {
+    prehash: false,
+    format: "recovered",
+  });
+
+  if (!(sig instanceof Uint8Array) || sig.length !== 65) {
+    throw new Error(
+      "secp256k1SignDigestRecoverable: expected 65-byte recovered signature, " +
+        `got ${sig instanceof Uint8Array ? `${sig.length} bytes` : typeof sig}`,
+    );
+  }
+
+  // noble v2 place le recovery bit en PREMIER byte (convention Bitcoin
+  // compact signature). Structure : [recovery, r(32), s(32)].
+  const recoveryByte = sig[0]!;
+  if (recoveryByte !== 0 && recoveryByte !== 1) {
+    throw new Error(
+      `secp256k1SignDigestRecoverable: unexpected recovery byte ${recoveryByte} (expected 0 or 1)`,
+    );
+  }
+
+  const compact = sig.slice(1);
+  assertLength(compact, SIGNATURE_COMPACT_LENGTH, "compact signature");
+
+  return { compact, recovery: recoveryByte as 0 | 1 };
+}
+
 export function secp256k1Verify(
   publicKey: Uint8Array,
   digest: Uint8Array,
