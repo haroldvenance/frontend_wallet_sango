@@ -1,6 +1,6 @@
 import type { Network } from "@sango/types";
 
-import type { StoredWallet } from "@sango/wallet-core";
+import type { StoredWalletV1 } from "@sango/wallet-core";
 
 /**
  * Format du fichier exporté — wrapper versionné.
@@ -37,7 +37,7 @@ export interface KeyfileExport {
  * Sérialise un `StoredWallet` en JSON-safe (hex pour les Uint8Array).
  */
 export function serializeKeyfile(
-  stored: StoredWallet,
+  stored: StoredWalletV1,
 ): KeyfileExport {
   return {
     format: "sango-wallet-keyfile",
@@ -67,7 +67,7 @@ function bytesToHex(u: Uint8Array): string {
  *
  * Lance une erreur si le format est invalide ou la version inconnue.
  */
-export function deserializeKeyfile(raw: unknown): StoredWallet {
+export function deserializeKeyfile(raw: unknown): StoredWalletV1 {
   if (typeof raw !== "object" || raw === null) {
     throw new Error("Fichier invalide (pas un objet JSON)");
   }

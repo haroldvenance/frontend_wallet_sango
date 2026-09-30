@@ -1,4 +1,4 @@
-import type { StoredWallet } from "@sango/wallet-core";
+import type { StoredWalletV1 } from "@sango/wallet-core";
 import { Keyring, type KeyringEntry } from "@sango/wallet-core";
 import {
   AlertTriangle,
@@ -196,7 +196,7 @@ function WalletTab({ onClose }: { onClose: () => void }) {
   const t = useTranslation();
   const { wallet, noWallet } = useWalletStore();
   const [busy, setBusy] = useState(false);
-  const [stored, setStored] = useState<StoredWallet | null>(null);
+  const [stored, setStored] = useState<StoredWalletV1 | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -211,7 +211,13 @@ function WalletTab({ onClose }: { onClose: () => void }) {
         const active =
           entries.find((e: KeyringEntry) => e.id === activeId) ??
           entries.sort((a, b) => b.createdAt - a.createdAt)[0];
-        setStored(active?.stored ?? null);
+        // KeyringEntry.stored est une union StoredWalletV1 | StoredWalletV2.
+        // Le keyfile export est SANGO-spécifique ('sango-wallet-keyfile') :
+        // il ne peut sérialiser qu'un V1. Guard runtime — le state reste
+        // StoredWalletV1 | null, l'UI désactive l'export si null.
+        // (Patch 5 : export BIP-39 séparé pour les wallets EVM.)
+        const s = active?.stored;
+        setStored(s && s.version === 1 ? s : null);
       } catch {
         setStored(null);
       }
