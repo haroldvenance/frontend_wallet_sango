@@ -1,31 +1,75 @@
-import type { Delegation, PendingUnbonding } from "@sango/rpc";
+import type { Delegation, PendingUnbonding } from "@sango/wallet-chains";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 
-import { useSdkStore } from "@/stores/sdk-store";
+import { networkQueryKey } from "@/lib/network-query";
+import { useWalletSession } from "@/providers/wallet-session-context";
 import { useWalletStore } from "@/stores/wallet-store";
+import { useNetworkQueryContext } from "./use-network-query-context";
 
 const POLL_MS = 5_000;
 
-/** Délégations du wallet courant. */
-export function useMyDelegations(): UseQueryResult<Delegation[], Error> {
-  const { client } = useSdkStore();
+/**
+ * Délégations du wallet courant.
+ *
+ * **V0.2 (patch 5)** — Migration vers WalletSession.
+ *   `client.getMyDelegations()` → `session.getDelegations(account)`.
+ *   La session dérive l'adresse depuis l'`AccountRef` (même résultat).
+ *
+ * Query key (D-UI-1) : ["my-delegations", endpoint, networkId, address]
+ */
+export function useMyDelegations(): UseQueryResult<
+  readonly Delegation[],
+  Error
+> {
+  const session = useWalletSession();
   const { wallet, status } = useWalletStore();
-  return useQuery<Delegation[], Error>({
-    queryKey: ["my-delegations", wallet?.identity.addressHex],
-    queryFn: () => client.getMyDelegations(),
-    enabled: status === "unlocked" && !!wallet,
+  const { endpoint, networkId, account } = useNetworkQueryContext();
+
+  const address = wallet?.identity.addressHex;
+
+  return useQuery<readonly Delegation[], Error>({
+    queryKey: networkQueryKey(
+      ["my-delegations"],
+      endpoint,
+      networkId,
+      address,
+    ),
+    queryFn: async () => {
+      if (!session) return [];
+      return session.getDelegations(account);
+    },
+    enabled: status === "unlocked" && Boolean(session) && Boolean(address),
     refetchInterval: POLL_MS,
   });
 }
 
-/** Unbondings en attente de maturation du wallet courant. */
-export function useMyPendingUnbondings(): UseQueryResult<PendingUnbonding[], Error> {
-  const { client } = useSdkStore();
+/**
+ * Unbondings en attente de maturation du wallet courant.
+ *
+ * Query key (D-UI-1) : ["my-pending-unbondings", endpoint, networkId, address]
+ */
+export function useMyPendingUnbondings(): UseQueryResult<
+  readonly PendingUnbonding[],
+  Error
+> {
+  const session = useWalletSession();
   const { wallet, status } = useWalletStore();
-  return useQuery<PendingUnbonding[], Error>({
-    queryKey: ["my-pending-unbondings", wallet?.identity.addressHex],
-    queryFn: () => client.getMyPendingUnbondings(),
-    enabled: status === "unlocked" && !!wallet,
+  const { endpoint, networkId, account } = useNetworkQueryContext();
+
+  const address = wallet?.identity.addressHex;
+
+  return useQuery<readonly PendingUnbonding[], Error>({
+    queryKey: networkQueryKey(
+      ["my-pending-unbondings"],
+      endpoint,
+      networkId,
+      address,
+    ),
+    queryFn: async () => {
+      if (!session) return [];
+      return session.getPendingUnbondings(account);
+    },
+    enabled: status === "unlocked" && Boolean(session) && Boolean(address),
     refetchInterval: POLL_MS,
   });
 }

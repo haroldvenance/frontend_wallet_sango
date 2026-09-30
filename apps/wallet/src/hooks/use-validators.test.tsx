@@ -1,59 +1,107 @@
-import { waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { renderHookWithQuery } from "@/test-utils";
+import type { AddressHex } from "@sango/types";
+import type { ValidatorInfo } from "@sango/rpc";
+import type { WalletSession } from "@sango/wallet-session";
 
-// Mock du sdk-store AVANT d'importer le hook.
-const mockGetValidators = vi.fn();
+import { WalletSessionContext } from "@/providers/wallet-session-context";
+import { useSdkStore } from "@/stores/sdk-store";
+import { useWalletStore } from "@/stores/wallet-store";
+import { useValidatorInfo, useValidators } from "./use-validators";
 
-vi.mock("@/stores/sdk-store", () => ({
-  useSdkStore: () => ({
-    client: {
-      getValidators: mockGetValidators,
-      getValidatorInfo: vi.fn(),
-    },
-    endpoint: "http://test",
-  }),
-}));
+const VALIDATOR = ("0x" + "dd".repeat(20)) as AddressHex;
 
-import { useValidators } from "./use-validators";
+const FIXTURE_VALIDATOR: ValidatorInfo = {
+  address: VALIDATOR,
+  // Caster car `@sango/rpc.PublicKeyHex` est `\`0x${string}\`` et
+  // l'expression ci-dessous produit `string`. Le runtime est identique.
+  publicKey: ("0x" + "cc".repeat(32)) as ValidatorInfo["publicKey"],
+  selfStake: "1000000000000",
+  totalDelegated: "5000000000000",
+  votingPower: "6000000000000",
+  commissionBps: 700,
+  jailed: false,
+  pendingCommissionBps: null,
+  pendingCommissionAt: null,
+  jailedUntil: null,
+  downtimeWindowStart: 100,
+  downtimeMissed: 0,
+};
 
-const SAMPLE = [
-  {
-    address: "0x" + "aa".repeat(20),
-    publicKey: "0x" + "bb".repeat(32),
-    selfStake: "1000000000000",
-    totalDelegated: "0",
-    votingPower: "1000000000000",
-    commissionBps: 700,
-    jailed: false,
-    pendingCommissionBps: null,
-    pendingCommissionAt: null,
-    jailedUntil: null,
-    downtimeWindowStart: 0,
-    downtimeMissed: 0,
-  },
-];
+function makeWrapper(session: WalletSession | null, qc: QueryClient) {
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return (
+      <QueryClientProvider client={qc}>
+        <WalletSessionContext.Provider value={session}>
+          {children}
+        </WalletSessionContext.Provider>
+      </QueryClientProvider>
+    );
+  };
+}
 
-describe("useValidators", () => {
-  beforeEach(() => {
-    mockGetValidators.mockReset();
+function makeQc() {
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 60_000 } },
   });
+}
 
-  it("retourne la liste des validateurs", async () => {
-    mockGetValidators.mockResolvedValueOnce(SAMPLE);
-    const { result } = renderHookWithQuery(() => useValidators());
+beforeEach(() => {
+  vi.clearAllMocks();
+  useSdkStore.setState({ endpoint: "http://test", customEndpoint: null });
+  useWalletStore.setState({ network: "testnet" });
+});
+
+describe("useValidators (session-backed)", () => {
+  it("delegates to session.listValidators(networkId)", async () => {
+    const listValidators = vi.fn(async () => [FIXTURE_VALIDATOR]);
+    const session = { listValidators } as unknown as WalletSession;
+    const qc = makeQc();
+
+    const { result } = renderHook(() => useValidators(), {
+      wrapper: makeWrapper(session, qc),
+    });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toEqual(SAMPLE);
-    expect(mockGetValidators).toHaveBeenCalledOnce();
+    expect(result.current.data).toEqual([FIXTURE_VALIDATOR]);
+    expect(listValidators).toHaveBeenCalledWith("sango-devnet");
+
+    const keys = qc.getQueryCache().getAll().map((q) => q.queryKey);
+    expect(keys).toContainEqual([
+      "validators",
+      "http://test",
+      "sango-devnet",
+    ]);
+  });
+});
+
+describe("useValidatorInfo (session-backed)", () => {
+  it("delegates to session.getValidatorInfo(networkId, address)", async () => {
+    const getValidatorInfo = vi.fn(async () => FIXTURE_VALIDATOR);
+    const session = { getValidatorInfo } as unknown as WalletSession;
+    const qc = makeQc();
+
+    const { result } = renderHook(() => useValidatorInfo(VALIDATOR), {
+      wrapper: makeWrapper(session, qc),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(FIXTURE_VALIDATOR);
+    expect(getValidatorInfo).toHaveBeenCalledWith("sango-devnet", VALIDATOR);
   });
 
-  it("expose l'erreur si le RPC échoue", async () => {
-    mockGetValidators.mockRejectedValueOnce(new Error("boom"));
-    const { result } = renderHookWithQuery(() => useValidators());
+  it("stays idle when address is undefined", () => {
+    const getValidatorInfo = vi.fn();
+    const session = { getValidatorInfo } as unknown as WalletSession;
+    const qc = makeQc();
 
-    await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(result.current.error?.message).toBe("boom");
+    const { result } = renderHook(() => useValidatorInfo(undefined), {
+      wrapper: makeWrapper(session, qc),
+    });
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(getValidatorInfo).not.toHaveBeenCalled();
   });
 });
