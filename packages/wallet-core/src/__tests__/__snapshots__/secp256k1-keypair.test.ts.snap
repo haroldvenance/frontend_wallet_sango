@@ -1,0 +1,3 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`secp256k1 sign/verify > snapshot: signature on fixed digest is stable 1`] = `"0x7c5d2c603ac5148df10836c33491ab51b92ccfe33e671d4e94f22fc307abbde151bb7e7acfbe3ebdcd762cc6b7e2d444420ced1ca8ec909c4bc9933f156a3c6f"`;

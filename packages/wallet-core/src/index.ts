@@ -44,3 +44,31 @@ export type { StoredWallet } from "./storage";
 
 export { Keyring } from "./keyring";
 export type { KeyringEntry } from "./keyring";
+
+// ── E1 : primitives EVM (secp256k1, BIP-39, BIP-44) ──────────────
+
+export {
+  secp256k1KeypairFromPrivateKey,
+  secp256k1SignDigest,
+  secp256k1SignMessage,
+  secp256k1Verify,
+  deriveEthereumAddress,
+} from "./secp256k1";
+export type { Secp256k1Keypair } from "./secp256k1";
+
+export {
+  generateMnemonic,
+  validateMnemonic,
+  mnemonicToSeed,
+  mnemonicToSeedSync,
+} from "./bip39";
+export type { MnemonicStrength } from "./bip39";
+
+export {
+  parseBip44Path,
+  formatBip44Path,
+  EVM_PATH_PARTS,
+  EVM_DEFAULT_PATH,
+  deriveEvmKeypair,
+} from "./derivation";
+export type { Bip44PathParts } from "./derivation";
