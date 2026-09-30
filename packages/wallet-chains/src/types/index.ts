@@ -9,3 +9,4 @@ export * from "./signer";
 export * from "./tx";
 export * from "./history";
 export * from "./staking";
+export * from "./tx-detail";

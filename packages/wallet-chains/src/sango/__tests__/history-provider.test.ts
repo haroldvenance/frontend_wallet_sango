@@ -1,4 +1,4 @@
-import { asPublicKey } from "../../types/address";
+import { asHash, asPublicKey } from "../../types/address";
 import { asAddress } from "../../types/address";
 import { describe, expect, it, vi } from "vitest";
 import { SangoHistoryProvider } from "../history-provider";
@@ -14,7 +14,11 @@ function tx(overrides: Partial<SangoRpcTx> = {}): SangoRpcTx {
     blockHash: asPublicKey("cc".repeat(32)),
     txIndex: 0,
     kind: "native",
+    version: 1,
+    chainId: asPublicKey("11".repeat(32)),
     nonce: 0,
+    publicKey: null,
+    signature: asPublicKey("00".repeat(64)),
     sender: ADDR,
     recipient: asAddress("bb".repeat(20)),
     value: "1000",
@@ -22,7 +26,7 @@ function tx(overrides: Partial<SangoRpcTx> = {}): SangoRpcTx {
     gasLimit: 21000,
     maxFee: "20",
     priorityFee: "2",
-    data: "0x",
+    data: asHash(""),
     success: true,
     gasUsed: 21000,
     ...overrides,

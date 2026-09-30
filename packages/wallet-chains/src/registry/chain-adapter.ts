@@ -7,6 +7,7 @@ import type { HistoryProvider } from "../capabilities/history-provider";
 import type { StakingProvider } from "../capabilities/staking-provider";
 import type { TokenProvider } from "../capabilities/token-provider";
 import type { TransactionBuilder } from "../capabilities/transaction-builder";
+import type { TxDetailProvider } from "../capabilities/tx-detail-provider";
 import type { TransactionSigner } from "../capabilities/transaction-signer";
 import type { Network } from "../types/network";
 
@@ -19,6 +20,7 @@ export interface ChainAdapter {
 
   readonly accountProvider?: AccountProvider;
   readonly stakingProvider?: StakingProvider;
+  readonly txDetailProvider?: TxDetailProvider;
 
   readonly transactionBuilder?: TransactionBuilder;
   readonly transactionSigner?: TransactionSigner;

@@ -49,6 +49,19 @@ export type Address = `0x${string}`;
  */
 export type PublicKey = `0x${string}`;
 
+/**
+ * Hash, sérialisé en hex `0x…`.
+ *
+ * Brand identique à `Address`/`PublicKey` (\`0x${string}\`), mais nommé
+ * séparément pour la lisibilité sémantique. Utilisé pour les hashes de
+ * tx, blocs, chainId, signatures, data.
+ */
+export type Hash = `0x${string}`;
+
+export function asHash(body: string): Hash {
+  return `0x${body}`;
+}
+
 export function asPublicKey(body: string): PublicKey {
   return `0x${body}`;
 }

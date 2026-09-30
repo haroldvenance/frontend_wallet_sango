@@ -1,4 +1,4 @@
-import type { Address, PublicKey } from "../types/address";
+import type { Address, Hash, PublicKey } from "../types/address";
 
 /**
  * Interface structurelle minimale du client RPC SANGO.
@@ -19,20 +19,24 @@ export interface SangoRpcAccount {
 }
 
 export interface SangoRpcTx {
-  readonly hash: string;
+  readonly hash: Hash;
   readonly blockHeight: number | null;
-  readonly blockHash: string | null;
+  readonly blockHash: Hash | null;
   readonly txIndex: number | null;
   readonly kind: "native" | "evm";
+  readonly version: number;
+  readonly chainId: Hash;
   readonly nonce: number;
-  readonly sender: string;
-  readonly recipient: string | null;
-  readonly value: string;
-  readonly txKind: number;
+  readonly sender: Address;
+  readonly publicKey: PublicKey | null;
   readonly gasLimit: number;
   readonly maxFee: string;
   readonly priorityFee: string;
-  readonly data: string;
+  readonly value: string;
+  readonly txKind: number;
+  readonly recipient: Address | null;
+  readonly data: Hash;
+  readonly signature: Hash;
   readonly success: boolean;
   readonly gasUsed: number;
 }
@@ -86,6 +90,7 @@ export interface SangoRpc {
   getChainId(): Promise<string>;
   getAccount(address: string): Promise<SangoRpcAccount | null>;
   getBaseFee(): Promise<string>;
+  getTransactionByHash(hash: string): Promise<SangoRpcTx | null>;
   getTransactionsByAddress(
     address: string,
     limit: number,

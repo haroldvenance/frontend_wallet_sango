@@ -11,6 +11,8 @@ import type {
   PendingUnbonding,
   SendParams,
   Signer,
+  TxDetail,
+  TxDetailPage,
   TxHistory,
   ValidatorInfo,
 } from "@sango/wallet-chains";
@@ -108,6 +110,28 @@ export interface WalletSession {
     networkId: string,
     validator: Address,
   ): Promise<ValidatorInfo | null>;
+
+  /**
+   * Détail d'une transaction par hash (D-SESS-9).
+   *
+   * **Réseau-centric** : n'importe qui peut consulter n'importe quelle
+   * tx. Pas d'`AccountRef`.
+   */
+  getTransactionByHash(
+    networkId: string,
+    hash: string,
+  ): Promise<TxDetail | null>;
+
+  /**
+   * Page de transactions émises par un compte (D-SESS-9).
+   *
+   * **Compte-centric** : l'adresse est dérivée de l'`AccountRef`.
+   */
+  getTransactionPage(
+    account: AccountRef,
+    limit: number,
+    offset: number,
+  ): Promise<TxDetailPage>;
 
   /**
    * Lien vers l'explorateur pour une tx, ou `undefined` si le réseau
@@ -249,11 +273,40 @@ export class WalletSessionImpl implements WalletSession {
     return provider.getValidatorInfo(validator);
   }
 
+  async getTransactionByHash(
+    networkId: string,
+    hash: string,
+  ): Promise<TxDetail | null> {
+    const provider = this.#txDetailProvider(networkId);
+    return provider.getTransactionByHash(hash);
+  }
+
+  async getTransactionPage(
+    account: AccountRef,
+    limit: number,
+    offset: number,
+  ): Promise<TxDetailPage> {
+    const adapter = this.#adapter(account.networkId);
+    const provider = this.#txDetailProvider(account.networkId);
+    const address = await adapter.addressProvider.deriveAddress(account);
+    return provider.getTransactionsByAddress(address, limit, offset);
+  }
+
   explorerLink(account: AccountRef, txHash: string): string | undefined {
     const network = this.#network(account.networkId);
     if (!network.explorer) return undefined;
     const { baseUrl, txPath } = network.explorer;
     return `${baseUrl}${txPath.replace("{hash}", txHash)}`;
+  }
+
+  #txDetailProvider(networkId: string) {
+    const adapter = this.#adapter(networkId);
+    if (!adapter.txDetailProvider) {
+      throw new Error(
+        `WalletSession: no tx detail provider for network "${networkId}"`,
+      );
+    }
+    return adapter.txDetailProvider;
   }
 
   #stakingProvider(networkId: string) {

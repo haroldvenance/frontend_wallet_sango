@@ -10,6 +10,7 @@ import { SangoHistoryProvider } from "./history-provider";
 import type { SangoRpc } from "./rpc";
 import { SangoStakingProvider } from "./staking-provider";
 import { SangoTransactionBuilder } from "./transaction-builder";
+import { SangoTxDetailProvider } from "./tx-detail-provider";
 import { SangoTransactionSigner } from "./transaction-signer";
 
 export interface SangoAdapterDeps {
@@ -28,6 +29,7 @@ export function sangoAdapterFactory(
     balanceProvider: new SangoBalanceProvider(deps.rpc, network.id),
     historyProvider: new SangoHistoryProvider(deps.rpc, network.id),
     stakingProvider: new SangoStakingProvider(deps.rpc),
+    txDetailProvider: new SangoTxDetailProvider(deps.rpc),
     transactionBuilder: new SangoTransactionBuilder(
       deps.rpc,
       network.id,

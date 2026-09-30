@@ -8,6 +8,7 @@ export function mockRpc(overrides: Partial<SangoRpc> = {}): SangoRpc {
     getChainId: vi.fn(async () => "0x" + "11".repeat(32)),
     getAccount: vi.fn(async () => null),
     getBaseFee: vi.fn(async () => "0"),
+    getTransactionByHash: vi.fn(async () => null),
     getTransactionsByAddress: vi.fn(async () => ({
       total: 0,
       offset: 0,
