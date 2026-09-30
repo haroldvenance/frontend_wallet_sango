@@ -83,7 +83,7 @@ function makeAdapter(o: AdapterOverrides = {}): ChainAdapter {
     transactionBuilder: {
       build:
         (o.build as never) ??
-        (async (params: unknown) => ({
+        (async (params: unknown, _sender: unknown) => ({
           family: "sango" as const,
           networkId: "sango-devnet",
           payload: params,
@@ -184,7 +184,7 @@ describe("WalletSession", () => {
   it("send() runs build → sign → broadcast in order", async () => {
     const calls: string[] = [];
     const adapter = makeAdapter({
-      build: async (p: unknown) => {
+      build: async (p: unknown, _sender: unknown) => {
         calls.push("build");
         return {
           family: "sango" as const,
@@ -208,23 +208,25 @@ describe("WalletSession", () => {
     });
     const session = makeSession(adapter);
     const hash = await session.send(
-      { from: "0xWRONG", to: ADDRESS, assetRef: NATIVE, amount: 1n },
+      { kind: "transfer", to: ADDRESS, assetRef: NATIVE, amount: 1n },
       ACCOUNT,
     );
     expect(hash).toBe("0x" + "ee".repeat(32));
     expect(calls).toEqual(["build", "sign", "broadcast"]);
   });
 
-  it("send() overrides `from` with derived address", async () => {
+  it("send() passes the derived sender as 2nd arg to build()", async () => {
     const adapter = makeAdapter();
     const spy = vi.spyOn(adapter.transactionBuilder!, "build");
     const session = makeSession(adapter);
     await session.send(
-      { from: "0xWRONG", to: ADDRESS, assetRef: NATIVE, amount: 1n },
+      { kind: "transfer", to: ADDRESS, assetRef: NATIVE, amount: 1n },
       ACCOUNT,
     );
-    const arg = spy.mock.calls[0]![0];
-    expect(arg.from).toBe(ADDRESS);
+    expect(spy).toHaveBeenCalledWith(
+      { kind: "transfer", to: ADDRESS, assetRef: NATIVE, amount: 1n },
+      ADDRESS,
+    );
   });
 
   it("explorerLink() formats the URL from network.explorer", () => {

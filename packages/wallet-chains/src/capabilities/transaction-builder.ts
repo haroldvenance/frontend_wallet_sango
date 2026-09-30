@@ -3,30 +3,49 @@ import type { AssetRef } from "../types/asset";
 import type { UnsignedTransaction } from "../types/tx";
 
 /**
- * Paramètres d'un envoi natif.
+ * Paramètres d'une opération wallet (transfert, staking…).
  *
- * **Sémantique de `from` (D-SESS-8) :**
+ * **D-SESS-10** — Union discriminée keyed on `kind`.
  *
- * - Appelé via `WalletSession.send(params, account)` : `from` peut
- *   être omis. La session dérive l'adresse depuis `account` et
- *   l'injecte dans le builder.
- * - Appelé directement via `TransactionBuilder.build(params)` : `from`
- *   est **requis**. Le builder lance une erreur explicite si absent.
+ * Le `kind` décrit **l'intention wallet** (transfer, bond, delegate…),
+ * pas un type backend. Le mapping vers le `txKind` SANGO concret (et
+ * son payload) est la responsabilité du `TransactionBuilder` de chaque
+ * famille :
  *
- * Cette dualité évite aux consommateurs de la session de devoir
- * connaître l'adresse source (responsabilité du `AccountRef`).
+ *     SendParams.kind
+ *           ↓
+ *     SangoTransactionBuilder
+ *           ↓
+ *     txKind SANGO + payload
+ *           ↓
+ *     bytes
+ *
+ * **Aucune adresse source.** La source (`sender`) est une propriété du
+ * `AccountRef` fourni à `WalletSession.send(params, account)`. Le
+ * builder reçoit le sender en 2ᵉ argument, déjà résolu par la session.
+ *
+ * En V0.2, seul le variant `"transfer"` est supporté par le builder
+ * SANGO. Les variants staking (`bond`, `delegate`…) seront ajoutés au
+ * fur et à mesure que le builder les prend en charge — pas d'API qui
+ * prétend supporter ce qu'elle ne sait pas construire.
  */
-export interface SendParams {
-  readonly from?: Address;
+export type SendParams = {
+  readonly kind: "transfer";
   readonly to: Address;
   readonly assetRef: AssetRef;
   readonly amount: bigint;
   readonly memo?: Uint8Array;
-}
+};
 
 /**
  * Capacité optionnelle : construire une transaction non signée.
+ *
+ * @param params  L'intention wallet à encoder.
+ * @param sender  Adresse source (hex `0x…` ou bech32m), résolue par la
+ *                session via `AddressProvider.deriveAddress(account)`.
+ *                Le builder ne reçoit jamais l'`AccountRef` — il ne
+ *                connaît que des adresses.
  */
 export interface TransactionBuilder {
-  build(params: SendParams): Promise<UnsignedTransaction>;
+  build(params: SendParams, sender: Address): Promise<UnsignedTransaction>;
 }

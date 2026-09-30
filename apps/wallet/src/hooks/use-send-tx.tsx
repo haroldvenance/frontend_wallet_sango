@@ -51,6 +51,7 @@ export function useSendTx(): UseMutationResult<SendResult, Error, SendArgs> {
       // 1. Pipeline complet via la session.
       const txHashStr = await session.send(
         {
+          kind: "transfer",
           to,
           assetRef: {
             kind: "native",

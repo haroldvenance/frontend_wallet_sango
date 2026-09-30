@@ -174,8 +174,8 @@ export class WalletSessionImpl implements WalletSession {
       );
     }
 
-    const from = await adapter.addressProvider.deriveAddress(account);
-    const unsigned = await adapter.transactionBuilder.build({ ...params, from });
+    const sender = await adapter.addressProvider.deriveAddress(account);
+    const unsigned = await adapter.transactionBuilder.build(params, sender);
     const signed = await adapter.transactionSigner.sign(
       unsigned,
       this.signer,

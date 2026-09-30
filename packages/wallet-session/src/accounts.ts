@@ -94,3 +94,43 @@ export class KeyringBackedAccountList implements AccountList {
     this.#current = account;
   }
 }
+
+/**
+ * Implémentation en mémoire de `AccountList`.
+ *
+ * Utilisée par `WalletSessionProvider` (V0.1) tant que la persistance
+ * IndexedDB n'est pas nécessaire pour les hooks pilotes. Sera
+ * remplacée par `KeyringBackedAccountList` en V0.2 (page "Mes
+ * wallets" / multi-comptes).
+ */
+export class InMemoryAccountList implements AccountList {
+  readonly #entries = new Map<string, StoredAccountSummary>();
+  #current: AccountRef | undefined;
+
+  async list(): Promise<readonly StoredAccountSummary[]> {
+    return Array.from(this.#entries.values()).sort(
+      (a, b) => a.createdAt - b.createdAt,
+    );
+  }
+
+  async persist(entry: KeyringEntry): Promise<void> {
+    this.#entries.set(entry.id, {
+      id: entry.id,
+      label: entry.label,
+      network: entry.network,
+      createdAt: entry.createdAt,
+    });
+  }
+
+  async forget(id: string): Promise<void> {
+    this.#entries.delete(id);
+  }
+
+  current(): AccountRef | undefined {
+    return this.#current;
+  }
+
+  setCurrent(account: AccountRef): void {
+    this.#current = account;
+  }
+}

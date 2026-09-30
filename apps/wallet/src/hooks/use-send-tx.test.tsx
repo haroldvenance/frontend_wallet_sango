@@ -93,6 +93,7 @@ describe("useSendTx (session-backed)", () => {
     // Pipeline passé par la session avec le bon SendParams + AccountRef.
     expect(send).toHaveBeenCalledWith(
       {
+        kind: "transfer",
         to: TO_ADDRESS,
         assetRef: {
           kind: "native",

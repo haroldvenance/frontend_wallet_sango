@@ -8,6 +8,7 @@ import type {
   SendParams,
   TransactionBuilder,
 } from "../capabilities/transaction-builder";
+import type { Address } from "../types/address";
 import type {
   TxMeta,
   UnsignedTransaction as ChainsUnsignedTx,
@@ -27,16 +28,17 @@ const DEFAULT_PRIORITY_FEE = 0n;
 const MAX_FEE_MULTIPLIER = 2n;
 
 /**
- * Construction d'une tx native SANGO (V0 : Transfer uniquement).
+ * Construction d'une tx native SANGO.
  *
- * Le builder interroge le RPC pour récupérer `nonce`, `publicKey`
- * (bootstrap si null) et `baseFee`, puis assemble une
- * `UnsignedTransaction` de wallet-core enveloppée dans le type
- * opaque de `wallet-chains`.
+ * **D-SESS-10** — `SendParams` est une union discriminée. Ce builder
+ * dispatche sur `params.kind` et produit le `txKind` SANGO + payload
+ * correspondant. La source (sender) est fournie par la session, déjà
+ * résolue depuis l'`AccountRef`.
  *
- * Conventions d'adresse :
- *  - `from` : hex `0x…` (issu de `AddressProvider.deriveAddress`).
- *  - `to`   : hex **ou** Bech32m — normalisé en interne.
+ * V0.2 : seul `"transfer"` est supporté. Ajouter un variant à
+ * `SendParams` **exige** d'ajouter le `case` correspondant ici — le
+ * `default:` contient un check `never` qui provoque une erreur TS
+ * sinon.
  */
 export class SangoTransactionBuilder implements TransactionBuilder {
   readonly #rpc: SangoRpc;
@@ -56,20 +58,34 @@ export class SangoTransactionBuilder implements TransactionBuilder {
     this.#bech32Network = bech32Network;
   }
 
-  async build(params: SendParams): Promise<ChainsUnsignedTx> {
+  async build(params: SendParams, sender: Address): Promise<ChainsUnsignedTx> {
     assertNativeSango(params, this.#networkId);
 
-    // D-SESS-8 : `from` est optionnel côté type (WalletSession l'injecte),
-    // mais requis ici. Erreur explicite pour guider le caller.
-    if (!params.from) {
-      throw new Error(
-        "SangoTransactionBuilder.build: 'from' is required when calling " +
-          "build() directly. Use WalletSession.send(params, account) to " +
-          "have the source derived from the account.",
-      );
+    switch (params.kind) {
+      case "transfer":
+        return this.#buildTransfer(params, sender);
+      default: {
+        // Exhaustive check : `params.kind` est narrow à `never` ici
+        // (tous les variants de SendParams ont été épuisés par les
+        // cases ci-dessus). Ajouter un variant sans case → erreur TS
+        // sur l'assignation ci-dessous.
+        //
+        // Note : `params` (objet) n'est pas narrow à `never` par TS
+        // car SendParams n'est pas une vraie union en V0.2 (un seul
+        // variant). C'est `params.kind` qui porte le narrowing.
+        const _kind: never = params.kind;
+        throw new Error(
+          `SangoTransactionBuilder: unsupported send kind "${String(_kind)}"`,
+        );
+      }
     }
+  }
 
-    const fromHex = normalizeToHex(params.from, this.#bech32Network);
+  async #buildTransfer(
+    params: Extract<SendParams, { kind: "transfer" }>,
+    sender: Address,
+  ): Promise<ChainsUnsignedTx> {
+    const fromHex = normalizeToHex(sender, this.#bech32Network);
     const toBytes = toAddressBytes(params.to, this.#bech32Network);
     const fromBytes = hexToBytes(fromHex);
 
@@ -96,7 +112,7 @@ export class SangoTransactionBuilder implements TransactionBuilder {
     };
 
     const meta: TxMeta = {
-      from: params.from,
+      from: sender,
       to: params.to,
       assetRef: params.assetRef,
       amount: params.amount,
@@ -134,7 +150,7 @@ function assertNativeSango(params: SendParams, networkId: string): void {
     params.assetRef.assetId !== SANGO_NATIVE_ASSET_ID
   ) {
     throw new Error(
-      "SangoTransactionBuilder: only native SANGO transfers supported in V0",
+      "SangoTransactionBuilder: only native SANGO supported in V0",
     );
   }
   if (params.assetRef.networkId !== networkId) {
