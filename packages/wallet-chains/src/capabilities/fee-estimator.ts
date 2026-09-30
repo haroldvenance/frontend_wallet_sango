@@ -15,6 +15,12 @@ export interface FeeEstimate {
   readonly assetId: AssetId;
   readonly total: bigint;
   readonly breakdown?: Readonly<Record<string, bigint>>;
+  /**
+   * Vrai si l'estimation est dynamique (calculée par `estimateGas`
+   * + baseFee, cas EVM). Faux (défaut) pour les frais fixes
+   * (baseFee * 2 * gasLimit, cas SANGO V0).
+   */
+  readonly dynamic?: boolean;
 }
 
 /**

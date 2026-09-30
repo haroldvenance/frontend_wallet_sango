@@ -37,9 +37,18 @@ export const EVM_ACCOUNT: AccountRef = {
 /** Mock EvmRpc : valeurs par défaut neutres, overridables. */
 export function mockRpc(overrides: Partial<EvmRpc> = {}): EvmRpc {
   return {
+    // Patch 2 : lecture
     getChainId: vi.fn(async () => 11155111), // Sepolia
     getBalance: vi.fn(async () => 0n),
     getTransactionCount: vi.fn(async () => 0),
+    // Patch 4 : EIP-1559 + broadcast
+    estimateGas: vi.fn(async () => 21_000n),
+    getBaseFeePerGas: vi.fn(async () => 1_000_000_000n), // 1 gwei
+    getMaxPriorityFeePerGas: vi.fn(async () => 1_000_000_000n), // 1 gwei
+    sendRawTransaction: vi.fn(
+      async () =>
+        "0x" + "00".repeat(32) as `0x${string}`,
+    ),
     ...overrides,
   };
 }

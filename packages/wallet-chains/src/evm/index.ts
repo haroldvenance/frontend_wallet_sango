@@ -15,3 +15,6 @@ export type {
   Eip1559UnsignedFields,
   Eip1559RecoveredSignature,
 } from "./eip1559-codec";
+export { EvmFeeEstimator } from "./fee-estimator";
+export { EvmTransactionBuilder } from "./transaction-builder";
+export type { EvmCallParams } from "./rpc";
