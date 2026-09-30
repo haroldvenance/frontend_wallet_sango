@@ -1,0 +1,5 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`EvmTransactionSigner — happy path > snapshot: raw bytes for a fixed tx are stable > signed-raw-hex 1`] = `"0x02f87683aa36a7808459682f008504a817c80082520894f39fd6e51aad88f6f4ce6ab8827279cfffb92266880de0b6b3a764000080c001a0a3aa4580533e4068e1206a2e9c37e5e720f80e4c0a1c45ffda7bbc62f4c8be3aa05568f6f67bfbb9e020af745382592b895788216f0ab16a4150943987946e4504"`;
+
+exports[`EvmTransactionSigner — happy path > snapshot: raw bytes for a fixed tx are stable > tx-hash-hex 1`] = `"0x990e89eb3de78533aebe84b4377b2d160cd5348ece89c563147dff76c170def6"`;

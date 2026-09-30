@@ -1,43 +1,43 @@
 import type { ChainAdapter } from "../registry/chain-adapter";
+import type { Network } from "../types/network";
 import type { Signer } from "../types/signer";
 import { EvmAccountProvider } from "./account-provider";
 import { EvmAddressProvider } from "./address-provider";
 import { EvmBalanceProvider } from "./balance-provider";
-import type { Network } from "../types/network";
+import { EvmBroadcaster } from "./broadcaster";
+import { EvmFeeEstimator } from "./fee-estimator";
 import type { EvmRpc } from "./rpc";
+import { EvmTransactionBuilder } from "./transaction-builder";
+import { EvmTransactionSigner } from "./transaction-signer";
 
 /**
  * Dépendances injectées à l'adaptateur EVM.
  *
- * - `rpc`    : interface structurelle (viem + RpcPool en patch 3).
- * - `signer` : fournit la pubkey non-compressée (65 bytes) pour EVM.
- *
- * D-SIGNER-1 : le `Signer` route vers secp256k1 quand
- * `account.family === "evm"` (implémenté dans `MultiCurveSigner`,
- * patch 5). En patch 2, l'adapter suppose que le signer est compatible.
+ * - `rpc`      : interface structurelle (implémentée par
+ *                `EvmRpcUsingPool` dans wallet-providers).
+ * - `signer`   : fournit la pubkey non-compressée (65 bytes) et — en
+ *                patch 4+ — `signDigestRecoverable` (EIP-1559 yParity).
+ * - `chainId`  : chaîne EVM cible (11155111 pour Sepolia).
  */
 export interface EvmAdapterDeps {
   readonly rpc: EvmRpc;
   readonly signer: Signer;
+  readonly chainId: number;
 }
 
 /**
- * Fabrique l'adaptateur EVM minimal (patch 2).
+ * Fabrique l'adaptateur EVM complet (patch 4).
  *
- * **Capacités exposées** :
- *   - addressProvider  : dérivation + validation d'adresse Ethereum.
- *   - balanceProvider  : solde natif ETH.
- *   - accountProvider  : balance + nonce.
+ * Capacités exposées :
+ *   - addressProvider, balanceProvider, accountProvider (patch 2)
+ *   - feeEstimator, transactionBuilder, transactionSigner,
+ *     broadcaster (patch 4)
  *
- * **Non exposées en patch 2** :
- *   - historyProvider   (patch 4 — dépend de l'indexation EVM)
- *   - transactionBuilder / transactionSigner / broadcaster (patch 4)
- *   - feeEstimator      (patch 4)
- *   - stakingProvider / tokenProvider / txDetailProvider (post-E1)
- *
- * Le `historyProvider` est **obligatoire** dans `ChainAdapter`. En
- * attendant son implémentation (patch 4), on utilise un stub qui
- * retourne une page vide. C'est explicite et testable.
+ * Capacités absentes (reportées) :
+ *   - historyProvider (stub page vide — indexation EVM post-E1)
+ *   - stakingProvider (pas de staking EVM en E1)
+ *   - tokenProvider   (ERC-20 post-E1)
+ *   - txDetailProvider (post-E1)
  */
 export function evmAdapterFactory(
   network: Network,
@@ -54,12 +54,15 @@ export function evmAdapterFactory(
     balanceProvider: new EvmBalanceProvider(deps.rpc, network.id),
     accountProvider: new EvmAccountProvider(deps.rpc, network.id),
     historyProvider: {
-      // Stub — patch 4 remplacera par un vrai provider (via
-      // eth_getLogs + indexation côté backend, ou explorer).
       getHistory: async () => ({ total: 0, items: [] }),
     },
-    // transactionBuilder / transactionSigner / broadcaster /
-    // feeEstimator / stakingProvider / tokenProvider / txDetailProvider
-    // : absents jusqu'au patch 4.
+    feeEstimator: new EvmFeeEstimator(deps.rpc, network.id),
+    transactionBuilder: new EvmTransactionBuilder(
+      deps.rpc,
+      network.id,
+      deps.chainId,
+    ),
+    transactionSigner: new EvmTransactionSigner(),
+    broadcaster: new EvmBroadcaster(deps.rpc),
   };
 }

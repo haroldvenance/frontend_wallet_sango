@@ -1,22 +1,29 @@
-import type { Address, EvmRpc } from "@sango/wallet-chains";
+import type {
+  Address,
+  EvmCallParams,
+  EvmRpc,
+  Hash,
+} from "@sango/wallet-chains";
 
 import type { RpcPool } from "../rpc/rpc-pool";
 
 /**
  * Implémentation `EvmRpc` au-dessus du `RpcPool` générique.
  *
- * **D-EVM-1** — la conversion "interface structurelle EvmRpc (3
- * méthodes en patch 2) → JSON-RPC EVM" vit ici, pas dans
- * `wallet-chains` (qui ne connaît ni `RpcPool` ni le protocole).
+ * **D-EVM-1** — la conversion "interface structurelle EvmRpc (7
+ * méthodes) → JSON-RPC EVM" vit ici, pas dans `wallet-chains`.
  *
  * Conversions :
- *   - `eth_chainId`            : hex → number
- *   - `eth_getBalance`         : hex → bigint (wei)
- *   - `eth_getTransactionCount`: hex → number
+ *   - `eth_chainId`                : hex → number
+ *   - `eth_getBalance`             : hex → bigint (wei)
+ *   - `eth_getTransactionCount`    : hex → number
+ *   - `eth_estimateGas`            : hex → bigint
+ *   - `eth_getBlockByNumber(latest)`: extraction baseFeePerGas → bigint
+ *   - `eth_maxPriorityFeePerGas`   : hex → bigint
+ *   - `eth_sendRawTransaction`     : passthrough (hash)
  *
- * Paramètres conformes au protocole EVM :
- *   - `eth_getBalance(address, "latest")`
- *   - `eth_getTransactionCount(address, "latest")`
+ * Toutes les méthodes utilisent le pool : fallback automatique sur
+ * erreur d'endpoint (D-RPC-2).
  */
 export class EvmRpcUsingPool implements EvmRpc {
   readonly #pool: RpcPool;
@@ -26,6 +33,8 @@ export class EvmRpcUsingPool implements EvmRpc {
     this.#pool = pool;
     this.#networkId = networkId;
   }
+
+  // ── Lecture (patch 2) ─────────────────────────────────────
 
   async getChainId(): Promise<number> {
     const hex = await this.#pool.request<string>(
@@ -52,6 +61,61 @@ export class EvmRpcUsingPool implements EvmRpc {
       [address, "latest"],
     );
     return hexToNumber(hex, "eth_getTransactionCount");
+  }
+
+  // ── EIP-1559 + broadcast (patch 4) ────────────────────────
+
+  async estimateGas(tx: EvmCallParams): Promise<bigint> {
+    const callObj: Record<string, unknown> = { from: tx.from };
+    if (tx.to !== undefined) callObj.to = tx.to;
+    if (tx.value !== undefined) callObj.value = "0x" + tx.value.toString(16);
+    if (tx.data !== undefined) callObj.data = tx.data;
+
+    const hex = await this.#pool.request<string>(
+      this.#networkId,
+      "eth_estimateGas",
+      [callObj],
+    );
+    return hexToBigInt(hex, "eth_estimateGas");
+  }
+
+  async getBaseFeePerGas(): Promise<bigint> {
+    const block = await this.#pool.request<{
+      readonly baseFeePerGas?: string;
+    } | null>(
+      this.#networkId,
+      "eth_getBlockByNumber",
+      ["latest", false],
+    );
+    if (!block || !block.baseFeePerGas) {
+      throw new Error(
+        "EvmRpcUsingPool.getBaseFeePerGas: missing baseFeePerGas in block (pre-London chain?)",
+      );
+    }
+    return hexToBigInt(block.baseFeePerGas, "baseFeePerGas");
+  }
+
+  async getMaxPriorityFeePerGas(): Promise<bigint> {
+    const hex = await this.#pool.request<string>(
+      this.#networkId,
+      "eth_maxPriorityFeePerGas",
+      [],
+    );
+    return hexToBigInt(hex, "eth_maxPriorityFeePerGas");
+  }
+
+  async sendRawTransaction(raw: Hash): Promise<Hash> {
+    const hash = await this.#pool.request<string>(
+      this.#networkId,
+      "eth_sendRawTransaction",
+      [raw],
+    );
+    if (typeof hash !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(hash)) {
+      throw new Error(
+        `EvmRpcUsingPool.sendRawTransaction: expected 32-byte hex hash, got ${String(hash)}`,
+      );
+    }
+    return hash as Hash;
   }
 }
 

@@ -105,3 +105,88 @@ describe("EvmRpcUsingPool + HttpRpcPool (intégration légère)", () => {
     expect(await rpc.getChainId()).toBe(1);
   });
 });
+
+// ── EIP-1559 + broadcast (patch 4) ──────────────────────────
+
+describe("EvmRpcUsingPool — patch 4", () => {
+  it("estimateGas parses hex → bigint and forwards callObj", async () => {
+    const pool = mockPool({ eth_estimateGas: "0x5208" }); // 21000
+    const rpc = new EvmRpcUsingPool(pool, "eth");
+    const gas = await rpc.estimateGas({
+      from: ADDR as `0x${string}`,
+      to: "0x70997970c51812dc3a010c7d01b50e0d17dc79c8" as `0x${string}`,
+      value: 1000n,
+    });
+    expect(gas).toBe(21_000n);
+    expect(pool.calls[0]!.method).toBe("eth_estimateGas");
+    const callObj = pool.calls[0]!.params[0] as Record<string, unknown>;
+    expect(callObj.from).toBe(ADDR);
+    expect(callObj.to).toBe("0x70997970c51812dc3a010c7d01b50e0d17dc79c8");
+    expect(callObj.value).toBe("0x3e8"); // 1000 en hex
+  });
+
+  it("estimateGas supports no `to` (contract deployment)", async () => {
+    const pool = mockPool({ eth_estimateGas: "0x5208" });
+    const rpc = new EvmRpcUsingPool(pool, "eth");
+    await rpc.estimateGas({ from: ADDR as `0x${string}` });
+    const callObj = pool.calls[0]!.params[0] as Record<string, unknown>;
+    expect(callObj).not.toHaveProperty("to");
+    expect(callObj).not.toHaveProperty("value");
+    expect(callObj).not.toHaveProperty("data");
+  });
+
+  it("getBaseFeePerGas extracts baseFeePerGas from latest block", async () => {
+    const pool = mockPool({
+      eth_getBlockByNumber: { baseFeePerGas: "0x3b9aca00" }, // 1 gwei
+    });
+    const rpc = new EvmRpcUsingPool(pool, "eth");
+    const fee = await rpc.getBaseFeePerGas();
+    expect(fee).toBe(1_000_000_000n);
+    expect(pool.calls[0]!.method).toBe("eth_getBlockByNumber");
+    expect(pool.calls[0]!.params).toEqual(["latest", false]);
+  });
+
+  it("getBaseFeePerGas throws on null block", async () => {
+    const pool = mockPool({ eth_getBlockByNumber: null });
+    const rpc = new EvmRpcUsingPool(pool, "eth");
+    await expect(rpc.getBaseFeePerGas()).rejects.toThrow(
+      /missing baseFeePerGas/,
+    );
+  });
+
+  it("getBaseFeePerGas throws when baseFeePerGas missing (pre-London)", async () => {
+    const pool = mockPool({ eth_getBlockByNumber: {} });
+    const rpc = new EvmRpcUsingPool(pool, "eth");
+    await expect(rpc.getBaseFeePerGas()).rejects.toThrow(
+      /missing baseFeePerGas/,
+    );
+  });
+
+  it("getMaxPriorityFeePerGas parses hex → bigint", async () => {
+    const pool = mockPool({ eth_maxPriorityFeePerGas: "0x3b9aca00" });
+    const rpc = new EvmRpcUsingPool(pool, "eth");
+    const tip = await rpc.getMaxPriorityFeePerGas();
+    expect(tip).toBe(1_000_000_000n);
+    expect(pool.calls[0]!.method).toBe("eth_maxPriorityFeePerGas");
+  });
+
+  it("sendRawTransaction forwards raw and returns hash", async () => {
+    const hash = "0x" + "ee".repeat(32);
+    const pool = mockPool({ eth_sendRawTransaction: hash });
+    const rpc = new EvmRpcUsingPool(pool, "eth");
+    const out = await rpc.sendRawTransaction(
+      "0x02abcd" as `0x${string}`,
+    );
+    expect(out).toBe(hash);
+    expect(pool.calls[0]!.method).toBe("eth_sendRawTransaction");
+    expect(pool.calls[0]!.params).toEqual(["0x02abcd"]);
+  });
+
+  it("sendRawTransaction rejects a malformed hash", async () => {
+    const pool = mockPool({ eth_sendRawTransaction: "notahex" });
+    const rpc = new EvmRpcUsingPool(pool, "eth");
+    await expect(
+      rpc.sendRawTransaction("0x02abcd" as `0x${string}`),
+    ).rejects.toThrow(/expected 32-byte hex hash/);
+  });
+});

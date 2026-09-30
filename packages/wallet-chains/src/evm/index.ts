@@ -18,3 +18,5 @@ export type {
 export { EvmFeeEstimator } from "./fee-estimator";
 export { EvmTransactionBuilder } from "./transaction-builder";
 export type { EvmCallParams } from "./rpc";
+export { EvmTransactionSigner } from "./transaction-signer";
+export { EvmBroadcaster } from "./broadcaster";
