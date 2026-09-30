@@ -1,0 +1,7 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`🔒 FROZEN — EVM identity > identity #1 has a distinct frozen address > address-1-hex 1`] = `"0x70997970c51812dc3a010c7d01b50e0d17dc79c8"`;
+
+exports[`🔒 FROZEN — EVM signature (snapshot) > signDigest(fixed 32-byte digest) is stable > secp256k1-signature-hex 1`] = `"0x7c5d2c603ac5148df10836c33491ab51b92ccfe33e671d4e94f22fc307abbde151bb7e7acfbe3ebdcd762cc6b7e2d444420ced1ca8ec909c4bc9933f156a3c6f"`;
+
+exports[`🔒 FROZEN — EVM signature (snapshot) > signDomain(fixed domain || payload) is stable > secp256k1-signDomain-hex 1`] = `"0x2f13360088fcc87d107e106b43159cf6b22838d4dd4395f26aeb4a808219bcdb1b66dd0304cb51d73d30d5f11fc8abefb112bcba0007a0e66b17655b565110eb"`;

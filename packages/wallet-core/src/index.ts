@@ -72,3 +72,14 @@ export {
   deriveEvmKeypair,
 } from "./derivation";
 export type { Bip44PathParts } from "./derivation";
+
+// ── E1 : Bip39Wallet + StoredWalletV2 ────────────────────────────
+
+export { Bip39Wallet, bip39WalletFromMnemonicSync } from "./bip39-wallet";
+export type { Bip39Identity } from "./bip39-wallet";
+
+export {
+  encryptBip39Secret,
+  decryptBip39Secret,
+} from "./storage";
+export type { StoredWalletV1, StoredWalletV2 } from "./storage";

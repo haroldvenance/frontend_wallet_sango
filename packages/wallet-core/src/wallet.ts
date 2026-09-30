@@ -11,7 +11,8 @@ import {
 import {
   decryptWalletSecret,
   encryptWalletSecret,
-  type StoredWallet,
+  type StoredWalletV1,
+  type StoredWalletV2,
 } from "./storage";
 
 const SEED_LENGTH = 32;
@@ -123,7 +124,7 @@ export class Wallet {
     return verifyNative(this.#publicKey, domain, payload, signature);
   }
 
-  async exportEncrypted(password: string): Promise<StoredWallet> {
+  async exportEncrypted(password: string): Promise<StoredWalletV1> {
     this.#assertAlive();
     return encryptWalletSecret({
       secret: this.#secretKey,
@@ -133,7 +134,16 @@ export class Wallet {
     });
   }
 
-  static async importEncrypted(stored: StoredWallet, password: string): Promise<Wallet> {
+  static async importEncrypted(
+    stored: StoredWalletV1 | StoredWalletV2,
+    password: string,
+  ): Promise<Wallet> {
+    if (stored.version !== 1) {
+      throw new Error(
+        `Wallet.importEncrypted: expected version 1 (SANGO legacy), got ${stored.version}. ` +
+          `Use Bip39Wallet.importEncrypted for BIP-39 wallets.`,
+      );
+    }
     const { secret, network } = await decryptWalletSecret(stored, password);
     const wallet = await Wallet.fromSeed(secret, network);
     secret.fill(0);
