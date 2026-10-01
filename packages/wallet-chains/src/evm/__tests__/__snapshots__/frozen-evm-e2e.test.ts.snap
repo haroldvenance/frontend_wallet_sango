@@ -1,0 +1,5 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`🔒 FROZEN — EVM pipeline (build → sign → bytes) > produit une tx signée byte-stable (snapshot) > signed-raw-hex 1`] = `"0x02f87683aa36a780843b9aca008504e3b292008252089470997970c51812dc3a010c7d01b50e0d17dc79c8880de0b6b3a764000080c001a042353c914e944cb422803019d2317488da39c0ec840ef3b6de64240d883e9b2aa038583af533b966aa1099004f4af38df3e9fad8e76ff1187e80f03861523cc701"`;
+
+exports[`🔒 FROZEN — EVM pipeline (build → sign → bytes) > produit une tx signée byte-stable (snapshot) > signed-tx-hash 1`] = `"0x1c32d6a15fcca7790978e75447579e811b4c0d9a7e8426ecf773a3b423f2705c"`;
