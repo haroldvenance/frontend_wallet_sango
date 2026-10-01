@@ -11,6 +11,7 @@ import type {
   PendingUnbonding,
   SendParams,
   Signer,
+  Token,
   TxDetail,
   TxDetailPage,
   TxHistory,
@@ -132,6 +133,21 @@ export interface WalletSession {
     limit: number,
     offset: number,
   ): Promise<TxDetailPage>;
+
+  /**
+   * Liste les tokens ERC-20 configurés pour un réseau (E1.6).
+   *
+   * Retourne uniquement les tokens officiellement enregistrés dans
+   * `EVM_TOKENS` (USDC, USDT). Pas de découverte auto.
+   */
+  listTokens(networkId: string): Promise<readonly Token[]>;
+
+  /**
+   * Solde d'un token ERC-20 pour un compte (base units du token).
+   *
+   * `token.networkId` doit correspondre à `account.networkId`.
+   */
+  getTokenBalance(account: AccountRef, token: Token): Promise<bigint>;
 
   /**
    * Lien vers l'explorateur pour une tx, ou `undefined` si le réseau
@@ -290,6 +306,32 @@ export class WalletSessionImpl implements WalletSession {
     const provider = this.#txDetailProvider(account.networkId);
     const address = await adapter.addressProvider.deriveAddress(account);
     return provider.getTransactionsByAddress(address, limit, offset);
+  }
+
+  async listTokens(networkId: string): Promise<readonly Token[]> {
+    const adapter = this.#adapter(networkId);
+    if (!adapter.tokenProvider) {
+      throw new Error(
+        `WalletSession: no token provider for network "${networkId}"`,
+      );
+    }
+    return adapter.tokenProvider.listTokens(networkId);
+  }
+
+  async getTokenBalance(account: AccountRef, token: Token): Promise<bigint> {
+    if (token.networkId !== account.networkId) {
+      throw new Error(
+        `WalletSession.getTokenBalance: token network "${token.networkId}" does not match account network "${account.networkId}"`,
+      );
+    }
+    const adapter = this.#adapter(account.networkId);
+    if (!adapter.tokenProvider) {
+      throw new Error(
+        `WalletSession: no token provider for network "${account.networkId}"`,
+      );
+    }
+    const address = await adapter.addressProvider.deriveAddress(account);
+    return adapter.tokenProvider.getTokenBalance(address, token);
   }
 
   explorerLink(account: AccountRef, txHash: string): string | undefined {

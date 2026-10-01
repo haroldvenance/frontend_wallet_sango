@@ -1,4 +1,4 @@
-import type { Address, AssetRef, Hash } from "@sango/wallet-chains";
+import type { Address, AssetRef, Hash, Token } from "@sango/wallet-chains";
 import {
   useMutation,
   useQueryClient,
@@ -13,7 +13,12 @@ import { useNetworkQueryContext } from "./use-network-query-context";
 
 export interface SendEvmArgs {
   readonly to: Address;
-  readonly amountWei: bigint;
+  readonly amountBaseUnits: bigint;
+  /**
+   * Token ERC-20 à envoyer. `undefined` = ETH natif.
+   * Détermine le `kind` du SendParams (`transferErc20` vs `transfer`).
+   */
+  readonly token?: Token;
 }
 
 export interface SendEvmResult {
@@ -21,24 +26,16 @@ export interface SendEvmResult {
 }
 
 /**
- * Envoi d'ETH natif (EIP-1559).
+ * Envoi d'un actif EVM (ETH natif ou token ERC-20).
  *
- * **D-UI-3 (patch 6.b)** — pipeline :
+ * **E1.6.a.5** — Le `token` optionnel route :
+ *   - absent → `{ kind: "transfer", … }` (EIP-1559, value > 0)
+ *   - présent → `{ kind: "transferErc20", … }` (data encodé ABI,
+ *     value = 0, tx.to = contrat)
  *
- *     build → sign → broadcast → txHash → toast + explorer
- *
- * **Note importante** : le nonce seul ne permet PAS de confirmer qu'une
- * tx donnée est incluse (une autre tx peut consommer le nonce avant).
- * Ce hook n'affiche donc PAS "Confirmée" sur la base du nonce — il
- * affiche "Transaction envoyée" avec le hash + lien explorer. Le
- * polling `useEvmAccount` rafraîchit ensuite le solde/nonce en
- * arrière-plan. Une vraie confirmation (receipt) viendra en 6.b.1+
- * si nécessaire.
- *
- * Guards :
- *   - session requise
- *   - wallet.format === "bip39" (EVM uniquement)
- *   - networkId EVM
+ * **Confirmation** : on affiche "Transaction envoyée" avec le hash +
+ * lien explorer. Le nonce seul ne prouve pas l'inclusion. Vraie
+ * confirmation via `eth_getTransactionReceipt` en E1.6.c+.
  */
 export function useSendEvm(): UseMutationResult<
   SendEvmResult,
@@ -51,7 +48,7 @@ export function useSendEvm(): UseMutationResult<
   const qc = useQueryClient();
 
   return useMutation<SendEvmResult, Error, SendEvmArgs>({
-    mutationFn: async ({ to, amountWei }) => {
+    mutationFn: async ({ to, amountBaseUnits, token }) => {
       if (!session) {
         throw new Error(
           "useSendEvm: WalletSession indisponible (wallet verrouillé ?)",
@@ -68,17 +65,37 @@ export function useSendEvm(): UseMutationResult<
         );
       }
 
-      const assetRef: AssetRef = {
-        kind: "native",
-        assetId: "eth",
-        networkId,
-      };
+      let txHash: Hash;
+      if (token) {
+        // ERC-20
+        const assetRef: AssetRef = {
+          kind: "token",
+          networkId,
+          contract: token.contract,
+        };
+        txHash = (await session.send(
+          {
+            kind: "transferErc20",
+            to,
+            assetRef,
+            amount: amountBaseUnits,
+          },
+          account,
+        )) as Hash;
+      } else {
+        // ETH natif
+        const assetRef: AssetRef = {
+          kind: "native",
+          assetId: "eth",
+          networkId,
+        };
+        txHash = (await session.send(
+          { kind: "transfer", to, assetRef, amount: amountBaseUnits },
+          account,
+        )) as Hash;
+      }
 
-      const txHash = (await session.send(
-        { kind: "transfer", to, assetRef, amount: amountWei },
-        account,
-      )) as Hash;
-
+      const symbol = token?.metadata.symbol ?? "ETH";
       toast.info("Transaction envoyée", {
         description: (
           <span className="inline-flex items-center gap-2">
@@ -91,10 +108,13 @@ export function useSendEvm(): UseMutationResult<
         ),
       });
 
-      // D-INDEXER-3 : invalidation immédiate (pas besoin d'attendre
-      // le refresh périodique de 30 s).
+      // Invalide les queries dépendantes (compte + tokens + historique).
       void qc.invalidateQueries({ queryKey: ["evm-account"] });
+      void qc.invalidateQueries({ queryKey: ["evm-tokens"] });
       void qc.invalidateQueries({ queryKey: ["evm-history"] });
+
+      // Silence unused warning pour `symbol` (utile pour debug).
+      void symbol;
 
       return { txHash };
     },

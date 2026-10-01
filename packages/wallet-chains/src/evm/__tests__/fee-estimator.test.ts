@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { EvmFeeEstimator } from "../fee-estimator";
+import type { EvmCallParams } from "../rpc";
 import { EVM_NATIVE_ASSET_ID } from "../config";
 import type { AssetRef } from "../../types/asset";
 import { ANVIL_ADDRESS_0, mockRpc } from "./_helpers";
@@ -54,16 +55,41 @@ describe("EvmFeeEstimator", () => {
     });
   });
 
-  it("rejects token assetRef", async () => {
-    const fee = new EvmFeeEstimator(mockRpc(), "ethereum-sepolia");
-    await expect(
-      fee.estimate({
-        from: ANVIL_ADDRESS_0,
-        to: TO,
-        assetRef: { kind: "token", networkId: "ethereum-sepolia", contract: "0x" },
-        amount: 1n,
+  it("supports token assetRef (E1.6)", async () => {
+    // Depuis E1.6, l'estimation accepte les ERC-20 : elle encode
+    // transfer(address,uint256) et appelle eth_estimateGas avec data.
+    const estimateGas = vi.fn<(tx: EvmCallParams) => Promise<bigint>>(async () => 65_000n);
+    const fee = new EvmFeeEstimator(
+      mockRpc({
+        estimateGas,
+        getBaseFeePerGas: vi.fn(async () => 1n),
+        getMaxPriorityFeePerGas: vi.fn(async () => 0n),
       }),
-    ).rejects.toThrow(/only native ETH/);
+      "ethereum-sepolia",
+    );
+
+    const est = await fee.estimate({
+      from: ANVIL_ADDRESS_0,
+      to: TO,
+      assetRef: {
+        kind: "token",
+        networkId: "ethereum-sepolia",
+        contract: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      },
+      amount: 1_000_000n,
+    });
+
+    expect(est.dynamic).toBe(true);
+    expect(est.breakdown?.gasLimit).toBe(65_000n);
+
+    // Vérifie que estimateGas a bien reçu to=contract + data encodé.
+    const firstCall = estimateGas.mock.calls[0];
+    expect(firstCall).toBeDefined();
+    const arg = firstCall![0];
+    expect(arg.to).toBe("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48");
+    expect(arg.value).toBe(0n);
+    expect(typeof arg.data).toBe("string");
+    expect((arg.data as string).startsWith("0xa9059cbb")).toBe(true);
   });
 
   it("rejects a network mismatch", async () => {

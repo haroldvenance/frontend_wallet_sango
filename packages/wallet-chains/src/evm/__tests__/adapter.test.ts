@@ -43,11 +43,17 @@ describe("evmAdapterFactory — capacités exposées (patch 4)", () => {
 });
 
 describe("evmAdapterFactory — capacités absentes", () => {
-  it("does NOT expose staking/token/txDetail (post-E1)", () => {
+  it("does NOT expose staking/txDetail (post-E1)", () => {
     const adapter = makeAdapter();
     expect(adapter.stakingProvider).toBeUndefined();
-    expect(adapter.tokenProvider).toBeUndefined();
     expect(adapter.txDetailProvider).toBeUndefined();
+    // tokenProvider a été wired en E1.6 (EVM only) — voir le test
+    // dédié ci-dessous.
+  });
+
+  it("exposes a tokenProvider (E1.6)", () => {
+    const adapter = makeAdapter();
+    expect(adapter.tokenProvider).toBeDefined();
   });
 });
 

@@ -5,6 +5,7 @@ import { EvmAccountProvider } from "./account-provider";
 import { EvmAddressProvider } from "./address-provider";
 import { EvmBalanceProvider } from "./balance-provider";
 import { EvmBroadcaster } from "./broadcaster";
+import { EvmTokenProvider } from "./token-provider";
 import { EvmFeeEstimator } from "./fee-estimator";
 import { EvmHistoryProvider } from "./history-provider";
 import type { EvmIndexer } from "./indexer";
@@ -76,5 +77,6 @@ export function evmAdapterFactory(
     ),
     transactionSigner: new EvmTransactionSigner(),
     broadcaster: new EvmBroadcaster(deps.rpc),
+    tokenProvider: new EvmTokenProvider(deps.rpc, network.id),
   };
 }

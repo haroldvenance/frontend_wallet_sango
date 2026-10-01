@@ -1,36 +1,60 @@
-import type { Address } from "@sango/wallet-chains";
+import type { Address, Token } from "@sango/wallet-chains";
+import { evmNetworkById } from "@sango/wallet-chains";
 import { ArrowLeft, Send } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 import { ExplorerLinkEvm } from "@/features/evm/explorer-link-evm";
 import { useEvmAccount } from "@/hooks/use-evm-account";
+import { useEvmTokens } from "@/hooks/use-evm-tokens";
 import { useSendEvm } from "@/hooks/use-send-evm";
-import { formatEthShort, isValidEvmAddress, parseEth } from "@/lib/eth";
+import {
+  formatEthShort,
+  formatStablecoinUsd,
+  formatTokenAmount,
+  isValidEvmAddress,
+  parseEth,
+  parseTokenAmount,
+} from "@/lib/eth";
+import { useNetworkQueryContext } from "@/hooks/use-network-query-context";
 import { useWalletSession } from "@/providers/wallet-session-context";
 import { useWalletStore } from "@/stores/wallet-store";
-import { useNetworkQueryContext } from "@/hooks/use-network-query-context";
-import { evmNetworkById } from "@sango/wallet-chains";
 
 /**
- * Envoi d'ETH natif (EIP-1559) sur le réseau du wallet actif.
+ * Envoi d'un actif EVM — ETH natif ou token ERC-20 (E1.6.a.5).
  *
- * Symétrique de `/send` (SANGO). Passe par `WalletSession.send()`
- * qui orchestre build → sign → broadcast.
+ * Le sélecteur de token liste :
+ *   - ETH (toujours présent, gas token)
+ *   - USDC / USDT (si configurés pour le réseau courant)
  *
- * Pas d'ERC-20 en 6.b. Pas de changement de réseau depuis cette page
- * (le réseau est figé à la création, D-UI-3).
+ * Selon le token sélectionné :
+ *   - validation : solde du token (pas ETH)
+ *   - frais     : en ETH dans tous les cas (gas token)
+ *   - MAX       : solde du token (ou ETH − 0.0001 pour réserve de frais)
  */
 export function SendEvmRoute() {
   const session = useWalletSession();
   const networkId = useWalletStore((s) => s.networkId);
   const { account } = useNetworkQueryContext();
   const { data: evmAccount } = useEvmAccount();
+  const { data: tokensWithBalance } = useEvmTokens();
   const sendEvm = useSendEvm();
 
   const network = evmNetworkById(networkId);
   const networkName = network?.name ?? networkId;
+
+  // Liste des tokens disponibles (ETH en premier, puis tokens configurés).
+  const availableTokens = useMemo(
+    () => (tokensWithBalance ?? []).map((t) => t.token),
+    [tokensWithBalance],
+  );
+
+  // Token sélectionné : "eth" (string sentinel) ou contrat du token.
+  const [selected, setSelected] = useState<string>("eth");
+  const selectedToken: Token | undefined = availableTokens.find(
+    (t) => t.contract === selected,
+  );
 
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
@@ -42,7 +66,14 @@ export function SendEvmRoute() {
   const [feeLoading, setFeeLoading] = useState(false);
   const [lastTxHash, setLastTxHash] = useState<string | null>(null);
 
-  // Estimation des frais dès que to + amount sont valides.
+  // Le solde du token sélectionné (ETH si selected === "eth").
+  const selectedBalance: bigint | null = (() => {
+    if (selected === "eth") return evmAccount?.balance ?? null;
+    const entry = tokensWithBalance?.find((t) => t.token.contract === selected);
+    return entry?.balance ?? null;
+  })();
+
+  // Estimation des frais (natif ou ERC-20).
   useEffect(() => {
     if (!session || !to || !amount) {
       setFeeHint(null);
@@ -52,23 +83,39 @@ export function SendEvmRoute() {
       setFeeHint(null);
       return;
     }
-    let amountWei: bigint;
+
+    let amountBaseUnits: bigint;
     try {
-      amountWei = parseEth(amount);
+      if (selectedToken) {
+        amountBaseUnits = parseTokenAmount(
+          amount,
+          selectedToken.metadata.decimals,
+        );
+      } else {
+        amountBaseUnits = parseEth(amount);
+      }
     } catch {
       setFeeHint(null);
       return;
     }
+
+    const assetRef = selectedToken
+      ? ({
+          kind: "token",
+          networkId,
+          contract: selectedToken.contract,
+        } as const)
+      : ({ kind: "native", assetId: "eth", networkId } as const);
 
     let cancelled = false;
     setFeeLoading(true);
     session
       .estimateFee(
         {
-          from: to as Address, // sera remplacé par la session via account
+          from: to as Address,
           to: to as Address,
-          assetRef: { kind: "native", assetId: "eth", networkId },
-          amount: amountWei,
+          assetRef,
+          amount: amountBaseUnits,
         },
         account,
       )
@@ -91,7 +138,7 @@ export function SendEvmRoute() {
     return () => {
       cancelled = true;
     };
-  }, [session, to, amount, networkId, account]);
+  }, [session, to, amount, networkId, account, selectedToken]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -101,30 +148,52 @@ export function SendEvmRoute() {
         description: "Format attendu : 0x suivi de 40 caractères hexadécimaux.",
       });
     }
-    let amountWei: bigint;
+
+    let amountBaseUnits: bigint;
     try {
-      amountWei = parseEth(amount);
+      if (selectedToken) {
+        amountBaseUnits = parseTokenAmount(
+          amount,
+          selectedToken.metadata.decimals,
+        );
+      } else {
+        amountBaseUnits = parseEth(amount);
+      }
     } catch (err) {
       return toast.error("Montant invalide", {
         description: (err as Error).message,
       });
     }
-    if (amountWei <= 0n) {
+
+    if (amountBaseUnits <= 0n) {
       return toast.error("Le montant doit être supérieur à 0");
     }
-    if (evmAccount && amountWei + (feeHint?.totalWei ?? 0n) > evmAccount.balance) {
+
+    // Vérification du solde du token sélectionné.
+    if (selectedBalance !== null && amountBaseUnits > selectedBalance) {
+      const symbol = selectedToken?.metadata.symbol ?? "ETH";
+      const displayed = selectedToken
+        ? formatTokenAmount(selectedBalance, selectedToken.metadata.decimals)
+        : formatEthShort(selectedBalance);
       return toast.error("Solde insuffisant", {
-        description: `Solde : ${formatEthShort(evmAccount.balance)} ETH`,
+        description: `Solde : ${displayed} ${symbol}`,
+      });
+    }
+
+    // Vérification du solde ETH pour les frais (gas token).
+    if (evmAccount && feeHint && evmAccount.balance < feeHint.totalWei) {
+      return toast.error("Solde ETH insuffisant pour les frais", {
+        description: `Frais estimés : ${formatEthShort(feeHint.totalWei)} ETH`,
       });
     }
 
     try {
       const { txHash } = await sendEvm.mutateAsync({
         to: to as Address,
-        amountWei,
+        amountBaseUnits,
+        token: selectedToken,
       });
       setLastTxHash(txHash);
-      // Reset le formulaire mais reste sur la page pour montrer le lien.
       setTo("");
       setAmount("");
       setFeeHint(null);
@@ -132,6 +201,14 @@ export function SendEvmRoute() {
       // toast déjà déclenché par onError du hook
     }
   }
+
+  const symbol = selectedToken?.metadata.symbol ?? "ETH";
+  const balanceDisplay =
+    selectedBalance !== null
+      ? selectedToken
+        ? formatTokenAmount(selectedBalance, selectedToken.metadata.decimals)
+        : formatEthShort(selectedBalance)
+      : null;
 
   return (
     <div className="mx-auto max-w-md px-6 py-10">
@@ -143,15 +220,13 @@ export function SendEvmRoute() {
       </Link>
 
       <h1 className="mt-6 text-xl font-semibold tracking-tight">
-        Envoyer de l&apos;ETH
+        Envoyer
       </h1>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Réseau : {networkName}
-      </p>
+      <p className="mt-1 text-xs text-muted-foreground">Réseau : {networkName}</p>
 
-      {evmAccount && (
+      {balanceDisplay !== null && (
         <p className="mt-3 text-xs text-muted-foreground">
-          Solde : {formatEthShort(evmAccount.balance)} ETH
+          Solde : {balanceDisplay} {symbol}
         </p>
       )}
 
@@ -171,6 +246,26 @@ export function SendEvmRoute() {
 
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
         <label className="block">
+          <span className="text-xs font-medium">Actif</span>
+          <select
+            value={selected}
+            onChange={(e) => {
+              setSelected(e.target.value);
+              setAmount("");
+              setFeeHint(null);
+            }}
+            className="mt-1 flex h-10 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <option value="eth">ETH — natif</option>
+            {availableTokens.map((t) => (
+              <option key={t.contract} value={t.contract}>
+                {t.metadata.symbol} — {t.metadata.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block">
           <span className="text-xs font-medium">Destinataire</span>
           <input
             type="text"
@@ -185,15 +280,58 @@ export function SendEvmRoute() {
         </label>
 
         <label className="block">
-          <span className="text-xs font-medium">Montant (ETH)</span>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.01"
-            className="mt-1 flex h-10 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
+          <span className="text-xs font-medium">Montant ({symbol})</span>
+          <div className="relative">
+            <input
+              type="text"
+              inputMode="decimal"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder={selectedToken ? "1.00" : "0.01"}
+              className="mt-1 flex h-10 w-full rounded-xl border border-input bg-background px-3 pr-16 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+            {selectedBalance !== null && selectedBalance > 0n && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedToken) {
+                    // Token : MAX = solde complet
+                    setAmount(
+                      formatTokenAmount(
+                        selectedBalance,
+                        selectedToken.metadata.decimals,
+                      ),
+                    );
+                  } else {
+                    // ETH : MAX = solde − 0.0001 ETH (réserve gas)
+                    const reserve = 10n ** 14n; // 0.0001 ETH
+                    const max = selectedBalance > reserve
+                      ? selectedBalance - reserve
+                      : 0n;
+                    setAmount(formatEthShort(max));
+                  }
+                }}
+                className="absolute right-2 top-1/2 mt-0.5 -translate-y-1/2 rounded-lg border bg-card px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-accent"
+              >
+                MAX
+              </button>
+            )}
+          </div>
+          {selectedToken && amount && (
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              ≈{" "}
+              {(() => {
+                try {
+                  return formatStablecoinUsd(
+                    parseTokenAmount(amount, selectedToken.metadata.decimals),
+                    selectedToken.metadata.decimals,
+                  );
+                } catch {
+                  return "—";
+                }
+              })()}
+            </p>
+          )}
         </label>
 
         {feeHint && (
@@ -226,7 +364,7 @@ export function SendEvmRoute() {
           className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           <Send className="size-4" />
-          {sendEvm.isPending ? "Envoi…" : "Envoyer"}
+          {sendEvm.isPending ? "Envoi…" : `Envoyer ${symbol}`}
         </button>
       </form>
     </div>
