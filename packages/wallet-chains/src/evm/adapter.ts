@@ -6,6 +6,8 @@ import { EvmAddressProvider } from "./address-provider";
 import { EvmBalanceProvider } from "./balance-provider";
 import { EvmBroadcaster } from "./broadcaster";
 import { EvmFeeEstimator } from "./fee-estimator";
+import { EvmHistoryProvider } from "./history-provider";
+import type { EvmIndexer } from "./indexer";
 import type { EvmRpc } from "./rpc";
 import { EvmTransactionBuilder } from "./transaction-builder";
 import { EvmTransactionSigner } from "./transaction-signer";
@@ -23,6 +25,14 @@ export interface EvmAdapterDeps {
   readonly rpc: EvmRpc;
   readonly signer: Signer;
   readonly chainId: number;
+  /**
+   * Indexeur optionnel (Etherscan V2 en E1.5).
+   *
+   * Si absent, `historyProvider` retourne une page vide (stub). Cela
+   * permet d'utiliser l'adapter sans indexeur (tests unitaires) tout
+   * en ayant une vraie implémentation en prod.
+   */
+  readonly indexer?: EvmIndexer;
 }
 
 /**
@@ -53,9 +63,11 @@ export function evmAdapterFactory(
     addressProvider: new EvmAddressProvider(deps.signer),
     balanceProvider: new EvmBalanceProvider(deps.rpc, network.id),
     accountProvider: new EvmAccountProvider(deps.rpc, network.id),
-    historyProvider: {
-      getHistory: async () => ({ total: 0, items: [] }),
-    },
+    historyProvider: deps.indexer
+      ? new EvmHistoryProvider(deps.indexer, network.id)
+      : {
+          getHistory: async () => ({ total: 0, items: [] }),
+        },
     feeEstimator: new EvmFeeEstimator(deps.rpc, network.id),
     transactionBuilder: new EvmTransactionBuilder(
       deps.rpc,

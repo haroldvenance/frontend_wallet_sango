@@ -91,7 +91,10 @@ export function useSendEvm(): UseMutationResult<
         ),
       });
 
+      // D-INDEXER-3 : invalidation immédiate (pas besoin d'attendre
+      // le refresh périodique de 30 s).
       void qc.invalidateQueries({ queryKey: ["evm-account"] });
+      void qc.invalidateQueries({ queryKey: ["evm-history"] });
 
       return { txHash };
     },

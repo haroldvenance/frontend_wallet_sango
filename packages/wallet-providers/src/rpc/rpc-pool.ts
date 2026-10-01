@@ -101,13 +101,22 @@ export class HttpRpcPool implements RpcPool {
   readonly #fetch: FetchLike;
   #nextId = 1;
 
-  constructor(fetchImpl: FetchLike = globalThis.fetch) {
-    if (typeof fetchImpl !== "function") {
+  constructor(fetchImpl?: FetchLike) {
+    // Distingue `undefined` (⇒ fetch global par défaut) de `null`
+    // (⇒ erreur explicite — passer `null` c'est dire "je ne veux PAS
+    // de fetch", ce qui n'a pas de sens). Le `??` classique traiterait
+    // `null` comme `undefined` et masquerait ce cas.
+    const raw = fetchImpl !== undefined ? fetchImpl : globalThis.fetch;
+    if (typeof raw !== "function") {
       throw new Error(
         "HttpRpcPool: fetch is not available. Pass a fetch implementation.",
       );
     }
-    this.#fetch = fetchImpl;
+    // ⚠️ `window.fetch` exige `this === window`. Stocké dans un champ
+    //    privé et appelé via `this.#fetch(...)`, le `this` devient
+    //    l'instance → erreur navigateur. On bind à `globalThis` SI et
+    //    seulement SI c'est le fetch du global (un mock reste intact).
+    this.#fetch = fetchImpl ? raw : raw.bind(globalThis);
   }
 
   register(networkId: string, endpoints: readonly RpcEndpoint[]): void {

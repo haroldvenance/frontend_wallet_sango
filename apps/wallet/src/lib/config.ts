@@ -86,3 +86,15 @@ export const FAUCET_ENDPOINT: string =
   (import.meta.env.VITE_SANGO_FAUCET_URL as string | undefined) ??
   (import.meta.env.VITE_FAUCET_URL as string | undefined) ??
   DEFAULT_FAUCET_URL;
+
+/**
+ * Etherscan V2 API key (D-INDEXER-2).
+ *
+ * ⚠️ Cette clé n'est PAS un secret : elle finit dans le bundle
+ *    navigateur. Configurer des restrictions de domaine + rate limit
+ *    côté Etherscan.
+ *
+ * Si vide, l'historique EVM est désactivé (page vide).
+ */
+export const ETHERSCAN_API_KEY: string =
+  (import.meta.env.VITE_ETHERSCAN_API_KEY as string | undefined) ?? "";

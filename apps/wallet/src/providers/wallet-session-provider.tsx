@@ -18,8 +18,13 @@ import {
   signerFromAnyWallet,
   type WalletSession,
 } from "@sango/wallet-session";
-import { createRpcPool, EvmRpcUsingPool } from "@sango/wallet-providers";
+import {
+  EtherscanIndexer,
+  createRpcPool,
+  EvmRpcUsingPool,
+} from "@sango/wallet-providers";
 
+import { ETHERSCAN_API_KEY } from "@/lib/config";
 import { useSdkStore } from "@/stores/sdk-store";
 import { useWalletStore } from "@/stores/wallet-store";
 import { WalletSessionContext } from "./wallet-session-context";
@@ -90,11 +95,21 @@ export function WalletSessionProvider({ children }: WalletSessionProviderProps) 
       const evmRpc = new EvmRpcUsingPool(pool, network.id);
       const chainId = hexChainIdToNumber(network.chainId);
 
+      // D-INDEXER-1/2 : indexer Etherscan V2 par réseau. Si aucune
+      // clé n'est configurée, l'adapter utilise son stub (page vide).
+      const indexer = ETHERSCAN_API_KEY
+        ? new EtherscanIndexer({
+            apiKey: ETHERSCAN_API_KEY,
+            chainId,
+          })
+        : undefined;
+
       chainRegistry.register(network, () =>
         evmAdapterFactory(network, {
           rpc: evmRpc,
           signer,
           chainId,
+          indexer,
         }),
       );
     }

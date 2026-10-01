@@ -2,6 +2,7 @@ import { evmNetworkById } from "@sango/wallet-chains";
 
 import { useWalletStore } from "@/stores/wallet-store";
 import { BalanceCardEvm } from "./balance-card-evm";
+import { HistoryListEvm } from "./history-list-evm";
 
 /**
  * Dashboard EVM (E1.5) — volontairement minimal.
@@ -34,6 +35,7 @@ export function EvmDashboard() {
       </div>
       <div className="space-y-8">
         <BalanceCardEvm />
+        <HistoryListEvm />
       </div>
     </div>
   );

@@ -30,3 +30,5 @@ export { EvmTransactionBuilder } from "./transaction-builder";
 export type { EvmCallParams } from "./rpc";
 export { EvmTransactionSigner } from "./transaction-signer";
 export { EvmBroadcaster } from "./broadcaster";
+export { EvmHistoryProvider } from "./history-provider";
+export type { EvmIndexer, EvmIndexerTx, EvmIndexerPage } from "./indexer";
