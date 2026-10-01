@@ -7,16 +7,10 @@ import { useAutoLock } from "@/hooks/use-auto-lock";
 import { useSdkWalletSync } from "@/hooks/use-sdk-wallet-sync";
 import { UnifiedDashboard } from "@/features/dashboard/unified-dashboard";
 import { CreateWallet } from "@/routes/create-wallet";
-const SendEvmRoute = lazy(() =>
-  import("@/routes/send-evm").then((m) => ({ default: m.SendEvmRoute })),
-);
 const CreateEvmWalletRoute = lazy(() =>
   import("@/routes/create-evm").then((m) => ({ default: m.CreateEvmWallet })),
 );
 const HistoryDetailRoute = lazy(() => import("@/routes/history-detail").then(m => ({ default: m.HistoryDetailRoute })));
-const HistoryEvmRoute = lazy(() =>
-  import("@/routes/history-evm").then((m) => ({ default: m.HistoryEvmRoute })),
-);
 const HistoryRoute = lazy(() => import("@/routes/history").then(m => ({ default: m.HistoryRoute })));
 import { ImportWallet } from "@/routes/import-wallet";
 const ImportEvmWalletRoute = lazy(() =>
@@ -68,12 +62,12 @@ export default function App() {
         <Route element={<ProtectedLayout />}>
           <Route path="/" element={<UnifiedDashboard />} />
             <Route path="/send" element={<SendRoute />} />
-            <Route path="/send-evm" element={<SendEvmRoute />} />
+            <Route path="/send-evm" element={<Navigate to="/send" replace />} />
             <Route path="/validators" element={<ValidatorsRoute />} />
             <Route path="/validators/:address" element={<ValidatorDetailRoute />} />
             <Route path="/become-validator" element={<BecomeValidatorRoute />} />
             <Route path="/history" element={<HistoryRoute />} />
-            <Route path="/history-evm" element={<HistoryEvmRoute />} />
+            <Route path="/history-evm" element={<Navigate to="/history" replace />} />
             <Route path="/history/:hash" element={<HistoryDetailRoute />} />
         </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

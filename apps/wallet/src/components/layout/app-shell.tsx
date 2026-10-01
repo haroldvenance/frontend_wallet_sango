@@ -78,24 +78,13 @@ export function AppShell({ children }: AppShellProps) {
   const format = useWalletStore((s) => s.format);
   const isSango = format === "sango-legacy";
 
-  // Nav wallet-aware : dispatch selon le format.
-  // `isSango` est déjà déclaré plus haut (utilisé pour le dispatch
-  // sidebar NetworkSelector / EvmNetworkSelector).
+  // Nav UX-2.c : routes canoniques `/send` et `/history`, dispatchées
+  // par `SendRoute`/`HistoryRoute` selon `wallet.format`. Seul
+  // "Validateurs" reste conditionnel (SANGO uniquement).
   const navigation = [
     { to: "/", label: t.nav.dashboard, icon: LayoutDashboard, end: true },
-    {
-      to: isSango ? "/send" : "/send-evm",
-      label: t.nav.send,
-      icon: ArrowLeftRight,
-      end: false,
-    },
-    {
-      to: isSango ? "/history" : "/history-evm",
-      label: t.nav.history,
-      icon: History,
-      end: false,
-    },
-    // Validators : SANGO uniquement.
+    { to: "/send", label: t.nav.send, icon: ArrowLeftRight, end: false },
+    { to: "/history", label: t.nav.history, icon: History, end: false },
     ...(isSango
       ? [
           {

@@ -197,6 +197,7 @@ function WalletTab({ onClose }: { onClose: () => void }) {
   const t = useTranslation();
   const wallet = useSangoWallet();
   const { noWallet } = useWalletStore();
+  const format = useWalletStore((s) => s.format);
   const [busy, setBusy] = useState(false);
   const [stored, setStored] = useState<StoredWalletV1 | null>(null);
 
@@ -274,6 +275,26 @@ function WalletTab({ onClose }: { onClose: () => void }) {
       toast.error(t.keyfile.importFailed, { description: msg });
       setBusy(false);
     }
+  }
+
+  // UX-2.d — Le keyfile export est SANGO-spécifique ('sango-wallet-keyfile'
+  // V1). Les wallets BIP-39 EVM auront un format dédié en E1.6.
+  if (format === "bip39") {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-xl border border-dashed bg-card/60 p-4">
+          <p className="text-sm font-medium">Keyfile BIP-39</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            La gestion du keyfile pour les wallets EVM sera disponible
+            prochainement (E1.6).
+          </p>
+          <p className="mt-3 text-[11px] text-muted-foreground">
+            En attendant, ton wallet est chiffré et persisté localement dans
+            le keyring. Tu peux le verrouiller via l&apos;onglet Sécurité.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
