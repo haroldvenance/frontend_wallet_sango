@@ -7,6 +7,7 @@ import {
 import { toast } from "sonner";
 
 import { ExplorerLink } from "@/components/branding/explorer-link";
+import { useIsSangoWallet } from "@/hooks/use-is-sango-wallet";
 import { shortenHash } from "@/lib/format";
 import { useWalletSession } from "@/providers/wallet-session-context";
 import { useSdkStore } from "@/stores/sdk-store";
@@ -36,6 +37,7 @@ export interface SendResult {
  */
 export function useSendTx(): UseMutationResult<SendResult, Error, SendArgs> {
   const session = useWalletSession();
+  const isSango = useIsSangoWallet();
   const { client } = useSdkStore();
   const { account } = useNetworkQueryContext();
   const qc = useQueryClient();
@@ -45,6 +47,11 @@ export function useSendTx(): UseMutationResult<SendResult, Error, SendArgs> {
       if (!session) {
         throw new Error(
           "useSendTx: WalletSession indisponible (wallet verrouillé ?)",
+        );
+      }
+      if (!isSango) {
+        throw new Error(
+          "useSendTx: réservé aux wallets SANGO — utilise le dashboard EVM pour envoyer de l'ETH",
         );
       }
 

@@ -3,6 +3,7 @@ import type { ValidatorInfo } from "@sango/rpc";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 
 import { networkQueryKey } from "@/lib/network-query";
+import { useIsSangoWallet } from "@/hooks/use-is-sango-wallet";
 import { useWalletSession } from "@/providers/wallet-session-context";
 import { useNetworkQueryContext } from "./use-network-query-context";
 
@@ -25,6 +26,7 @@ const POLL_MS = 5_000;
  */
 export function useValidators(): UseQueryResult<ValidatorInfo[], Error> {
   const session = useWalletSession();
+  const isSango = useIsSangoWallet();
   const { endpoint, networkId } = useNetworkQueryContext();
 
   return useQuery<ValidatorInfo[], Error>({
@@ -36,7 +38,7 @@ export function useValidators(): UseQueryResult<ValidatorInfo[], Error> {
       // composants (ValidatorActionsPanel, validators.tsx).
       return [...(await session.listValidators(networkId))];
     },
-    enabled: Boolean(session),
+    enabled: isSango && Boolean(session),
     refetchInterval: POLL_MS,
   });
 }
@@ -54,13 +56,14 @@ export function useValidatorInfo(
   const session = useWalletSession();
   const { endpoint, networkId } = useNetworkQueryContext();
 
+  const isSango = useIsSangoWallet();
   return useQuery<ValidatorInfo | null, Error>({
     queryKey: networkQueryKey(["validator"], endpoint, networkId, address),
     queryFn: async () => {
       if (!session || !address) return null;
       return session.getValidatorInfo(networkId, address);
     },
-    enabled: Boolean(session) && Boolean(address),
+    enabled: isSango && Boolean(session) && Boolean(address),
     refetchInterval: POLL_MS,
   });
 }

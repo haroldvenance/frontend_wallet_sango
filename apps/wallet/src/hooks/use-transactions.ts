@@ -11,6 +11,7 @@ import { networkQueryKey } from "@/lib/network-query";
 import { useWalletSession } from "@/providers/wallet-session-context";
 import { useWalletStore } from "@/stores/wallet-store";
 import { useSangoWallet } from "@/hooks/use-sango-wallet";
+import { useIsSangoWallet } from "@/hooks/use-is-sango-wallet";
 import { useNetworkQueryContext } from "./use-network-query-context";
 
 /**
@@ -95,6 +96,7 @@ export function useTransactions(
   filter: TransactionsFilter = {},
 ): UseQueryResult<TxPage, Error> {
   const session = useWalletSession();
+  const isSango = useIsSangoWallet();
   const wallet = useSangoWallet();
   const { status } = useWalletStore();
   const { endpoint, networkId, account } = useNetworkQueryContext();
@@ -116,7 +118,7 @@ export function useTransactions(
       const page = await session.getTransactionPage(account, limit, offset);
       return toTxPage(page);
     },
-    enabled: status === "unlocked" && Boolean(session) && Boolean(address),
+    enabled: isSango && status === "unlocked" && Boolean(session) && Boolean(address),
     refetchInterval: 10_000,
     staleTime: 5_000,
     retry: 1,
@@ -138,6 +140,7 @@ export function useTransaction(
   const session = useWalletSession();
   const { endpoint, networkId } = useNetworkQueryContext();
 
+  const isSango = useIsSangoWallet();
   return useQuery<Tx | null, Error>({
     queryKey: networkQueryKey(["tx"], endpoint, networkId, hash),
     queryFn: async () => {
@@ -145,7 +148,7 @@ export function useTransaction(
       const detail = await session.getTransactionByHash(networkId, hash);
       return detail ? toTx(detail) : null;
     },
-    enabled: Boolean(session) && Boolean(hash),
+    enabled: isSango && Boolean(session) && Boolean(hash),
     staleTime: 30_000,
     retry: 1,
   });
@@ -168,6 +171,7 @@ export function useInfiniteTransactions(
   const wallet = useSangoWallet();
   const { status } = useWalletStore();
   const { endpoint, networkId, account } = useNetworkQueryContext();
+  const isSango = useIsSangoWallet();
   const address = wallet?.identity.addressHex;
 
   return useInfiniteQuery<
@@ -184,7 +188,7 @@ export function useInfiniteTransactions(
       address,
       limit,
     ),
-    enabled: status === "unlocked" && Boolean(session) && Boolean(address),
+    enabled: isSango && status === "unlocked" && Boolean(session) && Boolean(address),
     initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
       if (!session) return { total: 0, offset: 0, limit, items: [] };

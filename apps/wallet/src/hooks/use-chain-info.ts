@@ -2,6 +2,7 @@ import type { ChainInfo } from "@sango/rpc";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 
 import { networkQueryKey } from "@/lib/network-query";
+import { useIsSangoWallet } from "@/hooks/use-is-sango-wallet";
 import { useSdkStore } from "@/stores/sdk-store";
 import { useNetworkQueryContext } from "./use-network-query-context";
 
@@ -24,11 +25,13 @@ import { useNetworkQueryContext } from "./use-network-query-context";
  */
 export function useChainInfo(): UseQueryResult<ChainInfo, Error> {
   const { client } = useSdkStore();
+  const isSango = useIsSangoWallet();
   const { endpoint, networkId } = useNetworkQueryContext();
 
   return useQuery<ChainInfo, Error>({
     queryKey: networkQueryKey(["chain-info"], endpoint, networkId),
     queryFn: () => client.getChainInfo(),
+    enabled: isSango,
     refetchInterval: 5_000,
   });
 }

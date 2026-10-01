@@ -17,6 +17,7 @@ import {
 import { formatSango } from "@/lib/format";
 import { useSdkStore } from "@/stores/sdk-store";
 import { useSangoWallet } from "@/hooks/use-sango-wallet";
+import { useIsSangoWallet } from "@/hooks/use-is-sango-wallet";
 import { ExplorerLink } from "@/components/branding/explorer-link";
 
 /**
@@ -24,9 +25,11 @@ import { ExplorerLink } from "@/components/branding/explorer-link";
  * Permet de griser le bouton si le faucet est down.
  */
 export function useFaucetHealth(): UseQueryResult<FaucetHealth, Error> {
+  const isSango = useIsSangoWallet();
   return useQuery<FaucetHealth, Error>({
     queryKey: ["faucet", "health"],
     queryFn: getFaucetHealth,
+    enabled: isSango,
     refetchInterval: 30_000,
     retry: 1,
     staleTime: 20_000,
@@ -50,11 +53,17 @@ export function useFaucet(): UseMutationResult<
   void
 > {
   const { client } = useSdkStore();
+  const isSango = useIsSangoWallet();
   const wallet = useSangoWallet();
   const qc = useQueryClient();
 
   return useMutation<FaucetRequestResult, Error, void>({
     mutationFn: async () => {
+      if (!isSango) {
+        throw new Error(
+          "useFaucet: réservé aux wallets SANGO (le faucet HTTP est SANGO-devnet-only en E1)",
+        );
+      }
       if (!wallet) throw new Error("Wallet not attached");
 
       // 1. Appel faucet.

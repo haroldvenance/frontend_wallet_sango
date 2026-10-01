@@ -7,6 +7,7 @@ import { networkQueryKey } from "@/lib/network-query";
 import { useWalletSession } from "@/providers/wallet-session-context";
 import { useWalletStore } from "@/stores/wallet-store";
 import { useSangoWallet } from "@/hooks/use-sango-wallet";
+import { useIsSangoWallet } from "@/hooks/use-is-sango-wallet";
 import { useNetworkQueryContext } from "./use-network-query-context";
 
 /**
@@ -23,6 +24,7 @@ import { useNetworkQueryContext } from "./use-network-query-context";
  */
 export function useAccount(): UseQueryResult<Account | null, Error> {
   const session = useWalletSession();
+  const isSango = useIsSangoWallet();
   const wallet = useSangoWallet();
   const { status } = useWalletStore();
   const { endpoint, networkId, account } = useNetworkQueryContext();
@@ -36,7 +38,7 @@ export function useAccount(): UseQueryResult<Account | null, Error> {
       const state = await session.getAccount(account);
       return state ? accountStateToRpc(state) : null;
     },
-    enabled: status === "unlocked" && Boolean(session) && Boolean(address),
+    enabled: isSango && status === "unlocked" && Boolean(session) && Boolean(address),
     refetchInterval: 5_000,
   });
 }

@@ -5,6 +5,7 @@ import { networkQueryKey } from "@/lib/network-query";
 import { useWalletSession } from "@/providers/wallet-session-context";
 import { useWalletStore } from "@/stores/wallet-store";
 import { useSangoWallet } from "@/hooks/use-sango-wallet";
+import { useIsSangoWallet } from "@/hooks/use-is-sango-wallet";
 import { useNetworkQueryContext } from "./use-network-query-context";
 
 const POLL_MS = 5_000;
@@ -23,6 +24,7 @@ export function useMyDelegations(): UseQueryResult<
   Error
 > {
   const session = useWalletSession();
+  const isSango = useIsSangoWallet();
   const wallet = useSangoWallet();
   const { status } = useWalletStore();
   const { endpoint, networkId, account } = useNetworkQueryContext();
@@ -40,7 +42,7 @@ export function useMyDelegations(): UseQueryResult<
       if (!session) return [];
       return session.getDelegations(account);
     },
-    enabled: status === "unlocked" && Boolean(session) && Boolean(address),
+    enabled: isSango && status === "unlocked" && Boolean(session) && Boolean(address),
     refetchInterval: POLL_MS,
   });
 }
@@ -59,6 +61,7 @@ export function useMyPendingUnbondings(): UseQueryResult<
   const { status } = useWalletStore();
   const { endpoint, networkId, account } = useNetworkQueryContext();
 
+  const isSango = useIsSangoWallet();
   const address = wallet?.identity.addressHex;
 
   return useQuery<readonly PendingUnbonding[], Error>({
@@ -72,7 +75,7 @@ export function useMyPendingUnbondings(): UseQueryResult<
       if (!session) return [];
       return session.getPendingUnbondings(account);
     },
-    enabled: status === "unlocked" && Boolean(session) && Boolean(address),
+    enabled: isSango && status === "unlocked" && Boolean(session) && Boolean(address),
     refetchInterval: POLL_MS,
   });
 }

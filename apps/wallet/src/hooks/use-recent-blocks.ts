@@ -2,6 +2,7 @@ import type { EvmBlock } from "@sango/rpc";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 
 import { networkQueryKey } from "@/lib/network-query";
+import { useIsSangoWallet } from "@/hooks/use-is-sango-wallet";
 import { useSdkStore } from "@/stores/sdk-store";
 import { useNetworkQueryContext } from "./use-network-query-context";
 
@@ -22,11 +23,13 @@ export function useRecentBlocks(
   count = 5,
 ): UseQueryResult<EvmBlock[], Error> {
   const { client } = useSdkStore();
+  const isSango = useIsSangoWallet();
   const { endpoint, networkId } = useNetworkQueryContext();
 
   return useQuery<EvmBlock[], Error>({
     queryKey: networkQueryKey(["recent-blocks"], endpoint, networkId, count),
     queryFn: () => client.getRecentBlocks(count),
+    enabled: isSango,
     refetchInterval: POLL_MS,
     staleTime: POLL_MS / 2,
   });

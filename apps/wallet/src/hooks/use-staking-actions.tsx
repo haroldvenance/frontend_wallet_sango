@@ -8,6 +8,7 @@ import {
 import { toast } from "sonner";
 
 import { ExplorerLink } from "@/components/branding/explorer-link";
+import { useIsSangoWallet } from "@/hooks/use-is-sango-wallet";
 import { useWalletSession } from "@/providers/wallet-session-context";
 import { useSdkStore } from "@/stores/sdk-store";
 import { shortenHash } from "@/lib/format";
@@ -95,6 +96,7 @@ async function runStakingAction(
  * - `client`  : SDK pour `waitForInclusion` (D-SESS-7).
  */
 function useStakingContext() {
+  const isSango = useIsSangoWallet();
   const session = useWalletSession();
   const { account, networkId } = useNetworkQueryContext();
   const { client } = useSdkStore();
@@ -105,14 +107,20 @@ function useStakingContext() {
     networkId,
   };
 
-  return { session, account, assetRef, client };
+  return { session, account, assetRef, client, isSango };
 }
 
 function assertSession(
   session: ReturnType<typeof useWalletSession>,
+  isSango: boolean,
 ): asserts session is NonNullable<typeof session> {
   if (!session) {
     throw new Error("WalletSession indisponible (wallet verrouillé ?)");
+  }
+  if (!isSango) {
+    throw new Error(
+      "Staking SANGO uniquement — le wallet actif est un wallet EVM (BIP-39)",
+    );
   }
 }
 
@@ -120,11 +128,11 @@ function assertSession(
 
 /** Bond (self-stake). */
 export function useBond(): UseMutationResult<StakingResult, Error, { amountBaseUnits: bigint }> {
-  const { session, account, assetRef, client } = useStakingContext();
+  const { session, account, assetRef, client, isSango } = useStakingContext();
   const invalidate = useInvalidateStaking();
   return useMutation<StakingResult, Error, { amountBaseUnits: bigint }>({
     mutationFn: ({ amountBaseUnits }) => {
-      assertSession(session);
+      assertSession(session, isSango);
       return runStakingAction(
         () =>
           session
@@ -144,11 +152,11 @@ export function useBond(): UseMutationResult<StakingResult, Error, { amountBaseU
 
 /** Unbond (retrait self-stake). */
 export function useUnbond(): UseMutationResult<StakingResult, Error, { amountBaseUnits: bigint }> {
-  const { session, account, assetRef, client } = useStakingContext();
+  const { session, account, assetRef, client, isSango } = useStakingContext();
   const invalidate = useInvalidateStaking();
   return useMutation<StakingResult, Error, { amountBaseUnits: bigint }>({
     mutationFn: ({ amountBaseUnits }) => {
-      assertSession(session);
+      assertSession(session, isSango);
       return runStakingAction(
         () =>
           session
@@ -172,11 +180,11 @@ export function useDelegate(): UseMutationResult<
   Error,
   { validator: AddressHex; amountBaseUnits: bigint }
 > {
-  const { session, account, assetRef, client } = useStakingContext();
+  const { session, account, assetRef, client, isSango } = useStakingContext();
   const invalidate = useInvalidateStaking();
   return useMutation<StakingResult, Error, { validator: AddressHex; amountBaseUnits: bigint }>({
     mutationFn: ({ validator, amountBaseUnits }) => {
-      assertSession(session);
+      assertSession(session, isSango);
       return runStakingAction(
         () =>
           session
@@ -200,11 +208,11 @@ export function useUndelegate(): UseMutationResult<
   Error,
   { validator: AddressHex; amountBaseUnits: bigint }
 > {
-  const { session, account, assetRef, client } = useStakingContext();
+  const { session, account, assetRef, client, isSango } = useStakingContext();
   const invalidate = useInvalidateStaking();
   return useMutation<StakingResult, Error, { validator: AddressHex; amountBaseUnits: bigint }>({
     mutationFn: ({ validator, amountBaseUnits }) => {
-      assertSession(session);
+      assertSession(session, isSango);
       return runStakingAction(
         () =>
           session
@@ -224,11 +232,11 @@ export function useUndelegate(): UseMutationResult<
 
 /** ClaimRewards. */
 export function useClaimRewards(): UseMutationResult<StakingResult, Error, { validator: AddressHex }> {
-  const { session, account, assetRef, client } = useStakingContext();
+  const { session, account, assetRef, client, isSango } = useStakingContext();
   const invalidate = useInvalidateStaking();
   return useMutation<StakingResult, Error, { validator: AddressHex }>({
     mutationFn: ({ validator }) => {
-      assertSession(session);
+      assertSession(session, isSango);
       return runStakingAction(
         () =>
           session
@@ -249,7 +257,7 @@ export function useRegisterValidator(): UseMutationResult<
   Error,
   { commissionBps: number; selfStakeBaseUnits: bigint }
 > {
-  const { session, account, assetRef, client } = useStakingContext();
+  const { session, account, assetRef, client, isSango } = useStakingContext();
   const invalidate = useInvalidateStaking();
   return useMutation<
     StakingResult,
@@ -257,7 +265,7 @@ export function useRegisterValidator(): UseMutationResult<
     { commissionBps: number; selfStakeBaseUnits: bigint }
   >({
     mutationFn: ({ commissionBps, selfStakeBaseUnits }) => {
-      assertSession(session);
+      assertSession(session, isSango);
       return runStakingAction(
         () =>
           session
@@ -286,11 +294,11 @@ export function useUpdateCommission(): UseMutationResult<
   Error,
   { newCommissionBps: number }
 > {
-  const { session, account, assetRef, client } = useStakingContext();
+  const { session, account, assetRef, client, isSango } = useStakingContext();
   const invalidate = useInvalidateStaking();
   return useMutation<StakingResult, Error, { newCommissionBps: number }>({
     mutationFn: ({ newCommissionBps }) => {
-      assertSession(session);
+      assertSession(session, isSango);
       return runStakingAction(
         () =>
           session
@@ -310,11 +318,11 @@ export function useUpdateCommission(): UseMutationResult<
 
 /** Unjail. */
 export function useUnjail(): UseMutationResult<StakingResult, Error, void> {
-  const { session, account, assetRef, client } = useStakingContext();
+  const { session, account, assetRef, client, isSango } = useStakingContext();
   const invalidate = useInvalidateStaking();
   return useMutation<StakingResult, Error, void>({
     mutationFn: () => {
-      assertSession(session);
+      assertSession(session, isSango);
       return runStakingAction(
         () =>
           session
