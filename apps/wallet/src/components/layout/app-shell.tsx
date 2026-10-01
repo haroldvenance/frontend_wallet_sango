@@ -79,10 +79,8 @@ export function AppShell({ children }: AppShellProps) {
   const isSango = format === "sango-legacy";
 
   // Nav wallet-aware : dispatch selon le format.
-  // - SANGO legacy : Dashboard / Send / History / Validators
-  // - BIP-39 EVM   : Dashboard / Send / History (pas de Validators)
-  const isSango = format === "sango-legacy";
-
+  // `isSango` est déjà déclaré plus haut (utilisé pour le dispatch
+  // sidebar NetworkSelector / EvmNetworkSelector).
   const navigation = [
     { to: "/", label: t.nav.dashboard, icon: LayoutDashboard, end: true },
     {
