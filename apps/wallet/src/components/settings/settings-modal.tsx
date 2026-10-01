@@ -1,4 +1,4 @@
-import type { StoredWalletV1 } from "@sango/wallet-core";
+import type { StoredWalletV1, StoredWalletV2 } from "@sango/wallet-core";
 import { Keyring, type KeyringEntry } from "@sango/wallet-core";
 import {
   AlertTriangle,
@@ -13,6 +13,10 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { useTranslation } from "@/i18n/use-translation";
+import {
+  deserializeBip39Keyfile,
+  serializeBip39Keyfile,
+} from "@/lib/bip39-keyfile";
 import {
   deserializeKeyfile,
   downloadJson,
@@ -191,13 +195,26 @@ function PreferencesTab() {
   );
 }
 
-// --- Onglet Wallet --------------------------------------------------------
+// --- Onglet Wallet (dispatcher) -------------------------------------------
 
+/**
+ * Dispatcher selon le format du wallet actif.
+ *
+ *   - sango-legacy  → SangoWalletTab (keyfile V1 existant)
+ *   - bip39         → Bip39WalletTab (keyfile V2, E1.6.b)
+ */
 function WalletTab({ onClose }: { onClose: () => void }) {
+  const format = useWalletStore((s) => s.format);
+  if (format === "bip39") return <Bip39WalletTab onClose={onClose} />;
+  return <SangoWalletTab onClose={onClose} />;
+}
+
+// --- Sous-onglet SANGO legacy (keyfile V1) --------------------------------
+
+function SangoWalletTab({ onClose }: { onClose: () => void }) {
   const t = useTranslation();
   const wallet = useSangoWallet();
   const { noWallet } = useWalletStore();
-  const format = useWalletStore((s) => s.format);
   const [busy, setBusy] = useState(false);
   const [stored, setStored] = useState<StoredWalletV1 | null>(null);
 
@@ -277,26 +294,6 @@ function WalletTab({ onClose }: { onClose: () => void }) {
     }
   }
 
-  // UX-2.d — Le keyfile export est SANGO-spécifique ('sango-wallet-keyfile'
-  // V1). Les wallets BIP-39 EVM auront un format dédié en E1.6.
-  if (format === "bip39") {
-    return (
-      <div className="space-y-4">
-        <div className="rounded-xl border border-dashed bg-card/60 p-4">
-          <p className="text-sm font-medium">Keyfile BIP-39</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            La gestion du keyfile pour les wallets EVM sera disponible
-            prochainement (E1.6).
-          </p>
-          <p className="mt-3 text-[11px] text-muted-foreground">
-            En attendant, ton wallet est chiffré et persisté localement dans
-            le keyring. Tu peux le verrouiller via l&apos;onglet Sécurité.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
       <div className="rounded-xl border bg-card p-4">
@@ -325,6 +322,172 @@ function WalletTab({ onClose }: { onClose: () => void }) {
         <p className="mt-3 flex items-start gap-2 text-[11px] text-amber-600 dark:text-amber-400">
           <AlertTriangle className="mt-0.5 size-3 shrink-0" />
           {t.keyfile.warning}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// --- Sous-onglet BIP-39 EVM (keyfile V2) ----------------------------------
+
+/**
+ * Gestion du keyfile BIP-39 (`sango-bip39-keyfile` v1).
+ *
+ * **D-E1.6-6** — Format propriétaire de sauvegarde/restauration. Pas
+ * de compatibilité MetaMask. La mnemonic n'est jamais persistée ni
+ * exportée (invariant D-HD-1).
+ *
+ * Le `StoredWalletV2` est chargé depuis le keyring (déjà chiffré au
+ * moment de la création). L'export ne demande pas de password.
+ *
+ * L'import reconstruit un `StoredWalletV2` et le persiste dans le
+ * keyring avec le `format: "bip39"` et le `networkId` du fichier.
+ * L'utilisateur devra ensuite déverrouiller avec le password d'origine
+ * (celui utilisé à la création du wallet exporté).
+ */
+function Bip39WalletTab({ onClose }: { onClose: () => void }) {
+  const { noWallet } = useWalletStore();
+  const format = useWalletStore((s) => s.format);
+  const [busy, setBusy] = useState(false);
+  const [stored, setStored] = useState<StoredWalletV2 | null>(null);
+  const [networkId, setNetworkId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const kr = await Keyring.open();
+        const entries = await kr.list();
+        kr.close();
+        if (cancelled) return;
+
+        // Filtre : uniquement les entrées BIP-39.
+        const bip39Entries = entries.filter((e) => e.format === "bip39");
+        if (bip39Entries.length === 0) {
+          setStored(null);
+          setNetworkId(null);
+          return;
+        }
+
+        // Priorité : l'entrée la plus récente.
+        const active = bip39Entries.sort((a, b) => b.createdAt - a.createdAt)[0];
+        if (!active) return;
+
+        const s = active.stored;
+        if (s && s.version === 2) {
+          setStored(s);
+          setNetworkId(active.networkId);
+        } else {
+          setStored(null);
+          setNetworkId(null);
+        }
+      } catch {
+        setStored(null);
+        setNetworkId(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [format]);
+
+  async function handleExport() {
+    if (!stored || !networkId) {
+      return toast.error("Aucun wallet BIP-39 actif à exporter");
+    }
+    setBusy(true);
+    try {
+      const payload = serializeBip39Keyfile(stored, networkId);
+      const filename = `sango-bip39-${stored.addressHex.slice(2, 10)}.keyfile.json`;
+      downloadJson(filename, payload);
+      toast.success("Keyfile BIP-39 exporté", { description: filename });
+    } catch (e) {
+      toast.error("Export impossible", { description: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleImport() {
+    setBusy(true);
+    try {
+      const raw = await pickJsonFile();
+
+      // Détection du format : refus si c'est un keyfile V1 (legacy).
+      const obj = raw as { format?: unknown };
+      if (obj.format === "sango-wallet-keyfile") {
+        toast.error("Format incompatible", {
+          description:
+            "Ce fichier est un keyfile SANGO legacy (Ed25519). Il doit être importé via un wallet SANGO (pas EVM).",
+        });
+        setBusy(false);
+        return;
+      }
+
+      const { stored: newStored, networkId: newNetworkId } =
+        deserializeBip39Keyfile(raw);
+
+      const kr = await Keyring.open();
+      await kr.put({
+        id: newStored.addressHex.toLowerCase(),
+        label: "EVM importé",
+        format: "bip39",
+        networkId: newNetworkId,
+        stored: newStored,
+        createdAt: Date.now(),
+      });
+      kr.close();
+
+      toast.success("Keyfile BIP-39 importé", {
+        description: "Recharge la page pour te déverrouiller",
+      });
+      noWallet();
+      setBusy(false);
+      onClose();
+    } catch (e) {
+      const msg = (e as Error).message;
+      if (msg === "Sélection annulée" || msg === "Sélection expirée") {
+        setBusy(false);
+        return;
+      }
+      toast.error("Import impossible", { description: msg });
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border bg-card p-4">
+        <p className="text-sm font-medium">Keyfile BIP-39</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Format propriétaire <code>sango-bip39-keyfile</code> — sauvegarde
+          et restauration du wallet EVM. Compatible avec ce wallet uniquement.
+        </p>
+
+        <div className="mt-4 space-y-2">
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={!stored || busy}
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
+          >
+            <Download className="size-4" /> Exporter
+          </button>
+          <button
+            type="button"
+            onClick={handleImport}
+            disabled={busy}
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border bg-background text-sm font-medium hover:bg-accent disabled:opacity-50"
+          >
+            <Upload className="size-4" /> Importer
+          </button>
+        </div>
+
+        <p className="mt-3 flex items-start gap-2 text-[11px] text-amber-600 dark:text-amber-400">
+          <AlertTriangle className="mt-0.5 size-3 shrink-0" />
+          Ce keyfile contient le <strong>seed BIP-39 chiffré</strong>. La
+          phrase de récupération n&apos;est jamais exportée. Conserve ce
+          fichier et son mot de passe séparément.
         </p>
       </div>
     </div>
