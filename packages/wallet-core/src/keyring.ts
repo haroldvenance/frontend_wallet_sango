@@ -1,6 +1,5 @@
-import type { Network } from "@sango/types";
-
 import type { StoredWallet } from "./storage";
+import type { WalletFormat } from "./wallet-format";
 
 const DB_NAME = "sango-wallet";
 const DB_VERSION = 1;
@@ -11,14 +10,29 @@ const STORE = "wallets";
  *
  * ⚠️ Ne contient **jamais** de secret en clair — uniquement le blob
  *    AES-GCM produit par `storage.ts`.
+ *
+ * **D-NET-2 (résolue en patch 5)** — ancien schéma `network: Network`
+ * (label SANGO `"mainnet" | "testnet"`) remplacé par :
+ *   - `format`    : discriminant de construction (SANGO legacy vs BIP-39).
+ *   - `networkId` : identifiant canonique wallet-chains
+ *                   (`"sango-devnet"`, `"ethereum-sepolia"`, …).
+ *
+ * Le label SANGO `"testnet"` reste calculable depuis le format si
+ * besoin (`resolveSangoNetworkId`), mais n'est plus stocké.
  */
 export interface KeyringEntry {
   /** Identifiant unique = adresse hex lowercase. */
   readonly id: string;
   /** Label utilisateur (« Alice », « Compte principal »…). */
   readonly label: string;
-  /** Réseau associé. */
-  readonly network: Network;
+  /** Format de construction du wallet (D-HD-1). */
+  readonly format: WalletFormat;
+  /**
+   * Identifiant canonique du réseau wallet-chains.
+   *   - `"sango-devnet"` (legacy SANGO, défaut devnet)
+   *   - `"ethereum-sepolia"` (BIP-39 EVM)
+   */
+  readonly networkId: string;
   /** Blob chiffré (salt + iv + ciphertext). */
   readonly stored: StoredWallet;
   /** Timestamp de création (ms epoch). */

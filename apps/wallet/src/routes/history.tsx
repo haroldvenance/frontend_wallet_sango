@@ -28,7 +28,7 @@ import { flattenTxPages, useInfiniteTransactions } from "@/hooks/use-transaction
 import { useTranslation } from "@/i18n/use-translation";
 import { formatSango, shortenAddress, shortenHash } from "@/lib/format";
 import { classifyTx, displayAmount, txKindLabel } from "@/lib/tx-classify";
-import { useWalletStore } from "@/stores/wallet-store";
+import { useSangoWallet } from "@/hooks/use-sango-wallet";
 
 // --- Types -----------------------------------------------------------------
 
@@ -76,7 +76,7 @@ function STAKING_KINDS_HAS(kind: number): boolean {
 
 export function HistoryRoute() {
   const t = useTranslation();
-  const { wallet } = useWalletStore();
+  const wallet = useSangoWallet();
   const {
     data,
     isLoading,

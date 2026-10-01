@@ -1,3 +1,4 @@
+import { Wallet } from "@sango/wallet-core";
 import { ArrowDownToLine, ArrowUpFromLine, Copy } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -19,8 +20,13 @@ export function BalanceCard() {
   const { data: chainInfo } = useChainInfo();
   const copy = useClipboard();
 
-  const bech32 = wallet?.identity.addressBech32 ?? "—";
-  const hex = wallet?.identity.addressHex ?? "—";
+  // Narrowing : le BalanceCard est SANGO-spécifique (bech32m, faucet
+  // SANGO, affichage SANGO). Les wallets BIP-39 (EVM) auront une carte
+  // dédiée en E1.5 — en attendant, `null` désactive l'affichage.
+  const sangoWallet = wallet instanceof Wallet ? wallet : null;
+
+  const bech32 = sangoWallet?.identity.addressBech32 ?? "—";
+  const hex = sangoWallet?.identity.addressHex ?? "—";
   const balanceDisplay = account
     ? formatSango(account.balance)
     : isLoading
@@ -28,9 +34,9 @@ export function BalanceCard() {
       : "0.0000000";
 
   const networkLabel =
-    chainInfo?.chainId === wallet?.identity.network
-      ? wallet?.identity.network ?? "unknown"
-      : wallet?.identity.network ?? "unknown";
+    chainInfo?.chainId === sangoWallet?.identity.network
+      ? sangoWallet?.identity.network ?? "unknown"
+      : sangoWallet?.identity.network ?? "unknown";
 
   return (
     <section className="relative overflow-hidden rounded-3xl border bg-card p-6 shadow-sm sm:p-8">

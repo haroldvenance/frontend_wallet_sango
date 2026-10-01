@@ -19,7 +19,7 @@ import {
 import { useValidatorInfo } from "@/hooks/use-validators";
 import { useTranslation } from "@/i18n/use-translation";
 import { formatSango } from "@/lib/format";
-import { useWalletStore } from "@/stores/wallet-store";
+import { useSangoWallet } from "@/hooks/use-sango-wallet";
 
 type ModalKind = "delegate" | "undelegate" | "bond" | "unbond" | "commission" | null;
 
@@ -44,7 +44,7 @@ export function ValidatorDetailRoute() {
 
   // Interdit l'auto-délégation (le protocole rejette SelfDelegation).
   // Sur son propre validateur → utiliser Bond (self-stake) à la place.
-  const { wallet } = useWalletStore();
+  const wallet = useSangoWallet();
   const isSelfValidator =
     !!wallet &&
     !!validator &&

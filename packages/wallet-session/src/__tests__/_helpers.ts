@@ -38,7 +38,8 @@ export function fakeEntry(
   return {
     id,
     label,
-    network: "testnet",
+    format: "sango-legacy",
+    networkId: "sango-devnet",
     stored,
     createdAt,
   };

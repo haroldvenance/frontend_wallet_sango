@@ -34,3 +34,11 @@ export const SANGO_NATIVE_ASSET: Asset = {
   decimals: 7,
   kind: "native",
 };
+
+/** Asset natif ETH — à enregistrer au boot par l'app (E1+). */
+export const ETH_NATIVE_ASSET: Asset = {
+  id: "eth",
+  symbol: "ETH",
+  decimals: 18,
+  kind: "native",
+};

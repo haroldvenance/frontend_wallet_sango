@@ -16,7 +16,7 @@ import {
 } from "@/lib/faucet";
 import { formatSango } from "@/lib/format";
 import { useSdkStore } from "@/stores/sdk-store";
-import { useWalletStore } from "@/stores/wallet-store";
+import { useSangoWallet } from "@/hooks/use-sango-wallet";
 import { ExplorerLink } from "@/components/branding/explorer-link";
 
 /**
@@ -50,7 +50,7 @@ export function useFaucet(): UseMutationResult<
   void
 > {
   const { client } = useSdkStore();
-  const { wallet } = useWalletStore();
+  const wallet = useSangoWallet();
   const qc = useQueryClient();
 
   return useMutation<FaucetRequestResult, Error, void>({

@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useClipboard } from "@/hooks/use-clipboard";
 import { useTranslation } from "@/i18n/use-translation";
-import { useWalletStore } from "@/stores/wallet-store";
+import { useSangoWallet } from "@/hooks/use-sango-wallet";
 
 import { FaucetButton } from "./faucet-button";
 import { ReceiveModal } from "./receive-modal";
@@ -17,7 +17,7 @@ import { ReceiveModal } from "./receive-modal";
 export function QuickActions() {
   const t = useTranslation();
   const navigate = useNavigate();
-  const { wallet } = useWalletStore();
+  const wallet = useSangoWallet();
   const copy = useClipboard();
   const [receiveOpen, setReceiveOpen] = useState(false);
 

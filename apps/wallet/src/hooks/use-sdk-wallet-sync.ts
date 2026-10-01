@@ -20,6 +20,7 @@
  * retirer ce hook et le montage dans `App.tsx`.
  */
 
+import { Wallet } from "@sango/wallet-core";
 import { useEffect } from "react";
 
 import { useSdkStore } from "@/stores/sdk-store";
@@ -42,7 +43,11 @@ export function useSdkWalletSync(): void {
   const { wallet, status } = useWalletStore();
 
   useEffect(() => {
-    if (status === "unlocked" && wallet) {
+    // ⚠️ Le SangoClient (SDK) n'accepte qu'un Wallet SANGO (Ed25519).
+    // Les wallets BIP-39 EVM ne passent PAS par le SDK — ils utilisent
+    // EvmRpcUsingPool + EvmAdapter (wallet-chains) directement.
+    // On détache donc le SDK pour les wallets BIP-39.
+    if (status === "unlocked" && wallet instanceof Wallet) {
       client.attachWallet(wallet);
     } else {
       client.detachWallet();

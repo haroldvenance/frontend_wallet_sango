@@ -22,6 +22,7 @@ import {
 import { isFiatAvailable } from "@/lib/fiat";
 import { usePreferencesStore } from "@/stores/preferences-store";
 import { useWalletStore } from "@/stores/wallet-store";
+import { useSangoWallet } from "@/hooks/use-sango-wallet";
 
 interface Props {
   open: boolean;
@@ -194,7 +195,8 @@ function PreferencesTab() {
 
 function WalletTab({ onClose }: { onClose: () => void }) {
   const t = useTranslation();
-  const { wallet, noWallet } = useWalletStore();
+  const wallet = useSangoWallet();
+  const { noWallet } = useWalletStore();
   const [busy, setBusy] = useState(false);
   const [stored, setStored] = useState<StoredWalletV1 | null>(null);
 
@@ -251,7 +253,8 @@ function WalletTab({ onClose }: { onClose: () => void }) {
       await kr.put({
         id: newStored.addressHex.toLowerCase(),
         label: "Importé",
-        network: newStored.network,
+        format: "sango-legacy",
+        networkId: "sango-devnet",
         stored: newStored,
         createdAt: Date.now(),
       });

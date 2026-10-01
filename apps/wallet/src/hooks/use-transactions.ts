@@ -10,6 +10,7 @@ import {
 import { networkQueryKey } from "@/lib/network-query";
 import { useWalletSession } from "@/providers/wallet-session-context";
 import { useWalletStore } from "@/stores/wallet-store";
+import { useSangoWallet } from "@/hooks/use-sango-wallet";
 import { useNetworkQueryContext } from "./use-network-query-context";
 
 /**
@@ -94,7 +95,8 @@ export function useTransactions(
   filter: TransactionsFilter = {},
 ): UseQueryResult<TxPage, Error> {
   const session = useWalletSession();
-  const { wallet, status } = useWalletStore();
+  const wallet = useSangoWallet();
+  const { status } = useWalletStore();
   const { endpoint, networkId, account } = useNetworkQueryContext();
   const address = wallet?.identity.addressHex;
   const limit = filter.limit ?? 20;
@@ -163,7 +165,8 @@ export function useInfiniteTransactions(
   limit = 20,
 ): UseInfiniteQueryResult<{ pages: TxPage[]; pageParams: number[] }, Error> {
   const session = useWalletSession();
-  const { wallet, status } = useWalletStore();
+  const wallet = useSangoWallet();
+  const { status } = useWalletStore();
   const { endpoint, networkId, account } = useNetworkQueryContext();
   const address = wallet?.identity.addressHex;
 

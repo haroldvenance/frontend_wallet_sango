@@ -34,7 +34,13 @@ export function UnlockOverlay() {
         return;
       }
       const wallet = await Wallet.importEncrypted(entry.stored, password);
-      unlock(wallet, entry.id, entry.network);
+      unlock({
+        wallet,
+        id: entry.id,
+        format: entry.format,
+        networkId: entry.networkId,
+        network: entry.format === "sango-legacy" ? "testnet" : "testnet",
+      });
       toast.success(t.overlay.unlocked);
       setPassword("");
     } catch (err) {

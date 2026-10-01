@@ -7,7 +7,7 @@ import {
 
 import { useTransactions } from "@/hooks/use-transactions";
 import { useTranslation } from "@/i18n/use-translation";
-import { useWalletStore } from "@/stores/wallet-store";
+import { useSangoWallet } from "@/hooks/use-sango-wallet";
 import { formatSango, shortenAddress } from "@/lib/format";
 import { classifyTx, displayAmount, txKindLabel, type TxDirection } from "@/lib/tx-classify";
 
@@ -39,7 +39,7 @@ function labelForTx(
 
 export function RecentActivity() {
   const t = useTranslation();
-  const { wallet } = useWalletStore();
+  const wallet = useSangoWallet();
   const { data, isLoading, isError } = useTransactions({ limit: 5 });
 
   const items = data?.items ?? [];

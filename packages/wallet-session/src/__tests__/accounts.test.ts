@@ -26,7 +26,8 @@ describe("KeyringBackedAccountList", () => {
     expect(summaries).toHaveLength(1);
     expect(summaries[0]!.id).toBe(asAddress("aa".repeat(20)));
     expect(summaries[0]!.label).toBe("Alice");
-    expect(summaries[0]!.network).toBe("testnet");
+    expect(summaries[0]!.format).toBe("sango-legacy");
+    expect(summaries[0]!.networkId).toBe("sango-devnet");
   });
 
   it("list() sorts by createdAt ascending", async () => {

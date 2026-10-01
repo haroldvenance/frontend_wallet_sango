@@ -8,7 +8,7 @@ import { useRegisterValidator } from "@/hooks/use-staking-actions";
 import { useValidators } from "@/hooks/use-validators";
 import { useTranslation } from "@/i18n/use-translation";
 import { formatSango, parseSango } from "@/lib/format";
-import { useWalletStore } from "@/stores/wallet-store";
+import { useSangoWallet } from "@/hooks/use-sango-wallet";
 
 /** 100 000 SANGO = 10^5 * 10^7 base units = 10^12 base units. */
 const MIN_SELF_STAKE = 100_000n * 10_000_000n;
@@ -21,7 +21,7 @@ export function BecomeValidatorRoute() {
   const navigate = useNavigate();
   const { data: account } = useAccount();
   const { data: validators } = useValidators();
-  const { wallet } = useWalletStore();
+  const wallet = useSangoWallet();
   const register = useRegisterValidator();
 
   const [commissionPct, setCommissionPct] = useState("7");

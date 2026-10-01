@@ -41,13 +41,20 @@ export function ImportWallet() {
       await keyring.put({
         id,
         label: label.trim() || "Wallet importé",
-        network,
+        format: "sango-legacy",
+        networkId: "sango-devnet",
         stored,
         createdAt: Date.now(),
       });
       keyring.close();
 
-      unlock(wallet, id, network);
+      unlock({
+        wallet,
+        id,
+        format: "sango-legacy",
+        networkId: "sango-devnet",
+        network,
+      });
       toast.success("Wallet importé");
       navigate("/");
     } catch (err) {

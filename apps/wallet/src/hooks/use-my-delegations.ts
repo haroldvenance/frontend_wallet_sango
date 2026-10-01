@@ -4,6 +4,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { networkQueryKey } from "@/lib/network-query";
 import { useWalletSession } from "@/providers/wallet-session-context";
 import { useWalletStore } from "@/stores/wallet-store";
+import { useSangoWallet } from "@/hooks/use-sango-wallet";
 import { useNetworkQueryContext } from "./use-network-query-context";
 
 const POLL_MS = 5_000;
@@ -22,7 +23,8 @@ export function useMyDelegations(): UseQueryResult<
   Error
 > {
   const session = useWalletSession();
-  const { wallet, status } = useWalletStore();
+  const wallet = useSangoWallet();
+  const { status } = useWalletStore();
   const { endpoint, networkId, account } = useNetworkQueryContext();
 
   const address = wallet?.identity.addressHex;
@@ -53,7 +55,8 @@ export function useMyPendingUnbondings(): UseQueryResult<
   Error
 > {
   const session = useWalletSession();
-  const { wallet, status } = useWalletStore();
+  const wallet = useSangoWallet();
+  const { status } = useWalletStore();
   const { endpoint, networkId, account } = useNetworkQueryContext();
 
   const address = wallet?.identity.addressHex;

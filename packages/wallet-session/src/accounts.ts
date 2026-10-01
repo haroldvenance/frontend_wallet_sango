@@ -22,7 +22,8 @@ export interface KeyringLike {
 export interface StoredAccountSummary {
   readonly id: string;
   readonly label: string;
-  readonly network: KeyringEntry["network"];
+  readonly format: KeyringEntry["format"];
+  readonly networkId: KeyringEntry["networkId"];
   readonly createdAt: number;
 }
 
@@ -72,7 +73,8 @@ export class KeyringBackedAccountList implements AccountList {
       .map((e) => ({
         id: e.id,
         label: e.label,
-        network: e.network,
+        format: e.format,
+        networkId: e.networkId,
         createdAt: e.createdAt,
       }))
       .sort((a, b) => a.createdAt - b.createdAt);
@@ -117,7 +119,8 @@ export class InMemoryAccountList implements AccountList {
     this.#entries.set(entry.id, {
       id: entry.id,
       label: entry.label,
-      network: entry.network,
+      format: entry.format,
+      networkId: entry.networkId,
       createdAt: entry.createdAt,
     });
   }

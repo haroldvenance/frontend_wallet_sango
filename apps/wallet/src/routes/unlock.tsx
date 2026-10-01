@@ -1,4 +1,5 @@
-import { Keyring, Wallet } from "@sango/wallet-core";
+import { Bip39Wallet, Keyring, Wallet } from "@sango/wallet-core";
+import type { Network } from "@sango/types";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -6,6 +7,23 @@ import { toast } from "sonner";
 import { useTranslation } from "@/i18n/use-translation";
 import { useWalletStore } from "@/stores/wallet-store";
 import { AuthShell } from "@/components/branding/auth-shell";
+
+/**
+ * Résout le label SANGO (Network) depuis un networkId wallet-chains.
+ *
+ * En E1, seuls "sango-devnet" et "ethereum-sepolia" existent. Tout ce
+ * qui n'est pas SANGO renvoie "testnet" (défaut neutre — les hooks EVM
+ * lisent `networkId`, pas `network`).
+ */
+function resolveSangoLabel(networkId: string): Network {
+  if (networkId === "sango-devnet" || networkId === "sango-testnet") {
+    return "testnet";
+  }
+  if (networkId === "sango-mainnet") {
+    return "mainnet";
+  }
+  return "testnet";
+}
 
 export function Unlock() {
   const t = useTranslation();
@@ -24,11 +42,32 @@ export function Unlock() {
         navigate("/welcome");
         return;
       }
-      // Essaie tous les wallets avec ce password.
+
+      // Essaie tous les wallets avec ce password, dispatch par format.
       for (const entry of entries) {
         try {
-          const w = await Wallet.importEncrypted(entry.stored, password);
-          unlock(w, entry.id, entry.network);
+          if (entry.format === "sango-legacy") {
+            const w = await Wallet.importEncrypted(entry.stored, password);
+            unlock({
+              wallet: w,
+              id: entry.id,
+              format: "sango-legacy",
+              networkId: entry.networkId,
+              network: resolveSangoLabel(entry.networkId),
+            });
+          } else {
+            const w = await Bip39Wallet.importEncrypted(
+              entry.stored,
+              password,
+            );
+            unlock({
+              wallet: w,
+              id: entry.id,
+              format: "bip39",
+              networkId: entry.networkId,
+              network: resolveSangoLabel(entry.networkId),
+            });
+          }
           keyring.close();
           toast.success(`${t.unlock.unlocked} : ${entry.label}`);
           navigate("/");
@@ -51,7 +90,6 @@ export function Unlock() {
       backTo="/welcome"
       logoSize={56}
     >
-
       <div className="mt-6 space-y-3">
         <input
           type="password"

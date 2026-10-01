@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import { useClipboard } from "@/hooks/use-clipboard";
 import { useTranslation } from "@/i18n/use-translation";
-import { useWalletStore } from "@/stores/wallet-store";
+import { useSangoWallet } from "@/hooks/use-sango-wallet";
 
 interface ReceiveModalProps {
   open: boolean;
@@ -22,7 +22,7 @@ type Tab = "bech32" | "hex";
  */
 export function ReceiveModal({ open, onClose }: ReceiveModalProps) {
   const t = useTranslation();
-  const { wallet } = useWalletStore();
+  const wallet = useSangoWallet();
   const copy = useClipboard();
   const [tab, setTab] = useState<Tab>("bech32");
 

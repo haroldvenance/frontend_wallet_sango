@@ -65,13 +65,20 @@ export function CreateWallet() {
       await keyring.put({
         id,
         label: label.trim() || "Mon wallet",
-        network,
+        format: "sango-legacy",
+        networkId: "sango-devnet",
         stored,
         createdAt: Date.now(),
       });
       keyring.close();
 
-      unlock(wallet, id, network);
+      unlock({
+        wallet,
+        id,
+        format: "sango-legacy",
+        networkId: "sango-devnet",
+        network, // label SANGO (mainnet | testnet) — pilote le HRP bech32m
+      });
       toast.success("Wallet créé et sauvegardé");
       navigate("/");
     } catch (err) {

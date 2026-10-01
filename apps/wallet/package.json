@@ -18,6 +18,7 @@
     "@sango/types": "workspace:*",
     "@sango/wallet-chains": "workspace:*",
     "@sango/wallet-core": "workspace:*",
+    "@sango/wallet-providers": "workspace:*",
     "@sango/wallet-session": "workspace:*",
     "@tanstack/react-query": "^5.103.2",
     "class-variance-authority": "^0.7.1",
