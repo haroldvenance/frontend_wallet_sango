@@ -1,5 +1,6 @@
 import { Bip39Wallet } from "@sango/wallet-core";
-import { Copy } from "lucide-react";
+import { ArrowUpFromLine, Copy } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { useClipboard } from "@/hooks/use-clipboard";
 import { useEvmAccount } from "@/hooks/use-evm-account";
@@ -33,6 +34,7 @@ function shortenAddress(a: string): string {
  * Pas de fiat, pas de faucet, pas de send (E1.5+).
  */
 export function BalanceCardEvm() {
+  const navigate = useNavigate();
   const wallet = useWalletStore((s) => s.wallet);
   const networkId = useWalletStore((s) => s.networkId);
   const { data: account, isLoading } = useEvmAccount();
@@ -107,6 +109,17 @@ export function BalanceCardEvm() {
             Nonce : {account.nonce}
           </p>
         )}
+
+        <div className="mt-8 grid grid-cols-1 gap-3 sm:flex sm:w-auto sm:flex-wrap">
+          <button
+            type="button"
+            onClick={() => navigate("/send-evm")}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-500 px-5 text-sm font-medium text-white shadow-sm transition-all hover:opacity-90 active:scale-[0.98]"
+          >
+            <ArrowUpFromLine className="size-4" />
+            Envoyer de l&apos;ETH
+          </button>
+        </div>
       </div>
     </section>
   );

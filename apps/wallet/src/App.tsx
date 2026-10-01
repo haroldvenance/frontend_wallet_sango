@@ -13,6 +13,9 @@ import { useAutoLock } from "@/hooks/use-auto-lock";
 import { useSdkWalletSync } from "@/hooks/use-sdk-wallet-sync";
 import { EvmDashboard } from "@/features/evm/evm-dashboard";
 import { CreateWallet } from "@/routes/create-wallet";
+const SendEvmRoute = lazy(() =>
+  import("@/routes/send-evm").then((m) => ({ default: m.SendEvmRoute })),
+);
 const CreateEvmWalletRoute = lazy(() =>
   import("@/routes/create-evm").then((m) => ({ default: m.CreateEvmWallet })),
 );
@@ -104,6 +107,7 @@ export default function App() {
         <Route element={<ProtectedLayout />}>
           <Route path="/" element={<Dashboard />} />
             <Route path="/send" element={<SendRoute />} />
+            <Route path="/send-evm" element={<SendEvmRoute />} />
             <Route path="/validators" element={<ValidatorsRoute />} />
             <Route path="/validators/:address" element={<ValidatorDetailRoute />} />
             <Route path="/become-validator" element={<BecomeValidatorRoute />} />
