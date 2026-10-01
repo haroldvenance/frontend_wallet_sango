@@ -55,6 +55,16 @@ interface WalletState {
   lock: () => void;
   noWallet: () => void;
   setNetwork: (network: Network) => void;
+  /**
+   * Change le `networkId` EVM actif (session-only, non persisté).
+   *
+   * Réservé aux wallets BIP-39 (EVM). Sans effet sur les wallets
+   * SANGO legacy. Reset à la valeur du keyring au prochain unlock.
+   *
+   * Limitation E1.5 : le changement n'est pas persisté. À revoir en
+   * E2 avec l'UI multi-chaîne.
+   */
+  setNetworkId: (networkId: string) => void;
 }
 
 export const useWalletStore = create<WalletState>((set, get) => ({
@@ -90,4 +100,16 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     }),
 
   setNetwork: (network) => set({ network }),
+
+  setNetworkId: (networkId) => {
+    // Sécurité : refuse si le wallet actif n'est pas EVM.
+    const { format } = get();
+    if (format !== "bip39") {
+      console.warn(
+        `wallet-store.setNetworkId: ignored (format="${format}", expected "bip39")`,
+      );
+      return;
+    }
+    set({ networkId });
+  },
 }));

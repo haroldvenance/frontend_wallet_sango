@@ -13,10 +13,13 @@ import { NavLink } from "react-router-dom";
 
 import { LocaleToggle } from "@/components/settings/locale-toggle";
 import { NetworkSelector } from "@/components/settings/network-selector";
+import { EvmNetworkBadge } from "@/features/evm/evm-network-badge";
+import { EvmNetworkSelector } from "@/features/evm/evm-network-selector";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { SettingsModal } from "@/components/settings/settings-modal";
 import { useChainInfo } from "@/hooks/use-chain-info";
+import { useWalletStore } from "@/stores/wallet-store";
 import { useTranslation } from "@/i18n/use-translation";
 import { shortenHash } from "@/lib/format";
 import { EXPLORER_URL } from "@/lib/config";
@@ -72,6 +75,8 @@ export function AppShell({ children }: AppShellProps) {
   const t = useTranslation();
   const [keyfileOpen, setKeyfileOpen] = useState(false);
   const { data, isError } = useChainInfo();
+  const format = useWalletStore((s) => s.format);
+  const isSango = format === "sango-legacy";
 
   const navigation = [
     { to: "/", label: t.nav.dashboard, icon: LayoutDashboard, end: true },
@@ -140,10 +145,21 @@ export function AppShell({ children }: AppShellProps) {
               Explorer
             </a>
 
-            <div className="mt-3">
-              <NetworkSelector />
-            </div>
-            <NetworkBadge />
+            {isSango ? (
+              <>
+                <div className="mt-3">
+                  <NetworkSelector />
+                </div>
+                <NetworkBadge />
+              </>
+            ) : (
+              <>
+                <div className="mt-3">
+                  <EvmNetworkSelector />
+                </div>
+                <EvmNetworkBadge />
+              </>
+            )}
           </div>
         </aside>
 
