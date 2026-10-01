@@ -38,6 +38,9 @@ importers:
       '@sango/wallet-core':
         specifier: workspace:*
         version: link:../../packages/wallet-core
+      '@sango/wallet-providers':
+        specifier: workspace:*
+        version: link:../../packages/wallet-providers
       '@sango/wallet-session':
         specifier: workspace:*
         version: link:../../packages/wallet-session
