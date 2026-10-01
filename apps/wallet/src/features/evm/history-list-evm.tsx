@@ -1,8 +1,9 @@
 import { Bip39Wallet } from "@sango/wallet-core";
 import type { HistoryItem } from "@sango/wallet-chains";
-import { ArrowDownLeft, ArrowUpRight, Clock, RefreshCw } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Clock } from "lucide-react";
 import { useMemo } from "react";
 
+import { ActivitySection } from "@/components/ui/activity-section";
 import { ExplorerLinkEvm } from "@/features/evm/explorer-link-evm";
 import { useEvmHistory } from "@/hooks/use-evm-history";
 import { formatEthShort } from "@/lib/eth";
@@ -50,46 +51,34 @@ export function HistoryListEvm() {
   }, [wallet]);
 
   return (
-    <section>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-sm font-semibold">Activité récente</h2>
-        <button
-          type="button"
-          onClick={() => void refetch()}
-          disabled={isFetching}
-          className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-2.5 py-1 text-xs font-medium transition-colors hover:bg-accent disabled:opacity-50"
-        >
-          <RefreshCw className={`size-3 ${isFetching ? "animate-spin" : ""}`} />
-          Rafraîchir
-        </button>
-      </div>
-
+    <ActivitySection
+      onRefresh={() => void refetch()}
+      isRefreshing={isFetching}
+    >
       {isLoading && (
-        <div className="rounded-2xl border bg-card p-6 text-center text-sm text-muted-foreground">
+        <div className="p-6 text-center text-sm text-muted-foreground">
           Chargement…
         </div>
       )}
 
       {isError && (
-        <div className="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4 text-xs text-amber-600 dark:text-amber-400">
+        <div className="p-6 text-center text-xs text-amber-600 dark:text-amber-400">
           {friendlyError(error.message)}
         </div>
       )}
 
       {!isLoading && !isError && (!data || data.items.length === 0) && (
-        <div className="rounded-2xl border bg-card p-6 text-center text-sm text-muted-foreground">
+        <div className="p-6 text-center text-sm text-muted-foreground">
           Aucune transaction pour ce compte.
         </div>
       )}
 
-      {data && data.items.length > 0 && (
-        <div className="overflow-hidden rounded-2xl border bg-card">
-          {data.items.map((item) => (
-            <HistoryRow key={item.txHash} item={item} myAddress={myAddress} />
-          ))}
-        </div>
-      )}
-    </section>
+      {data &&
+        data.items.length > 0 &&
+        data.items.map((item) => (
+          <HistoryRow key={item.txHash} item={item} myAddress={myAddress} />
+        ))}
+    </ActivitySection>
   );
 }
 

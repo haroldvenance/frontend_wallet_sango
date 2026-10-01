@@ -78,11 +78,36 @@ export function AppShell({ children }: AppShellProps) {
   const format = useWalletStore((s) => s.format);
   const isSango = format === "sango-legacy";
 
+  // Nav wallet-aware : dispatch selon le format.
+  // - SANGO legacy : Dashboard / Send / History / Validators
+  // - BIP-39 EVM   : Dashboard / Send / History (pas de Validators)
+  const isSango = format === "sango-legacy";
+
   const navigation = [
     { to: "/", label: t.nav.dashboard, icon: LayoutDashboard, end: true },
-    { to: "/send", label: t.nav.send, icon: ArrowLeftRight, end: false },
-    { to: "/history", label: t.nav.history, icon: History, end: false },
-    { to: "/validators", label: t.nav.validators, icon: ShieldCheck, end: false },
+    {
+      to: isSango ? "/send" : "/send-evm",
+      label: t.nav.send,
+      icon: ArrowLeftRight,
+      end: false,
+    },
+    {
+      to: isSango ? "/history" : "/history-evm",
+      label: t.nav.history,
+      icon: History,
+      end: false,
+    },
+    // Validators : SANGO uniquement.
+    ...(isSango
+      ? [
+          {
+            to: "/validators",
+            label: t.nav.validators,
+            icon: ShieldCheck,
+            end: false,
+          },
+        ]
+      : []),
   ];
 
   return (
