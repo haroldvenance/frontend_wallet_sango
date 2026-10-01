@@ -1,4 +1,14 @@
-export { ETHEREUM_SEPOLIA, EVM_NATIVE_ASSET_ID, EVM_DECIMALS } from "./config";
+export {
+  ETHEREUM_SEPOLIA,
+  ETHEREUM_MAINNET,
+  BASE,
+  ARBITRUM_ONE,
+  ALL_EVM_NETWORKS,
+  EVM_NATIVE_ASSET_ID,
+  EVM_DECIMALS,
+  DEFAULT_EVM_NETWORK_ID,
+  evmNetworkById,
+} from "./config";
 export type { EvmRpc } from "./rpc";
 export { EvmAddressProvider } from "./address-provider";
 export { EvmBalanceProvider } from "./balance-provider";

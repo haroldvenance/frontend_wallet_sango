@@ -2,7 +2,7 @@ import { useMemo, type ReactNode } from "react";
 
 import { SangoRpcClient } from "@sango/rpc";
 import {
-  ETHEREUM_SEPOLIA,
+  ALL_EVM_NETWORKS,
   SANGO_DEVNET,
   createChainRegistry,
   evmAdapterFactory,
@@ -25,25 +25,27 @@ import { useWalletStore } from "@/stores/wallet-store";
 import { WalletSessionContext } from "./wallet-session-context";
 
 /**
- * Construit la `WalletSession` dès que le wallet passe à `unlocked`,
- * et la reconstruit quand le wallet ou l'endpoint RPC SANGO change.
+ * Construit la `WalletSession` dès que le wallet passe à `unlocked`.
  *
- * **Patch 5 (E1)** — deux réseaux enregistrés :
- *   - SANGO_DEVNET  : legacy SANGO Ed25519 (SangoRpcClient).
- *   - ETHEREUM_SEPOLIA : BIP-39 EVM (RpcPool + EvmRpcUsingPool).
+ * **E1.5 (D-NET-1 étendu)** — deux familles enregistrées :
+ *   - SANGO_DEVNET       : legacy SANGO Ed25519 (SangoRpcClient).
+ *   - 4 réseaux EVM      : Sepolia, Mainnet, Base, Arbitrum One
+ *                          (RpcPool + EvmRpcUsingPool).
  *
  * Le `signer` est multi-courbe (D-SIGNER-1) : `signerFromAnyWallet`
- * route selon le type concret du wallet. Chaque signer applique son
- * `assertFamily` — un wallet SANGO ne peut pas signer pour EVM, et
- * inversement.
+ * route selon le type concret du wallet.
+ *
+ * **D-RPC-3 (status quo)** : chaque réseau EVM a son propre `RpcPool`
+ * déterministe et séquentiel. Pas de load balancing, pas de circuit
+ * breaker. Le pool est un mécanisme de fallback, pas un scheduler.
+ *
+ * **D-UI-3** : le réseau actif d'un wallet BIP-39 est figé à sa
+ * création (`wallet-store.networkId`). Les 4 réseaux sont enregistrés
+ * dans le registry pour que la session puisse router n'importe quel
+ * `AccountRef.networkId` — mais l'UI n'expose que celui du wallet.
  *
  * D-SESS-5 : la session n'est pas reconstruite au changement de réseau
- * sélectionné. Le réseau cible vit dans `AccountRef.networkId`.
- *
- * ⚠️ L'endpoint `endpoint` du `sdk-store` pilote **uniquement** le
- *    RPC SANGO. Les endpoints EVM sont fixés dans `ETHEREUM_SEPOLIA`
- *    (publics, sans clé API) — la sélection d'endpoint EVM viendra
- *    en E1.5.
+ * sélectionné (le réseau cible vit dans `AccountRef.networkId`).
  */
 interface WalletSessionProviderProps {
   children: ReactNode;
@@ -62,11 +64,9 @@ export function WalletSessionProvider({ children }: WalletSessionProviderProps) 
     if (status !== "unlocked" || !wallet) return null;
 
     const signer = signerFromAnyWallet(wallet);
-
-    // ── Registre ─────────────────────────────────────────────
     const chainRegistry = createChainRegistry();
 
-    // SANGO (legacy Ed25519) — utilise le SangoRpcClient existant.
+    // ── SANGO (legacy Ed25519) ───────────────────────────────
     const sangoRpc = new SangoRpcClient(endpoint);
     chainRegistry.register(SANGO_DEVNET, (network) =>
       sangoAdapterFactory(network as SangoNetwork, {
@@ -75,23 +75,29 @@ export function WalletSessionProvider({ children }: WalletSessionProviderProps) 
       }),
     );
 
-    // EVM (Sepolia) — utilise le RpcPool générique (D-RPC-2).
-    const evmPool = createRpcPool();
-    evmPool.register(
-      ETHEREUM_SEPOLIA.id,
-      ETHEREUM_SEPOLIA.defaultRpcEndpoints.map((url, i) => ({
-        url,
-        priority: i,
-      })),
-    );
-    const evmRpc = new EvmRpcUsingPool(evmPool, ETHEREUM_SEPOLIA.id);
-    chainRegistry.register(ETHEREUM_SEPOLIA, (network) =>
-      evmAdapterFactory(network, {
-        rpc: evmRpc,
-        signer,
-        chainId: hexChainIdToNumber(ETHEREUM_SEPOLIA.chainId),
-      }),
-    );
+    // ── EVM (4 réseaux) ──────────────────────────────────────
+    // Un RpcPool par réseau : chaque pool est isolé, avec sa propre
+    // liste d'endpoints priorisés (D-RPC-3).
+    for (const network of ALL_EVM_NETWORKS) {
+      const pool = createRpcPool();
+      pool.register(
+        network.id,
+        network.defaultRpcEndpoints.map((url, i) => ({
+          url,
+          priority: i,
+        })),
+      );
+      const evmRpc = new EvmRpcUsingPool(pool, network.id);
+      const chainId = hexChainIdToNumber(network.chainId);
+
+      chainRegistry.register(network, () =>
+        evmAdapterFactory(network, {
+          rpc: evmRpc,
+          signer,
+          chainId,
+        }),
+      );
+    }
 
     // ── Assets ───────────────────────────────────────────────
     const assets = new InMemoryAssetList();

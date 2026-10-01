@@ -6,19 +6,24 @@ import { toast } from "sonner";
 
 import { AuthShell } from "@/components/branding/auth-shell";
 import { useClipboard } from "@/hooks/use-clipboard";
+import {
+  ALL_EVM_NETWORKS,
+  DEFAULT_EVM_NETWORK_ID,
+} from "@sango/wallet-chains";
+
 import { useWalletStore } from "@/stores/wallet-store";
 
-const EVM_NETWORK_ID = "ethereum-sepolia";
-
 /**
- * Création d'un wallet BIP-39 (EVM, E1).
+ * Création d'un wallet BIP-39 (EVM, E1.5).
  *
- * Format BIP-39 (D-HD-1) : mnemonic 12/24 mots, seed 64 bytes, dérivation
+ * Format BIP-39 (D-HD-1) : mnemonic 12 mots, seed 64 bytes, dérivation
  * EVM via BIP-44 m/44'/60'/0'/0/0. Nouvelle famille de wallet, distincte
  * du legacy SANGO Ed25519.
  *
- * Le réseau est **fixé** à `ethereum-sepolia` (D-NET-1). La sélection
- * multi-réseau viendra en E1.5.
+ * **D-UI-3** : l'utilisateur choisit son réseau EVM à la création
+ * (Sepolia par défaut, Mainnet/Base/Arbitrum disponibles). Le
+ * `networkId` canonique est figé dans le wallet et le keyring.
+ * Aucun changement de réseau post-création en E1.5.
  *
  * ⚠️ La mnemonic est affichée **une seule fois** puis jetée — elle
  *    n'est jamais stockée dans le wallet (D-HD-1).
@@ -29,6 +34,9 @@ export function CreateEvmWallet() {
   const copy = useClipboard();
 
   const [step, setStep] = useState<"form" | "reveal">("form");
+  const [selectedNetworkId, setSelectedNetworkId] = useState<string>(
+    DEFAULT_EVM_NETWORK_ID,
+  );
   const [label, setLabel] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -72,7 +80,7 @@ export function CreateEvmWallet() {
         id,
         label: label.trim() || "EVM wallet",
         format: "bip39",
-        networkId: EVM_NETWORK_ID,
+        networkId: selectedNetworkId,
         stored,
         createdAt: Date.now(),
       });
@@ -82,7 +90,7 @@ export function CreateEvmWallet() {
         wallet,
         id,
         format: "bip39",
-        networkId: EVM_NETWORK_ID,
+        networkId: selectedNetworkId,
       });
       // Jette la référence à la mnemonic avant navigation.
       setMnemonic(null);
@@ -156,11 +164,33 @@ export function CreateEvmWallet() {
   return (
     <AuthShell
       title="Créer un wallet EVM"
-      subtitle="Un wallet BIP-39 pour Ethereum Sepolia (réseau de test). Chiffré localement en AES-GCM 256."
+      subtitle="Un wallet BIP-39 (secp256k1) compatible Ethereum, Base et Arbitrum. Chiffré localement en AES-GCM 256."
       backTo="/welcome"
       logoSize={56}
     >
       <div className="mt-6 space-y-3">
+        <label className="block">
+          <span className="text-xs font-medium text-muted-foreground">
+            Réseau EVM
+          </span>
+          <select
+            value={selectedNetworkId}
+            onChange={(e) => setSelectedNetworkId(e.target.value)}
+            className="mt-1 flex h-10 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {ALL_EVM_NETWORKS.map((n) => (
+              <option key={n.id} value={n.id}>
+                {n.name}
+                {n.id === "ethereum-sepolia" ? " (testnet)" : ""}
+              </option>
+            ))}
+          </select>
+          <span className="mt-1 block text-[11px] text-muted-foreground">
+            Le wallet sera figé sur ce réseau. Pour un autre réseau,
+            crée un wallet séparé.
+          </span>
+        </label>
+
         <div className="relative">
           <input
             type={showPassword ? "text" : "password"}

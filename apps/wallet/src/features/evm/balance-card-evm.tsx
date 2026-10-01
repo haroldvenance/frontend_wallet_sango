@@ -3,6 +3,8 @@ import { Copy } from "lucide-react";
 
 import { useClipboard } from "@/hooks/use-clipboard";
 import { useEvmAccount } from "@/hooks/use-evm-account";
+import { evmNetworkById } from "@sango/wallet-chains";
+
 import { useWalletStore } from "@/stores/wallet-store";
 
 /** Formate wei → ETH avec 6 décimales significatives. */
@@ -32,11 +34,15 @@ function shortenAddress(a: string): string {
  */
 export function BalanceCardEvm() {
   const wallet = useWalletStore((s) => s.wallet);
+  const networkId = useWalletStore((s) => s.networkId);
   const { data: account, isLoading } = useEvmAccount();
   const copy = useClipboard();
 
   const bip39Wallet = wallet instanceof Bip39Wallet ? wallet : null;
   const address = bip39Wallet?.defaultAddress ?? "—";
+  const network = evmNetworkById(networkId);
+  const networkName = network?.name ?? networkId;
+  const isTestnet = networkId === "ethereum-sepolia";
 
   const balanceDisplay = account
     ? formatEth(account.balance)
@@ -57,7 +63,10 @@ export function BalanceCardEvm() {
             </div>
             <div>
               <p className="text-sm font-medium">Solde Ethereum</p>
-              <p className="text-xs text-muted-foreground">Sepolia (testnet)</p>
+              <p className="text-xs text-muted-foreground">
+                {networkName}
+                {isTestnet ? " · testnet" : ""}
+              </p>
             </div>
           </div>
 
