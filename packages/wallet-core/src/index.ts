@@ -84,3 +84,4 @@ export {
   decryptBip39Secret,
 } from "./storage";
 export type { StoredWalletV1, StoredWalletV2 } from "./storage";
+export type { WalletFormat } from "./wallet-format";

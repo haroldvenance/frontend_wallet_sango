@@ -3,6 +3,7 @@ import { deriveEvmKeypair, EVM_DEFAULT_PATH } from "./derivation";
 import { deriveEthereumAddress } from "./secp256k1";
 import {
   secp256k1SignDigest,
+  secp256k1SignDigestRecoverable,
   secp256k1SignMessage,
 } from "./secp256k1/keypair";
 import {
@@ -25,6 +26,13 @@ export interface Bip39Identity {
   readonly address: Uint8Array;
   readonly addressHex: string;
   readonly publicKeyCompressed: Uint8Array;
+  /**
+   * Clé publique non-compressée (65 bytes, préfixe 0x04).
+   *
+   * Requise par `EvmAddressProvider` (keccak256 des 64 bytes de X||Y).
+   * Cf. `deriveEthereumAddress` dans wallet-core/secp256k1.
+   */
+  readonly publicKeyUncompressed: Uint8Array;
   readonly path: string;
 }
 
@@ -109,6 +117,7 @@ export class Bip39Wallet {
       address,
       addressHex: toHex(address),
       publicKeyCompressed: new Uint8Array(kp.publicKeyCompressed),
+      publicKeyUncompressed: new Uint8Array(kp.publicKeyUncompressed),
       path: index === 0
         ? EVM_DEFAULT_PATH
         : EVM_DEFAULT_PATH.replace(/\/\d+$/, `/${index}`),
@@ -154,6 +163,24 @@ export class Bip39Wallet {
     }
     const kp = deriveEvmKeypair(this.#seed, index);
     return secp256k1SignDigest(kp, digest);
+  }
+
+  /**
+   * Signe un digest 32 bytes et retourne la signature recoverable
+   * (compact 64 bytes + recovery bit 0|1).
+   *
+   * Requis par l'adapter EVM (EIP-1559 yParity).
+   */
+  async signDigestRecoverable(
+    digest: Uint8Array,
+    index = 0,
+  ): Promise<{ compact: Uint8Array; recovery: 0 | 1 }> {
+    this.#assertAlive();
+    if (digest.length !== 32) {
+      throw new Error(`digest must be 32 bytes, got ${digest.length}`);
+    }
+    const kp = deriveEvmKeypair(this.#seed, index);
+    return secp256k1SignDigestRecoverable(kp, digest);
   }
 
   // ── Persistence ─────────────────────────────────────────────
