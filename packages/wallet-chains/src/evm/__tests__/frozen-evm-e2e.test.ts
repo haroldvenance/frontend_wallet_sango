@@ -101,6 +101,9 @@ function frozenRpc() {
     sendRawTransaction: vi.fn(
       async () => "0x" + "00".repeat(32) as `0x${string}`,
     ),
+    // E1.6 : mock eth_call (non utilisé par les tests de gel, mais
+    // requis par l'interface EvmRpc).
+    call: vi.fn(async () => "0x"),
   };
 }
 

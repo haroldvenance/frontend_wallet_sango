@@ -5,6 +5,7 @@ import { HttpRpcPool } from "../../rpc/rpc-pool";
 import type { RpcPool } from "../../rpc/rpc-pool";
 
 const ADDR = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266";
+const OTHER = "0x" + "bb".repeat(20);
 
 /** Pool mock simple : enregistre les appels, retourne `results[method]`. */
 function mockPool(
@@ -188,5 +189,82 @@ describe("EvmRpcUsingPool — patch 4", () => {
     await expect(
       rpc.sendRawTransaction("0x02abcd" as `0x${string}`),
     ).rejects.toThrow(/expected 32-byte hex hash/);
+  });
+});
+
+// ── E1.6 : eth_call ──────────────────────────────────────────
+
+describe("EvmRpcUsingPool — call (eth_call)", () => {
+  it("forwards callObj with from + to + data, returns hex", async () => {
+    const pool = mockPool({
+      eth_call: "0x0000000000000000000000000000000000000000000000000000000000000064",
+    });
+    const rpc = new EvmRpcUsingPool(pool, "eth");
+    const result = await rpc.call({
+      from: ADDR as `0x${string}`,
+      to: OTHER as `0x${string}`,
+      data: "0x70a0823100000000000000000000000000000000000000000000000000000000000000aa" as `0x${string}`,
+    });
+
+    expect(result).toBe(
+      "0x0000000000000000000000000000000000000000000000000000000000000064",
+    );
+    expect(pool.calls[0]!.method).toBe("eth_call");
+    const callObj = pool.calls[0]!.params[0] as Record<string, unknown>;
+    expect(callObj.from).toBe(ADDR);
+    expect(callObj.to).toBe(OTHER);
+    expect(callObj.data).toBe(
+      "0x70a0823100000000000000000000000000000000000000000000000000000000000000aa",
+    );
+    expect(pool.calls[0]!.params[1]).toBe("latest");
+  });
+
+  it("supports call without `data` (rare, contract without args)", async () => {
+    const pool = mockPool({ eth_call: "0x" });
+    const rpc = new EvmRpcUsingPool(pool, "eth");
+    const result = await rpc.call({
+      from: ADDR as `0x${string}`,
+      to: OTHER as `0x${string}`,
+    });
+    expect(result).toBe("0x");
+    const callObj = pool.calls[0]!.params[0] as Record<string, unknown>;
+    expect(callObj).not.toHaveProperty("data");
+    expect(callObj).not.toHaveProperty("value");
+  });
+
+  it("returns 0x for empty return data (function without return)", async () => {
+    const pool = mockPool({ eth_call: "0x" });
+    const rpc = new EvmRpcUsingPool(pool, "eth");
+    expect(await rpc.call({
+      from: ADDR as `0x${string}`,
+      to: OTHER as `0x${string}`,
+    })).toBe("0x");
+  });
+
+  it("rejects malformed hex return", async () => {
+    const pool = mockPool({ eth_call: "notahex" });
+    const rpc = new EvmRpcUsingPool(pool, "eth");
+    await expect(
+      rpc.call({
+        from: ADDR as `0x${string}`,
+        to: OTHER as `0x${string}`,
+      }),
+    ).rejects.toThrow(/expected hex string/);
+  });
+
+  it("propagates RPC errors (revert)", async () => {
+    const pool: RpcPool = {
+      register: vi.fn(),
+      request: vi.fn(async () => {
+        throw new Error("execution reverted");
+      }),
+    };
+    const rpc = new EvmRpcUsingPool(pool, "eth");
+    await expect(
+      rpc.call({
+        from: ADDR as `0x${string}`,
+        to: OTHER as `0x${string}`,
+      }),
+    ).rejects.toThrow("execution reverted");
   });
 });

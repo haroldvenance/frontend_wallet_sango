@@ -117,6 +117,31 @@ export class EvmRpcUsingPool implements EvmRpc {
     }
     return hash as Hash;
   }
+
+  // ── E1.6 : eth_call ───────────────────────────────────────
+
+  async call(tx: EvmCallParams): Promise<string> {
+    const callObj: Record<string, unknown> = { from: tx.from };
+    if (tx.to !== undefined) callObj.to = tx.to;
+    if (tx.value !== undefined) callObj.value = "0x" + tx.value.toString(16);
+    if (tx.data !== undefined) callObj.data = tx.data;
+
+    const result = await this.#pool.request<string>(
+      this.#networkId,
+      "eth_call",
+      [callObj, "latest"],
+    );
+
+    // `eth_call` retourne toujours une string hex. On vérifie le
+    // préfixe pour détecter un RPC malformé. Pas de check de longueur
+    // (une fonction ABI peut retourner 0, 32, ou N bytes).
+    if (typeof result !== "string" || !/^0x[0-9a-fA-F]*$/.test(result)) {
+      throw new Error(
+        `EvmRpcUsingPool.call: expected hex string, got ${String(result)}`,
+      );
+    }
+    return result;
+  }
 }
 
 // ── Conversions hex strictes ────────────────────────────────

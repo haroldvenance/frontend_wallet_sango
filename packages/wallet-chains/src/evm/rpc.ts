@@ -60,4 +60,20 @@ export interface EvmRpc {
    * @returns Le hash canonique de la tx.
    */
   sendRawTransaction(raw: Hash): Promise<Hash>;
+
+  // ── E1.6 : lecture de contrats (ERC-20) ──────────────────
+
+  /**
+   * Appel `eth_call` — lecture seule d'un contrat, sans signature
+   * ni gas réel.
+   *
+   * Utilisé pour lire `balanceOf(address)`, `decimals()`,
+   * `symbol()` sur les contrats ERC-20.
+   *
+   * @param tx Call object (le champ `from` est purement indicatif,
+   *           il n'affecte pas le résultat d'une fonction pure).
+   * @returns La donnée de retour brute (`0x…`). Le décodage ABI
+   *          est la responsabilité de l'appelant.
+   */
+  call(tx: EvmCallParams): Promise<string>;
 }

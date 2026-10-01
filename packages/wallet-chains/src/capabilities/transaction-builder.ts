@@ -28,6 +28,11 @@ import type { UnsignedTransaction } from "../types/tx";
  * backend les construit déjà via `@sango/sdk`). Ajouter un variant à
  * cette union **exige** d'ajouter le `case` correspondant dans
  * `SangoTransactionBuilder#encodeParams` (exhaustive check).
+ *
+ * **E1.6** — `transferErc20` ajouté pour les tokens ERC-20 (USDC,
+ * USDT). Le variant porte `assetRef: { kind: "token", … }` et un
+ * `amount` en base units du token. L'encodage ABI `transfer(address,
+ * uint256)` est fait par l'adaptateur EVM.
  */
 export type SendParams =
   // --- Transfert natif ---
@@ -37,6 +42,19 @@ export type SendParams =
       readonly assetRef: AssetRef;
       readonly amount: bigint;
       readonly memo?: Uint8Array;
+    }
+  // --- EVM : ERC-20 transfer ---
+  | {
+      readonly kind: "transferErc20";
+      /** Adresse du destinataire (pas du contrat). */
+      readonly to: Address;
+      /**
+       * AssetRef de type `token` — `contract` = adresse du contrat
+       * ERC-20, `networkId` = réseau cible.
+       */
+      readonly assetRef: AssetRef;
+      /** Montant en base units du token (voir `decimals` du token). */
+      readonly amount: bigint;
     }
   // --- Staking : self-stake ---
   | {

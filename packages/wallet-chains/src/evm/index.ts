@@ -32,3 +32,13 @@ export { EvmTransactionSigner } from "./transaction-signer";
 export { EvmBroadcaster } from "./broadcaster";
 export { EvmHistoryProvider } from "./history-provider";
 export type { EvmIndexer, EvmIndexerTx, EvmIndexerPage } from "./indexer";
+export {
+  EVM_TOKENS,
+  getTokenConfig,
+  listTokensForNetwork,
+  isKnownEvmNetwork,
+  STABLECOIN_PARITY_USD,
+} from "./tokens";
+export type { Erc20Config, Erc20Symbol } from "./tokens";
+export { EvmTokenProvider } from "./token-provider";
+export { ERC20_ABI } from "./erc20-abi";

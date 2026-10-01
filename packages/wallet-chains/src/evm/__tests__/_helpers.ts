@@ -49,6 +49,10 @@ export function mockRpc(overrides: Partial<EvmRpc> = {}): EvmRpc {
       async () =>
         "0x" + "00".repeat(32) as `0x${string}`,
     ),
+    // E1.6 : eth_call pour la lecture ERC-20. Retourne 0x par défaut
+    // (32 bytes de zéros = uint256 0). Les tests qui ont besoin d'une
+    // valeur override ce mock.
+    call: vi.fn(async () => "0x"),
     ...overrides,
   };
 }
