@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ActionsRow } from "@/components/ui/actions-row";
+import { EvmFaucetButton } from "./evm-faucet-button";
 import { useClipboard } from "@/hooks/use-clipboard";
 import { useWalletStore } from "@/stores/wallet-store";
 import { Bip39Wallet } from "@sango/wallet-core";
@@ -12,8 +13,9 @@ import { Bip39Wallet } from "@sango/wallet-core";
  * Symétrique de `QuickActions` (SANGO) :
  *   - Send → /send-evm
  *   - Receive → copie l'adresse (pas de modal dédié en E1.5)
- *
- * Pas de faucet en E1.5 (Sepolia a des faucets publics externes).
+ *   - Faucet → lien externe (E1.7.d.2), visible uniquement sur
+ *     testnet EVM. Le composant `EvmFaucetButton` retourne `null`
+ *     sur mainnet — pas de branchement conditionnel ici.
  */
 export function QuickActionsEvm() {
   const navigate = useNavigate();
@@ -34,6 +36,7 @@ export function QuickActionsEvm() {
       }}
       sendLabel="Envoyer"
       receiveLabel="Recevoir"
+      trailing={<EvmFaucetButton variant="ghost" />}
     />
   );
 }
