@@ -5,14 +5,17 @@ import { toast } from "sonner";
 import { useWalletStore } from "@/stores/wallet-store";
 
 /**
- * Sélecteur de réseau EVM (session-only, D-UI-3 étendu en 6.d).
+ * Sélecteur de réseau EVM.
  *
  * Visible uniquement pour un wallet BIP-39. Le changement est
- * **éphémère** : au prochain unlock, le réseau revient à la valeur du
- * keyring (choisie à la création).
+ * **persisté** dans `wallet-store` (D-E2.3-1) — il survit au reload
+ * et au prochain unlock (la préférence de session gagne sur le
+ * `networkId` du keyring tant qu'elle pointe vers un réseau EVM
+ * connu du registre).
  *
- * Limitation assumée en E1.5 — un changement permanent nécessite de
- * recréer le wallet. L'UI multi-chaîne complète viendra en E2.
+ * **E2.3.a.2** ajoutera un sélecteur équivalent au create/import.
+ * Aujourd'hui le défaut de création reste `ethereum-sepolia`
+ * (D-UI-3).
  */
 export function EvmNetworkSelector() {
   const format = useWalletStore((s) => s.format);
@@ -29,9 +32,7 @@ export function EvmNetworkSelector() {
     if (next === networkId) return;
     setNetworkId(next);
     const target = evmNetworkById(next);
-    toast.success(`Réseau changé : ${target?.name ?? next}`, {
-      description: "Changement éphémère — reviendra au réseau d'origine au prochain déverrouillage.",
-    });
+    toast.success(`Réseau changé : ${target?.name ?? next}`);
   }
 
   return (
@@ -79,8 +80,6 @@ export function EvmNetworkSelector() {
 
       <p className="mt-2 text-[10px] text-muted-foreground">
         Actif : <span className="font-medium">{activeName}</span>
-        {" · "}
-        <span>changement éphémère (non persisté)</span>
       </p>
     </div>
   );
