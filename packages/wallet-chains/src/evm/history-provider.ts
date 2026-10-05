@@ -8,7 +8,6 @@ import type {
   TxHistory,
   TxStatus,
 } from "../types/history";
-import { EVM_NATIVE_ASSET_ID } from "./config";
 import type { EvmIndexer, EvmIndexerTx } from "./indexer";
 
 /**
@@ -25,10 +24,12 @@ import type { EvmIndexer, EvmIndexerTx } from "./indexer";
 export class EvmHistoryProvider implements HistoryProvider {
   readonly #indexer: EvmIndexer;
   readonly #networkId: string;
+  readonly #nativeAsset: string;
 
-  constructor(indexer: EvmIndexer, networkId: string) {
+  constructor(indexer: EvmIndexer, networkId: string, nativeAsset: string) {
     this.#indexer = indexer;
     this.#networkId = networkId;
+    this.#nativeAsset = nativeAsset;
   }
 
   async getHistory(query: HistoryQuery): Promise<TxHistory> {
@@ -40,17 +41,23 @@ export class EvmHistoryProvider implements HistoryProvider {
 
     return {
       total: page.total,
-      items: page.items.map((tx) => toHistoryItem(tx, this.#networkId)),
+      items: page.items.map((tx) =>
+        toHistoryItem(tx, this.#networkId, this.#nativeAsset),
+      ),
     };
   }
 }
 
 // ── Conversion EvmIndexerTx → HistoryItem ───────────────────
 
-function toHistoryItem(tx: EvmIndexerTx, networkId: string): HistoryItem {
+function toHistoryItem(
+  tx: EvmIndexerTx,
+  networkId: string,
+  nativeAsset: string,
+): HistoryItem {
   const assetRef: AssetRef = {
     kind: "native",
-    assetId: EVM_NATIVE_ASSET_ID,
+    assetId: nativeAsset,
     networkId,
   };
 

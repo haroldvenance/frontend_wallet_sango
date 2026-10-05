@@ -1,7 +1,6 @@
 import type { AccountProvider } from "../capabilities/account-provider";
 import type { AccountState } from "../types/account";
 import type { Address } from "../types/address";
-import { EVM_NATIVE_ASSET_ID } from "./config";
 import type { EvmRpc } from "./rpc";
 
 /**
@@ -51,6 +50,3 @@ export class EvmAccountProvider implements AccountProvider {
     return this.#networkId;
   }
 }
-
-// Marqueur pour éviter un warning TS d'import inutilisé.
-void EVM_NATIVE_ASSET_ID;

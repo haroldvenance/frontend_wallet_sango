@@ -44,7 +44,7 @@ export function useSendEvm(): UseMutationResult<
 > {
   const session = useWalletSession();
   const format = useWalletStore((s) => s.format);
-  const { account, networkId } = useNetworkQueryContext();
+  const { account, networkId, nativeAsset } = useNetworkQueryContext();
   const qc = useQueryClient();
 
   return useMutation<SendEvmResult, Error, SendEvmArgs>({
@@ -83,10 +83,15 @@ export function useSendEvm(): UseMutationResult<
           account,
         )) as Hash;
       } else {
-        // ETH natif
+        // Natif (ETH, BNB, …) — résolu par le réseau courant.
+        if (nativeAsset === null) {
+          throw new Error(
+            `useSendEvm: nativeAsset introuvable pour "${networkId}"`,
+          );
+        }
         const assetRef: AssetRef = {
           kind: "native",
-          assetId: "eth",
+          assetId: nativeAsset,
           networkId,
         };
         txHash = (await session.send(
@@ -95,7 +100,7 @@ export function useSendEvm(): UseMutationResult<
         )) as Hash;
       }
 
-      const symbol = token?.metadata.symbol ?? "ETH";
+      const symbol = token?.metadata.symbol ?? nativeAsset ?? "native";
       toast.info("Transaction envoyée", {
         description: (
           <span className="inline-flex items-center gap-2">

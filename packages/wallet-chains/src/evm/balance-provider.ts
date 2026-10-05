@@ -2,7 +2,7 @@ import type { BalanceProvider } from "../capabilities/balance-provider";
 import type { Address } from "../types/address";
 import type { AssetRef } from "../types/asset";
 import type { Balance } from "../types/balance";
-import { EVM_DECIMALS, EVM_NATIVE_ASSET_ID } from "./config";
+import { EVM_DECIMALS } from "./config";
 import type { EvmRpc } from "./rpc";
 
 /**
@@ -15,17 +15,19 @@ import type { EvmRpc } from "./rpc";
 export class EvmBalanceProvider implements BalanceProvider {
   readonly #rpc: EvmRpc;
   readonly #networkId: string;
+  readonly #nativeAsset: string;
 
-  constructor(rpc: EvmRpc, networkId: string) {
+  constructor(rpc: EvmRpc, networkId: string, nativeAsset: string) {
     this.#rpc = rpc;
     this.#networkId = networkId;
+    this.#nativeAsset = nativeAsset;
   }
 
   async getBalance(address: Address, assetRef: AssetRef): Promise<Balance> {
-    assertNativeEth(assetRef, this.#networkId);
+    assertNative(assetRef, this.#networkId, this.#nativeAsset);
     const amount = await this.#rpc.getBalance(address);
     return {
-      assetId: EVM_NATIVE_ASSET_ID,
+      assetId: this.#nativeAsset,
       networkId: this.#networkId,
       amount,
       decimals: EVM_DECIMALS,
@@ -33,15 +35,19 @@ export class EvmBalanceProvider implements BalanceProvider {
   }
 }
 
-function assertNativeEth(assetRef: AssetRef, networkId: string): void {
+function assertNative(
+  assetRef: AssetRef,
+  networkId: string,
+  nativeAsset: string,
+): void {
   if (assetRef.kind !== "native") {
     throw new Error(
-      `EvmBalanceProvider: token assets not supported in E1 (got kind="${assetRef.kind}")`,
+      `EvmBalanceProvider: token assets not supported (got kind="${assetRef.kind}")`,
     );
   }
-  if (assetRef.assetId !== EVM_NATIVE_ASSET_ID) {
+  if (assetRef.assetId !== nativeAsset) {
     throw new Error(
-      `EvmBalanceProvider: unsupported asset "${assetRef.assetId}" (expected "${EVM_NATIVE_ASSET_ID}")`,
+      `EvmBalanceProvider: unsupported asset "${assetRef.assetId}" (expected "${nativeAsset}")`,
     );
   }
   if (assetRef.networkId !== networkId) {

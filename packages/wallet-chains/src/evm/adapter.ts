@@ -62,18 +62,31 @@ export function evmAdapterFactory(
   return {
     network,
     addressProvider: new EvmAddressProvider(deps.signer),
-    balanceProvider: new EvmBalanceProvider(deps.rpc, network.id),
+    balanceProvider: new EvmBalanceProvider(
+      deps.rpc,
+      network.id,
+      network.nativeAsset,
+    ),
     accountProvider: new EvmAccountProvider(deps.rpc, network.id),
     historyProvider: deps.indexer
-      ? new EvmHistoryProvider(deps.indexer, network.id)
+      ? new EvmHistoryProvider(
+          deps.indexer,
+          network.id,
+          network.nativeAsset,
+        )
       : {
           getHistory: async () => ({ total: 0, items: [] }),
         },
-    feeEstimator: new EvmFeeEstimator(deps.rpc, network.id),
+    feeEstimator: new EvmFeeEstimator(
+      deps.rpc,
+      network.id,
+      network.nativeAsset,
+    ),
     transactionBuilder: new EvmTransactionBuilder(
       deps.rpc,
       network.id,
       deps.chainId,
+      network.nativeAsset,
     ),
     transactionSigner: new EvmTransactionSigner(),
     broadcaster: new EvmBroadcaster(deps.rpc),

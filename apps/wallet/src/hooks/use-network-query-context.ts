@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 
+import { evmNetworkById } from "@sango/wallet-chains";
 import type { AccountRef, ChainFamily } from "@sango/wallet-chains";
 import type { WalletFormat } from "@sango/wallet-core";
 
@@ -28,6 +29,20 @@ export interface NetworkQueryContext {
   readonly networkId: string;
   readonly family: ChainFamily;
   readonly account: AccountRef;
+  /**
+   * Asset natif du réseau courant, ou `null` si non résolu.
+   *
+   * Source de vérité pour l'`assetId` des transactions natives (send,
+   * fee). Remplace l'ancienne constante globale hardcodée "eth".
+   *
+   * - SANGO   → "sango"
+   * - EVM     → `network.nativeAsset` ("eth", "bnb", …)
+   * - inconnu → `null` (état métier explicite, pas de fallback)
+   *
+   * **D-E1.7-1** : pas de fallback `?? "eth"`. Un réseau inconnu
+   * DOIT être traité comme un état invalide par l'appelant.
+   */
+  readonly nativeAsset: string | null;
 }
 
 export function useNetworkQueryContext(): NetworkQueryContext {
@@ -37,10 +52,12 @@ export function useNetworkQueryContext(): NetworkQueryContext {
 
   return useMemo(() => {
     const family = familyFromFormat(format);
+    const nativeAsset = resolveNativeAsset(family, networkId);
     return {
       endpoint,
       networkId,
       family,
+      nativeAsset,
       account: {
         family,
         accountIndex: 0,
@@ -48,6 +65,21 @@ export function useNetworkQueryContext(): NetworkQueryContext {
       },
     };
   }, [endpoint, format, networkId]);
+}
+
+/**
+ * Résout l'asset natif du réseau courant.
+ *
+ * **D-E1.7-1** : pas de fallback `?? "eth"`. Un réseau EVM inconnu
+ * retourne `null` — l'appelant DOIT gérer cet état (guard).
+ */
+function resolveNativeAsset(
+  family: ChainFamily,
+  networkId: string,
+): string | null {
+  if (family === "sango") return "sango";
+  const network = evmNetworkById(networkId);
+  return network?.nativeAsset ?? null;
 }
 
 /**

@@ -32,7 +32,7 @@ function mockIndexer(items: EvmIndexerTx[] = [tx()]): EvmIndexer {
 
 describe("EvmHistoryProvider", () => {
   it("converts a confirmed transfer", async () => {
-    const p = new EvmHistoryProvider(mockIndexer(), "ethereum-sepolia");
+    const p = new EvmHistoryProvider(mockIndexer(), "ethereum-sepolia", "eth");
     const h = await p.getHistory({ address: ADDR, limit: 20 });
 
     expect(h.total).toBe(1);
@@ -51,6 +51,7 @@ describe("EvmHistoryProvider", () => {
     const p = new EvmHistoryProvider(
       mockIndexer([tx({ isError: true })]),
       "ethereum-sepolia",
+      "eth",
     );
     const h = await p.getHistory({ address: ADDR, limit: 20 });
     expect(h.items[0]!.status).toBe("failed");
@@ -60,6 +61,7 @@ describe("EvmHistoryProvider", () => {
     const p = new EvmHistoryProvider(
       mockIndexer([tx({ blockNumber: 0, timestamp: 0 })]),
       "ethereum-sepolia",
+      "eth",
     );
     const h = await p.getHistory({ address: ADDR, limit: 20 });
     expect(h.items[0]!.status).toBe("pending");
@@ -70,6 +72,7 @@ describe("EvmHistoryProvider", () => {
     const p = new EvmHistoryProvider(
       mockIndexer([tx({ to: null })]),
       "ethereum-sepolia",
+      "eth",
     );
     const h = await p.getHistory({ address: ADDR, limit: 20 });
     // La chaîne "0x000…000" remplace null.
@@ -78,20 +81,20 @@ describe("EvmHistoryProvider", () => {
 
   it("forwards limit + offset to the indexer", async () => {
     const indexer = mockIndexer();
-    const p = new EvmHistoryProvider(indexer, "ethereum-sepolia");
+    const p = new EvmHistoryProvider(indexer, "ethereum-sepolia", "eth");
     await p.getHistory({ address: ADDR, limit: 5, offset: 10 });
     expect(indexer.getTransactionsByAddress).toHaveBeenCalledWith(ADDR, 5, 10);
   });
 
   it("defaults offset to 0", async () => {
     const indexer = mockIndexer();
-    const p = new EvmHistoryProvider(indexer, "ethereum-sepolia");
+    const p = new EvmHistoryProvider(indexer, "ethereum-sepolia", "eth");
     await p.getHistory({ address: ADDR, limit: 20 });
     expect(indexer.getTransactionsByAddress).toHaveBeenCalledWith(ADDR, 20, 0);
   });
 
   it("returns empty page when the indexer has no items", async () => {
-    const p = new EvmHistoryProvider(mockIndexer([]), "ethereum-sepolia");
+    const p = new EvmHistoryProvider(mockIndexer([]), "ethereum-sepolia", "eth");
     const h = await p.getHistory({ address: ADDR, limit: 20 });
     expect(h.total).toBe(0);
     expect(h.items).toEqual([]);
@@ -103,14 +106,14 @@ describe("EvmHistoryProvider", () => {
         throw new Error("Rate limited");
       }),
     };
-    const p = new EvmHistoryProvider(indexer, "ethereum-sepolia");
+    const p = new EvmHistoryProvider(indexer, "ethereum-sepolia", "eth");
     await expect(p.getHistory({ address: ADDR, limit: 20 })).rejects.toThrow(
       "Rate limited",
     );
   });
 
   it("fills networkId from the constructor", async () => {
-    const p = new EvmHistoryProvider(mockIndexer(), "base");
+    const p = new EvmHistoryProvider(mockIndexer(), "base", "eth");
     const h = await p.getHistory({ address: ADDR, limit: 20 });
     expect(h.items[0]!.networkId).toBe("base");
     expect(h.items[0]!.assetRef).toMatchObject({ networkId: "base" });

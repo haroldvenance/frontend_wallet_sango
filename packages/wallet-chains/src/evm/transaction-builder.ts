@@ -11,7 +11,6 @@ import type {
 } from "../types/tx";
 import { ERC20_ABI } from "./erc20-abi";
 import type { Eip1559UnsignedFields } from "./eip1559-codec";
-import { EVM_NATIVE_ASSET_ID } from "./config";
 import type { EvmRpc } from "./rpc";
 
 const BASE_FEE_MULTIPLIER = 2n;
@@ -31,11 +30,18 @@ export class EvmTransactionBuilder implements TransactionBuilder {
   readonly #rpc: EvmRpc;
   readonly #networkId: string;
   readonly #chainId: number;
+  readonly #nativeAsset: string;
 
-  constructor(rpc: EvmRpc, networkId: string, chainId: number) {
+  constructor(
+    rpc: EvmRpc,
+    networkId: string,
+    chainId: number,
+    nativeAsset: string,
+  ) {
     this.#rpc = rpc;
     this.#networkId = networkId;
     this.#chainId = chainId;
+    this.#nativeAsset = nativeAsset;
   }
 
   async build(
@@ -63,7 +69,7 @@ export class EvmTransactionBuilder implements TransactionBuilder {
     params: Extract<SendParams, { kind: "transfer" }>,
     sender: Address,
   ): Promise<ChainsUnsignedTx> {
-    assertNativeEth(params, this.#networkId);
+    assertNative(params, this.#networkId, this.#nativeAsset);
 
     const [nonce, gasLimit, baseFeePerGas, maxPriorityFeePerGas] =
       await Promise.all([
@@ -174,16 +180,17 @@ function bytesToHex(bytes: Uint8Array): Hash {
   return s as Hash;
 }
 
-function assertNativeEth(
+function assertNative(
   params: Extract<SendParams, { kind: "transfer" }>,
   networkId: string,
+  nativeAsset: string,
 ): void {
   if (
     params.assetRef.kind !== "native" ||
-    params.assetRef.assetId !== EVM_NATIVE_ASSET_ID
+    params.assetRef.assetId !== nativeAsset
   ) {
     throw new Error(
-      "EvmTransactionBuilder: transfer requires a native ETH assetRef",
+      "EvmTransactionBuilder: transfer requires a native assetRef",
     );
   }
   if (params.assetRef.networkId !== networkId) {

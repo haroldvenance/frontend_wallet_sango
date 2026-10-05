@@ -6,7 +6,6 @@ import type {
   FeeParams,
 } from "../capabilities/fee-estimator";
 import type { Address } from "../types/address";
-import { EVM_NATIVE_ASSET_ID } from "./config";
 import { ERC20_ABI } from "./erc20-abi";
 import type { EvmRpc } from "./rpc";
 
@@ -30,10 +29,12 @@ const BASE_FEE_MULTIPLIER = 2n;
 export class EvmFeeEstimator implements FeeEstimator {
   readonly #rpc: EvmRpc;
   readonly #networkId: string;
+  readonly #nativeAsset: string;
 
-  constructor(rpc: EvmRpc, networkId: string) {
+  constructor(rpc: EvmRpc, networkId: string, nativeAsset: string) {
     this.#rpc = rpc;
     this.#networkId = networkId;
+    this.#nativeAsset = nativeAsset;
   }
 
   async estimate(params: FeeParams): Promise<FeeEstimate> {
@@ -46,7 +47,7 @@ export class EvmFeeEstimator implements FeeEstimator {
     // 1. Estimation du gas (natif ou ERC-20).
     let gasLimit: bigint;
     if (params.assetRef.kind === "native") {
-      if (params.assetRef.assetId !== EVM_NATIVE_ASSET_ID) {
+      if (params.assetRef.assetId !== this.#nativeAsset) {
         throw new Error(
           `EvmFeeEstimator: unsupported native asset "${params.assetRef.assetId}"`,
         );
@@ -80,10 +81,10 @@ export class EvmFeeEstimator implements FeeEstimator {
     const maxFeePerGas = baseFeePerGas * BASE_FEE_MULTIPLIER + maxPriorityFeePerGas;
     const total = maxFeePerGas * gasLimit;
 
-    // Le fee est TOUJOURS en ETH natif (gas token), même pour un
-    // transfert ERC-20.
+    // Le fee est TOUJOURS dans l'asset natif du réseau (gas token),
+    // même pour un transfert ERC-20.
     return {
-      assetId: EVM_NATIVE_ASSET_ID,
+      assetId: this.#nativeAsset,
       total,
       breakdown: {
         gasLimit,

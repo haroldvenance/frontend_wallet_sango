@@ -15,7 +15,12 @@ const TO = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8" as `0x${string}`;
 const SEPOLIA_CHAIN_ID = 11_155_111;
 
 function makeBuilder(rpc = mockRpc()) {
-  return new EvmTransactionBuilder(rpc, "ethereum-sepolia", SEPOLIA_CHAIN_ID);
+  return new EvmTransactionBuilder(
+    rpc,
+    "ethereum-sepolia",
+    SEPOLIA_CHAIN_ID,
+    "eth",
+  );
 }
 
 const TRANSFER_PARAMS: SendParams = {
@@ -100,7 +105,7 @@ describe("EvmTransactionBuilder — validation", () => {
         },
         ANVIL_ADDRESS_0,
       ),
-    ).rejects.toThrow(/requires a native ETH assetRef/);
+    ).rejects.toThrow(/requires a native assetRef/);
   });
 
   it("rejects mismatched network", async () => {
@@ -146,7 +151,12 @@ function erc20Params(
 const ERC20_CHAIN_ID = 1; // Ethereum Mainnet
 
 function makeErc20Builder(rpc = mockRpc()) {
-  return new EvmTransactionBuilder(rpc, "ethereum-mainnet", ERC20_CHAIN_ID);
+  return new EvmTransactionBuilder(
+    rpc,
+    "ethereum-mainnet",
+    ERC20_CHAIN_ID,
+    "eth",
+  );
 }
 
 const FROM = ("0x" + "cc".repeat(20)) as `0x${string}`;

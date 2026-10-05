@@ -17,7 +17,6 @@ import type { Network } from "../types/network";
  * persistant, pas de round-robin, pas de circuit breaker.
  */
 
-export const EVM_NATIVE_ASSET_ID = "eth";
 export const EVM_DECIMALS = 18;
 
 // ── Testnet ─────────────────────────────────────────────────
@@ -27,7 +26,7 @@ export const ETHEREUM_SEPOLIA: Network = {
   family: "evm",
   name: "Ethereum Sepolia",
   chainId: "0xaa36a7", // 11155111
-  nativeAsset: EVM_NATIVE_ASSET_ID,
+  nativeAsset: "eth",
   defaultRpcEndpoints: [
     "https://ethereum-sepolia.publicnode.com",
     "https://rpc.sepolia.org",
@@ -46,7 +45,7 @@ export const ETHEREUM_MAINNET: Network = {
   family: "evm",
   name: "Ethereum",
   chainId: "0x1", // 1
-  nativeAsset: EVM_NATIVE_ASSET_ID,
+  nativeAsset: "eth",
   defaultRpcEndpoints: [
     "https://eth.llamarpc.com",
     "https://ethereum-rpc.publicnode.com",
@@ -64,7 +63,7 @@ export const BASE: Network = {
   family: "evm",
   name: "Base",
   chainId: "0x2105", // 8453
-  nativeAsset: EVM_NATIVE_ASSET_ID,
+  nativeAsset: "eth",
   defaultRpcEndpoints: [
     "https://mainnet.base.org",
     "https://base-rpc.publicnode.com",
@@ -82,7 +81,7 @@ export const ARBITRUM_ONE: Network = {
   family: "evm",
   name: "Arbitrum One",
   chainId: "0xa4b1", // 42161
-  nativeAsset: EVM_NATIVE_ASSET_ID,
+  nativeAsset: "eth",
   defaultRpcEndpoints: [
     "https://arb1.arbitrum.io/rpc",
     "https://arbitrum-one-rpc.publicnode.com",

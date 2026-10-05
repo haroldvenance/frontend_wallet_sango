@@ -112,6 +112,7 @@ function buildFrozenUnsigned() {
     frozenRpc(),
     "ethereum-sepolia",
     SEPOLIA_CHAIN_ID,
+    "eth",
   );
   return builder.build(
     {

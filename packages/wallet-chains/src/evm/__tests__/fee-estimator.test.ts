@@ -2,13 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import { EvmFeeEstimator } from "../fee-estimator";
 import type { EvmCallParams } from "../rpc";
-import { EVM_NATIVE_ASSET_ID } from "../config";
 import type { AssetRef } from "../../types/asset";
 import { ANVIL_ADDRESS_0, mockRpc } from "./_helpers";
 
 const NATIVE_ETH: AssetRef = {
   kind: "native",
-  assetId: EVM_NATIVE_ASSET_ID,
+  assetId: "eth",
   networkId: "ethereum-sepolia",
 };
 
@@ -21,7 +20,7 @@ describe("EvmFeeEstimator", () => {
       getBaseFeePerGas: vi.fn(async () => 10_000_000_000n), // 10 gwei
       getMaxPriorityFeePerGas: vi.fn(async () => 1_000_000_000n), // 1 gwei
     });
-    const fee = new EvmFeeEstimator(rpc, "ethereum-sepolia");
+    const fee = new EvmFeeEstimator(rpc, "ethereum-sepolia", "eth");
     const est = await fee.estimate({
       from: ANVIL_ADDRESS_0,
       to: TO,
@@ -31,7 +30,7 @@ describe("EvmFeeEstimator", () => {
 
     // (10 * 2 + 1) gwei = 21 gwei ; 21000 gas → 21 * 21000 * 1e9
     expect(est.total).toBe(21_000_000_000n * 21_000n);
-    expect(est.assetId).toBe(EVM_NATIVE_ASSET_ID);
+    expect(est.assetId).toBe("eth");
     expect(est.dynamic).toBe(true);
     expect(est.breakdown?.gasLimit).toBe(21_000n);
     expect(est.breakdown?.maxFeePerGas).toBe(21_000_000_000n);
@@ -41,7 +40,7 @@ describe("EvmFeeEstimator", () => {
   it("calls estimateGas with the right params", async () => {
     const estimateGas = vi.fn(async () => 50_000n);
     const rpc = mockRpc({ estimateGas });
-    const fee = new EvmFeeEstimator(rpc, "ethereum-sepolia");
+    const fee = new EvmFeeEstimator(rpc, "ethereum-sepolia", "eth");
     await fee.estimate({
       from: ANVIL_ADDRESS_0,
       to: TO,
@@ -66,6 +65,7 @@ describe("EvmFeeEstimator", () => {
         getMaxPriorityFeePerGas: vi.fn(async () => 0n),
       }),
       "ethereum-sepolia",
+      "eth",
     );
 
     const est = await fee.estimate({
@@ -93,14 +93,14 @@ describe("EvmFeeEstimator", () => {
   });
 
   it("rejects a network mismatch", async () => {
-    const fee = new EvmFeeEstimator(mockRpc(), "ethereum-sepolia");
+    const fee = new EvmFeeEstimator(mockRpc(), "ethereum-sepolia", "eth");
     await expect(
       fee.estimate({
         from: ANVIL_ADDRESS_0,
         to: TO,
         assetRef: {
           kind: "native",
-          assetId: EVM_NATIVE_ASSET_ID,
+          assetId: "eth",
           networkId: "ethereum-mainnet",
         },
         amount: 1n,
