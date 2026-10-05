@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("sonner", () => ({
   toast: {
@@ -18,19 +18,33 @@ import { EvmNetworkSelector } from "./evm-network-selector";
 /**
  * 🔒 EvmNetworkSelector — API controlled/uncontrolled (D-E2.3-2)
  *
- * Invariant central : le simple fait que `value` soit fourni bascule
- * entièrement le composant en controlled — pas d'écriture dans
- * `wallet-store`, pas de toast, pas de garde-fou `format === "bip39"`.
+ * ⚠️ La cleanup automatique de @testing-library/react n'est pas
+ *    active dans ce projet (globals Vitest désactivés). On appelle
+ *    `cleanup()` explicitement après chaque test pour éviter
+ *    l'accumulation dans le DOM (sinon `getByTestId` échoue avec
+ *    "Found multiple elements").
  */
 
-beforeEach(() => {
+afterEach(() => {
+  cleanup();
   vi.clearAllMocks();
+});
+
+beforeEach(() => {
   useWalletStore.setState({
     format: "bip39",
     status: "unlocked",
     networkId: "ethereum-sepolia",
   });
 });
+
+// Helpers
+function option(id: string) {
+  return screen.getByTestId(`network-option-${id}`);
+}
+function activeName(): string {
+  return screen.getByTestId("network-active-name").textContent ?? "";
+}
 
 // ────────────────────────────────────────────────────────────
 //  Mode controlled (create/import)
@@ -39,9 +53,7 @@ beforeEach(() => {
 describe("EvmNetworkSelector — controlled", () => {
   it("affiche la valeur fournie comme active", () => {
     render(<EvmNetworkSelector value="bsc" onChange={() => {}} />);
-    // Le nom du réseau BSC apparaît en "Actif : ..."
-    expect(screen.getByText(/BNB Smart Chain$/)).toBeDefined();
-    expect(screen.getByText("BNB Smart Chain")).toBeDefined();
+    expect(activeName()).toBe("BNB Smart Chain");
   });
 
   it("appelle onChange avec le nouveau networkId sans toucher au store", () => {
@@ -49,16 +61,16 @@ describe("EvmNetworkSelector — controlled", () => {
     const before = useWalletStore.getState().networkId;
     render(<EvmNetworkSelector value="bsc" onChange={onChange} />);
 
-    // Clique sur "Arbitrum One" (non actif)
-    fireEvent.click(screen.getByRole("button", { name: /Arbitrum One/ }));
+    fireEvent.click(option("arbitrum-one"));
 
+    expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith("arbitrum-one");
     expect(useWalletStore.getState().networkId).toBe(before);
   });
 
   it("n'émet aucun toast.success (pas de session)", () => {
     render(<EvmNetworkSelector value="bsc" onChange={() => {}} />);
-    fireEvent.click(screen.getByRole("button", { name: /Arbitrum One/ }));
+    fireEvent.click(option("arbitrum-one"));
     expect(toast.success).not.toHaveBeenCalled();
   });
 
@@ -67,8 +79,7 @@ describe("EvmNetworkSelector — controlled", () => {
     render(
       <EvmNetworkSelector value="ethereum-sepolia" onChange={() => {}} />,
     );
-    // Le sélecteur est bien rendu, actif = sepolia.
-    expect(screen.getByText("Ethereum Sepolia")).toBeDefined();
+    expect(activeName()).toBe("Ethereum Sepolia");
   });
 
   it("s'affiche même si format=sango-legacy (protection contre le garde-fou)", () => {
@@ -76,14 +87,13 @@ describe("EvmNetworkSelector — controlled", () => {
     render(
       <EvmNetworkSelector value="ethereum-sepolia" onChange={() => {}} />,
     );
-    expect(screen.getByText("Ethereum Sepolia")).toBeDefined();
+    expect(activeName()).toBe("Ethereum Sepolia");
   });
 
-  it("no-op si on clique sur le réseau déjà actif", () => {
+  it("no-op si on clique sur le réseau déjà actif (bouton disabled)", () => {
     const onChange = vi.fn();
     render(<EvmNetworkSelector value="bsc" onChange={onChange} />);
-    // Le bouton BSC est disabled — pas d'appel même si on force le clic.
-    fireEvent.click(screen.getByRole("button", { name: /BNB Smart Chain$/ }));
+    fireEvent.click(option("bsc"));
     expect(onChange).not.toHaveBeenCalled();
   });
 });
@@ -96,13 +106,14 @@ describe("EvmNetworkSelector — uncontrolled", () => {
   it("affiche le networkId du store", () => {
     useWalletStore.setState({ networkId: "base" });
     render(<EvmNetworkSelector />);
-    expect(screen.getByText("Base")).toBeDefined();
+    expect(activeName()).toBe("Base");
   });
 
   it("écrit dans le store au changement + toast.success", () => {
     render(<EvmNetworkSelector />);
-    fireEvent.click(screen.getByRole("button", { name: /Arbitrum One/ }));
+    fireEvent.click(option("arbitrum-one"));
     expect(useWalletStore.getState().networkId).toBe("arbitrum-one");
+    expect(toast.success).toHaveBeenCalledTimes(1);
     expect(toast.success).toHaveBeenCalledWith(
       expect.stringContaining("Arbitrum One"),
     );
@@ -127,12 +138,17 @@ describe("EvmNetworkSelector — uncontrolled", () => {
 
 describe("EvmNetworkSelector — invariant de séparation", () => {
   it("controlled : le store ne sert jamais de fallback d'affichage", () => {
-    // Store = base, value = bsc. On attend l'affichage de bsc (pas base).
     useWalletStore.setState({ networkId: "base" });
     render(<EvmNetworkSelector value="bsc" onChange={() => {}} />);
-    // "Actif : BNB Smart Chain", pas "Actif : Base".
-    const actif = screen.getByText(/Actif :/);
-    expect(actif.textContent).toMatch(/BNB Smart Chain/);
-    expect(actif.textContent).not.toMatch(/Actif : Base$/);
+    expect(activeName()).toBe("BNB Smart Chain");
+    expect(activeName()).not.toBe("Base");
+  });
+
+  it("controlled : value ne touche pas au store même après plusieurs clics", () => {
+    render(<EvmNetworkSelector value="bsc" onChange={() => {}} />);
+    fireEvent.click(option("arbitrum-one"));
+    fireEvent.click(option("base"));
+    fireEvent.click(option("ethereum-mainnet"));
+    expect(useWalletStore.getState().networkId).toBe("ethereum-sepolia");
   });
 });
