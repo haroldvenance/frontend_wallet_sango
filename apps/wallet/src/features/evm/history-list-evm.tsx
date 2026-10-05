@@ -6,7 +6,7 @@ import { useMemo } from "react";
 import { ActivitySection } from "@/components/ui/activity-section";
 import { ExplorerLinkEvm } from "@/features/evm/explorer-link-evm";
 import { useEvmHistory } from "@/hooks/use-evm-history";
-import { formatEthShort } from "@/lib/eth";
+import { formatNativeShort } from "@/lib/eth";
 import { useWalletStore } from "@/stores/wallet-store";
 
 /**
@@ -159,8 +159,12 @@ function HistoryRow({ item, myAddress }: RowProps) {
       <div className="shrink-0 text-right">
         <div className="font-mono text-sm font-medium">
           {isSent ? "-" : "+"}
-          {formatEthShort(item.amount)}{" "}
-          <span className="text-xs font-normal text-muted-foreground">ETH</span>
+          {formatNativeShort(item.amount)}{" "}
+          <span className="text-xs font-normal text-muted-foreground">
+            {item.assetRef.kind === "native"
+              ? item.assetRef.assetId.toUpperCase()
+              : "TOKEN"}
+          </span>
         </div>
         <div className="mt-0.5">
           <ExplorerLinkEvm

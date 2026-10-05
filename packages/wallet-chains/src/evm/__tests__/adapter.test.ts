@@ -67,6 +67,7 @@ describe("evmAdapterFactory — validation", () => {
           name: "Sango Devnet",
           chainId: "0x00",
           nativeAsset: "sango",
+          isTestnet: true,
           defaultRpcEndpoints: [],
         },
         {

@@ -34,6 +34,7 @@ export const ETHEREUM_SEPOLIA: Network = {
   name: "Ethereum Sepolia",
   chainId: "0xaa36a7", // 11155111
   nativeAsset: "eth",
+  isTestnet: true,
   defaultRpcEndpoints: [
     "https://ethereum-sepolia.publicnode.com",
     "https://rpc.sepolia.org",
@@ -53,6 +54,7 @@ export const ETHEREUM_MAINNET: Network = {
   name: "Ethereum",
   chainId: "0x1", // 1
   nativeAsset: "eth",
+  isTestnet: false,
   defaultRpcEndpoints: [
     "https://eth.llamarpc.com",
     "https://ethereum-rpc.publicnode.com",
@@ -71,6 +73,7 @@ export const BASE: Network = {
   name: "Base",
   chainId: "0x2105", // 8453
   nativeAsset: "eth",
+  isTestnet: false,
   defaultRpcEndpoints: [
     "https://mainnet.base.org",
     "https://base-rpc.publicnode.com",
@@ -89,6 +92,7 @@ export const ARBITRUM_ONE: Network = {
   name: "Arbitrum One",
   chainId: "0xa4b1", // 42161
   nativeAsset: "eth",
+  isTestnet: false,
   defaultRpcEndpoints: [
     "https://arb1.arbitrum.io/rpc",
     "https://arbitrum-one-rpc.publicnode.com",
@@ -121,6 +125,7 @@ export const BNB_SMART_CHAIN_MAINNET: Network = {
   name: "BNB Smart Chain",
   chainId: "0x38", // 56
   nativeAsset: "bnb",
+  isTestnet: false,
   defaultRpcEndpoints: [
     "https://bsc-dataseed.binance.org",
     "https://bsc.publicnode.com",
@@ -151,6 +156,7 @@ export const BNB_SMART_CHAIN_TESTNET: Network = {
   name: "BNB Smart Chain Testnet",
   chainId: "0x61", // 97
   nativeAsset: "bnb",
+  isTestnet: true,
   defaultRpcEndpoints: [
     "https://data-seed-prebsc-1-s1.binance.org:8545",
   ],

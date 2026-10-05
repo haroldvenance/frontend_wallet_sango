@@ -30,6 +30,7 @@ const NETWORK: Network = {
   name: "Sango Devnet",
   chainId: asPublicKey("11".repeat(32)),
   nativeAsset: "sango",
+  isTestnet: true,
   defaultRpcEndpoints: ["http://127.0.0.1:8545"],
 };
 

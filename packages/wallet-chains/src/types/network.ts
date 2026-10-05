@@ -21,6 +21,12 @@ export interface Network {
   readonly name: string;
   readonly chainId: string;
   readonly nativeAsset: AssetId;
+  /**
+   * Vrai pour les testnets et devnets (sepolia, bsc-testnet,
+   * sango-devnet). Propriété intrinsèque du réseau — les composants
+   * UI ne doivent plus deviner via `id === "..."`.
+   */
+  readonly isTestnet: boolean;
   readonly defaultRpcEndpoints: readonly string[];
   readonly explorer?: ExplorerConfig;
 }

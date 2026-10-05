@@ -20,12 +20,13 @@ export function parseEth(input: string): bigint {
 }
 
 /**
- * Formate wei → ETH avec un nombre fixe de décimales significatives
- * (utile pour les fees, plus court qu'un `formatEther` complet).
+ * Formate wei d'un asset natif (ETH, BNB) → unités humaines avec un
+ * nombre fixe de décimales significatives (utile pour les fees, plus
+ * court qu'un `formatEther` complet).
  *
  * Exemple : 210_000_000_000_000 wei → "0.00021"
  */
-export function formatEthShort(wei: bigint, maxDecimals = 6): string {
+export function formatNativeShort(wei: bigint, maxDecimals = 6): string {
   const full = formatEther(wei);
   if (!full.includes(".")) return full;
   const [whole, frac] = full.split(".");

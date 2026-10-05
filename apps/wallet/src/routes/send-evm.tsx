@@ -10,7 +10,7 @@ import { useEvmAccount } from "@/hooks/use-evm-account";
 import { useEvmTokens } from "@/hooks/use-evm-tokens";
 import { useSendEvm } from "@/hooks/use-send-evm";
 import {
-  formatEthShort,
+  formatNativeShort,
   formatStablecoinUsd,
   formatTokenAmount,
   isValidEvmAddress,
@@ -174,7 +174,7 @@ export function SendEvmRoute() {
       const symbol = selectedToken?.metadata.symbol ?? "ETH";
       const displayed = selectedToken
         ? formatTokenAmount(selectedBalance, selectedToken.metadata.decimals)
-        : formatEthShort(selectedBalance);
+        : formatNativeShort(selectedBalance);
       return toast.error("Solde insuffisant", {
         description: `Solde : ${displayed} ${symbol}`,
       });
@@ -183,7 +183,7 @@ export function SendEvmRoute() {
     // Vérification du solde ETH pour les frais (gas token).
     if (evmAccount && feeHint && evmAccount.balance < feeHint.totalWei) {
       return toast.error("Solde ETH insuffisant pour les frais", {
-        description: `Frais estimés : ${formatEthShort(feeHint.totalWei)} ETH`,
+        description: `Frais estimés : ${formatNativeShort(feeHint.totalWei)} ETH`,
       });
     }
 
@@ -207,7 +207,7 @@ export function SendEvmRoute() {
     selectedBalance !== null
       ? selectedToken
         ? formatTokenAmount(selectedBalance, selectedToken.metadata.decimals)
-        : formatEthShort(selectedBalance)
+        : formatNativeShort(selectedBalance)
       : null;
 
   return (
@@ -308,7 +308,7 @@ export function SendEvmRoute() {
                     const max = selectedBalance > reserve
                       ? selectedBalance - reserve
                       : 0n;
-                    setAmount(formatEthShort(max));
+                    setAmount(formatNativeShort(max));
                   }
                 }}
                 className="absolute right-2 top-1/2 mt-0.5 -translate-y-1/2 rounded-lg border bg-card px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-accent"
@@ -343,13 +343,13 @@ export function SendEvmRoute() {
             <div className="flex justify-between">
               <span>Max fee / gas</span>
               <span className="font-mono">
-                {formatEthShort(feeHint.maxFeePerGas)} ETH
+                {formatNativeShort(feeHint.maxFeePerGas)} ETH
               </span>
             </div>
             <div className="mt-1 flex justify-between border-t pt-1 font-medium text-foreground">
               <span>Frais max</span>
               <span className="font-mono">
-                {formatEthShort(feeHint.totalWei)} ETH
+                {formatNativeShort(feeHint.totalWei)} ETH
               </span>
             </div>
           </div>

@@ -61,7 +61,7 @@ export function EvmNetworkSelector() {
                 {isActive && <Check className="size-3.5" />}
                 {!isActive && <span className="w-3.5" />}
                 <span>{n.name}</span>
-                {n.id === "ethereum-sepolia" && (
+                {n.isTestnet && (
                   <span className="text-[10px] text-muted-foreground">
                     (testnet)
                   </span>

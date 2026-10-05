@@ -12,6 +12,7 @@ function net(id: string, family: Network["family"] = "sango"): Network {
     name: id,
     chainId: "0x00",
     nativeAsset: "sango",
+    isTestnet: true,
     defaultRpcEndpoints: ["http://127.0.0.1:8545"],
   };
 }

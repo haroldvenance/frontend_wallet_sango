@@ -32,6 +32,7 @@ export const SANGO_DEVNET: SangoNetwork = {
   name: "Sango Devnet",
   chainId: SANGO_CHAIN_ID_HEX,
   nativeAsset: SANGO_NATIVE_ASSET_ID,
+  isTestnet: true,
   defaultRpcEndpoints: ["http://127.0.0.1:8545"],
   bech32Network: "testnet",
   explorer: {
