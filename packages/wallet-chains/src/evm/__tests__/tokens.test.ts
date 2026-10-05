@@ -72,6 +72,44 @@ describe("🔒 EVM_TOKENS — frozen addresses", () => {
       "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9",
     );
   });
+
+  // 🔒 USDT BSC — D-E1.7-3
+  // Le piège : copier-coller l'adresse Ethereum/Arbitrum (0xdAC1… /
+  // 0xFd08…) ou garder decimals: 6 par analogie. Les 4 propriétés
+  // doivent être validées ENSEMBLE pour bloquer ce type d'erreur.
+  it("USDT BSC mainnet — 4 propriétés couplées (anti copy-paste)", () => {
+    const t = getTokenConfig("bsc", "USDT");
+    expect(t).toBeDefined();
+    expect({
+      network: "bsc",
+      symbol: t!.symbol,
+      decimals: t!.decimals,
+      name: t!.name,
+      addressLower: t!.address.toLowerCase(),
+    }).toEqual({
+      network: "bsc",
+      symbol: "USDT",
+      decimals: 18,
+      name: "Binance-Peg BSC-USD",
+      addressLower: "0x55d398326f99059ff775485246999027b3197955",
+    });
+  });
+
+  it("USDT BSC n'est PAS de l'USDT Ethereum/Arbitrum (adresses distinctes)", () => {
+    const bsc = getTokenConfig("bsc", "USDT")!;
+    const eth = getTokenConfig("ethereum-mainnet", "USDT")!;
+    const arb = getTokenConfig("arbitrum-one", "USDT")!;
+    expect(bsc.address.toLowerCase()).not.toBe(eth.address.toLowerCase());
+    expect(bsc.address.toLowerCase()).not.toBe(arb.address.toLowerCase());
+    expect(bsc.decimals).not.toBe(eth.decimals);
+    expect(bsc.decimals).not.toBe(arb.decimals);
+  });
+
+  it("USDT BSC : checksum EIP-55 préservé", () => {
+    const t = getTokenConfig("bsc", "USDT")!;
+    // Doit être stocké avec le checksum mixte, pas en lowercase brut.
+    expect(t.address).toBe("0x55d398326f99059fF775485246999027B3197955");
+  });
 });
 
 describe("EVM_TOKENS — disponibilité par réseau", () => {
@@ -99,6 +137,17 @@ describe("EVM_TOKENS — disponibilité par réseau", () => {
       "USDC",
     ]);
     expect(getTokenConfig("ethereum-sepolia", "USDT")).toBeUndefined();
+  });
+
+  it("BSC : USDT uniquement (pas de USDC — D-E1.6-7 étendue)", () => {
+    expect(listTokensForNetwork("bsc").map((t) => t.symbol)).toEqual(["USDT"]);
+    expect(getTokenConfig("bsc", "USDC")).toBeUndefined();
+  });
+
+  it("BSC Testnet : aucun token (E1.7.d non livré)", () => {
+    expect(listTokensForNetwork("bsc-testnet")).toEqual([]);
+    expect(getTokenConfig("bsc-testnet", "USDT")).toBeUndefined();
+    expect(getTokenConfig("bsc-testnet", "USDC")).toBeUndefined();
   });
 
   it("réseau inconnu : liste vide", () => {
@@ -130,12 +179,16 @@ describe("EVM_TOKENS — intégrité des adresses", () => {
     }
   });
 
-  it("tous les tokens USDC/USDT ont 6 décimales", () => {
-    for (const networkId of Object.keys(EVM_TOKENS)) {
-      for (const token of listTokensForNetwork(networkId)) {
-        expect(token.decimals).toBe(6);
-      }
-    }
+  it("USDT BSC a 18 décimales, les autres tokens 6 (D-E1.7-3)", () => {
+    // Test explicite par token — plus de boucle "tout à 6".
+    // Voir le test frozen USDT BSC pour l'ensemble des 4 propriétés.
+    expect(getTokenConfig("ethereum-mainnet", "USDC")!.decimals).toBe(6);
+    expect(getTokenConfig("ethereum-mainnet", "USDT")!.decimals).toBe(6);
+    expect(getTokenConfig("arbitrum-one", "USDC")!.decimals).toBe(6);
+    expect(getTokenConfig("arbitrum-one", "USDT")!.decimals).toBe(6);
+    expect(getTokenConfig("base", "USDC")!.decimals).toBe(6);
+    expect(getTokenConfig("ethereum-sepolia", "USDC")!.decimals).toBe(6);
+    expect(getTokenConfig("bsc", "USDT")!.decimals).toBe(18);
   });
 });
 
@@ -143,6 +196,8 @@ describe("Helpers", () => {
   it("isKnownEvmNetwork", () => {
     expect(isKnownEvmNetwork("ethereum-mainnet")).toBe(true);
     expect(isKnownEvmNetwork("base")).toBe(true);
+    expect(isKnownEvmNetwork("bsc")).toBe(true);
+    expect(isKnownEvmNetwork("bsc-testnet")).toBe(false);
     expect(isKnownEvmNetwork("unknown")).toBe(false);
   });
 

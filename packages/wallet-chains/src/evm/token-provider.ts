@@ -11,9 +11,9 @@ import { listTokensForNetwork } from "./tokens";
  * Lecture ERC-20 côté EVM (D-E1.6-1).
  *
  * `listTokens(networkId)` : retourne les tokens **configurés** pour ce
- * réseau (pas de découverte auto). Les métadonnées `symbol`/`decimals`
- * viennent de la config figée (`EVM_TOKENS`) — pas de `eth_call`
- * supplémentaire.
+ * réseau (pas de découverte auto). Les métadonnées
+ * `name`/`symbol`/`decimals` viennent de la config figée (`EVM_TOKENS`)
+ * — pas de `eth_call` supplémentaire.
  *
  * `getTokenBalance(address, token)` : lit `balanceOf(address)` sur le
  * contrat via `eth_call`, décode la réponse `uint256`.
@@ -42,7 +42,9 @@ export class EvmTokenProvider implements TokenProvider {
       contract: cfg.address,
       assetId: cfg.symbol.toLowerCase(),
       metadata: {
-        name: cfg.symbol === "USDC" ? "USD Coin" : "Tether USD",
+        // `name` vient de la config (D-E1.7-3) — plus de hardcode
+        // symbol→name dans le provider.
+        name: cfg.name,
         symbol: cfg.symbol,
         decimals: cfg.decimals,
       },

@@ -11,8 +11,13 @@ import type { Address } from "../types/address";
  * des fonds à un contrat inconnu).
  *
  * **Réserves connues** :
- *   - USDT n'est disponible que sur Ethereum et Arbitrum (Tether ne
- *     déploie pas sur Base ni Sepolia).
+ *   - USDT Ethereum/Arbitrum = Tether natif (6 dec).
+ *   - USDT BSC = **Binance-Peg BSC-USD** (18 dec, D-E1.7-3). Ce n'est
+ *     PAS du Tether natif. `name` reflète le nom affiché sur BscScan.
+ *   - USDT non disponible sur Base ni Sepolia (Tether ne déploie pas).
+ *   - USDC BSC = **hors registre** (D-E1.6-7 étendue : pas de bridged
+ *     ni de Binance-Peg USDC tant qu'une décision produit explicite
+ *     n'a pas été prise).
  *   - L'adresse USDT Arbitrum n'est pas listée dans la doc Tether
  *     officielle mais est celle utilisée par tout l'écosystème. À
  *     revérifier trimestriellement.
@@ -23,8 +28,23 @@ export type Erc20Symbol = "USDC" | "USDT";
 export interface Erc20Config {
   readonly address: Address;
   readonly symbol: Erc20Symbol;
-  /** USDC et USDT utilisent 6 décimales. */
-  readonly decimals: 6;
+  /**
+   * Nom affichable du token.
+   *
+   * Peut différer du `name()` on-chain : le USDT BSC (Binance-Peg)
+   * s'appelle officiellement "Binance-Peg BSC-USD" sur BscScan, même
+   * si son `symbol()` est "USDT". On reflète le nom BscScan pour ne
+   * pas laisser croire qu'il s'agit du Tether natif (D-E1.7-3).
+   */
+  readonly name: string;
+  /**
+   * Decimals du token.
+   *
+   * **D-E1.7-3** : plus un littéral `6`. USDC et USDT ERC-20 utilisent
+   * 6 décimales ; le USDT BEP-20 (BSC) en utilise **18**. Un type
+   * `number` empêche le piège du copy-paste ETH → BSC.
+   */
+  readonly decimals: number;
   /** Source documentaire de l'adresse (URL ou référence). */
   readonly source: string;
 }
@@ -41,12 +61,14 @@ export const EVM_TOKENS: Readonly<
     USDC: {
       address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" as Address,
       symbol: "USDC",
+      name: "USD Coin",
       decimals: 6,
       source: "https://developers.circle.com/stablecoins/docs/usdc-on-main-networks (Ethereum)",
     },
     USDT: {
       address: "0xdAC17F958D2ee523a2206206994597C13D831ec7" as Address,
       symbol: "USDT",
+      name: "Tether USD",
       decimals: 6,
       source: "https://tether.to/en/supported-protocols (ERC-20 Ethereum)",
     },
@@ -55,12 +77,14 @@ export const EVM_TOKENS: Readonly<
     USDC: {
       address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831" as Address,
       symbol: "USDC",
+      name: "USD Coin",
       decimals: 6,
       source: "https://developers.circle.com/stablecoins/docs/usdc-on-main-networks (Arbitrum)",
     },
     USDT: {
       address: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9" as Address,
       symbol: "USDT",
+      name: "Tether USD",
       decimals: 6,
       source: "arbiscan.io/token/0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9 (à confirmer dans la doc Tether)",
     },
@@ -69,6 +93,7 @@ export const EVM_TOKENS: Readonly<
     USDC: {
       address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as Address,
       symbol: "USDC",
+      name: "USD Coin",
       decimals: 6,
       source: "https://developers.circle.com/stablecoins/docs/usdc-on-main-networks (Base)",
     },
@@ -78,11 +103,29 @@ export const EVM_TOKENS: Readonly<
     USDC: {
       address: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238" as Address,
       symbol: "USDC",
+      name: "USD Coin",
       decimals: 6,
       source: "https://developers.circle.com/stablecoins/docs/usdc-on-test-networks (Ethereum Sepolia)",
     },
     // USDT absent : Tether n'a pas de testnet officiel.
   },
+  // ── BNB Smart Chain (E1.7.c) ────────────────────────────────
+  "bsc": {
+    // Binance-Peg BSC-USD : symbole "USDT" on-chain, name "Binance-Peg
+    // BSC-USD" sur BscScan. 18 décimales (≠ 6 pour USDT Ethereum/
+    // Arbitrum) — D-E1.7-3.
+    USDT: {
+      address: "0x55d398326f99059fF775485246999027B3197955" as Address,
+      symbol: "USDT",
+      name: "Binance-Peg BSC-USD",
+      decimals: 18,
+      source: "https://bscscan.com/token/0x55d398326f99059fF775485246999027B3197955 (Binance-Peg BSC-USD)",
+    },
+    // USDC absent : D-E1.6-7 étendue — pas de bridged/Binance-Peg USDC
+    // tant qu'une décision produit explicite n'a pas été prise.
+  },
+  // "bsc-testnet" : aucun token. Les contrats Chapel n'ont pas encore
+  // été vérifiés (D-E1.6-1 étendue) — E1.7.d.
 });
 
 /**
