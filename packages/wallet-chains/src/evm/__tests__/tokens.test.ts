@@ -110,6 +110,41 @@ describe("🔒 EVM_TOKENS — frozen addresses", () => {
     // Doit être stocké avec le checksum mixte, pas en lowercase brut.
     expect(t.address).toBe("0x55d398326f99059fF775485246999027B3197955");
   });
+
+  // 🔒 USDT BSC Testnet — E1.7.d
+  it("USDT BSC Testnet — 5 propriétés couplées (anti copy-paste)", () => {
+    const t = getTokenConfig("bsc-testnet", "USDT");
+    expect(t).toBeDefined();
+    expect({
+      network: "bsc-testnet",
+      symbol: t!.symbol,
+      decimals: t!.decimals,
+      name: t!.name,
+      addressLower: t!.address.toLowerCase(),
+    }).toEqual({
+      network: "bsc-testnet",
+      symbol: "USDT",
+      decimals: 18,
+      name: "USDT (BSC Testnet)",
+      addressLower: "0x337610d27c682e347c9cd60bd4b3b107c9d34ddd",
+    });
+  });
+
+  it("USDT BSC Testnet n'est PAS l'adresse mainnet (anti copy-paste)", () => {
+    const mainnet = getTokenConfig("bsc", "USDT")!;
+    const testnet = getTokenConfig("bsc-testnet", "USDT")!;
+    expect(testnet.address.toLowerCase()).not.toBe(
+      mainnet.address.toLowerCase(),
+    );
+    // Le nom doit distinguer explicitement testnet / mainnet.
+    expect(testnet.name).not.toBe(mainnet.name);
+    expect(testnet.name).toContain("Testnet");
+  });
+
+  it("USDT BSC Testnet : checksum EIP-55 préservé", () => {
+    const t = getTokenConfig("bsc-testnet", "USDT")!;
+    expect(t.address).toBe("0x337610d27c682E347C9cD60BD4b3b107C9d34dDd");
+  });
 });
 
 describe("EVM_TOKENS — disponibilité par réseau", () => {
@@ -144,9 +179,11 @@ describe("EVM_TOKENS — disponibilité par réseau", () => {
     expect(getTokenConfig("bsc", "USDC")).toBeUndefined();
   });
 
-  it("BSC Testnet : aucun token (E1.7.d non livré)", () => {
-    expect(listTokensForNetwork("bsc-testnet")).toEqual([]);
-    expect(getTokenConfig("bsc-testnet", "USDT")).toBeUndefined();
+  it("BSC Testnet : USDT uniquement (E1.7.d)", () => {
+    expect(listTokensForNetwork("bsc-testnet").map((t) => t.symbol)).toEqual([
+      "USDT",
+    ]);
+    expect(getTokenConfig("bsc-testnet", "USDT")).toBeDefined();
     expect(getTokenConfig("bsc-testnet", "USDC")).toBeUndefined();
   });
 
@@ -197,7 +234,7 @@ describe("Helpers", () => {
     expect(isKnownEvmNetwork("ethereum-mainnet")).toBe(true);
     expect(isKnownEvmNetwork("base")).toBe(true);
     expect(isKnownEvmNetwork("bsc")).toBe(true);
-    expect(isKnownEvmNetwork("bsc-testnet")).toBe(false);
+    expect(isKnownEvmNetwork("bsc-testnet")).toBe(true);
     expect(isKnownEvmNetwork("unknown")).toBe(false);
   });
 

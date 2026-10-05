@@ -17,7 +17,9 @@ import type { Address } from "../types/address";
  *   - USDT non disponible sur Base ni Sepolia (Tether ne déploie pas).
  *   - USDC BSC = **hors registre** (D-E1.6-7 étendue : pas de bridged
  *     ni de Binance-Peg USDC tant qu'une décision produit explicite
- *     n'a pas été prise).
+ *     n'a pas été prise). Idem USDC BSC Testnet.
+ *   - USDT BSC Testnet = token de test distribué par le faucet BNB
+ *     Chain. Nom suffixé "(BSC Testnet)" pour lever l'ambiguïté.
  *   - L'adresse USDT Arbitrum n'est pas listée dans la doc Tether
  *     officielle mais est celle utilisée par tout l'écosystème. À
  *     revérifier trimestriellement.
@@ -124,8 +126,24 @@ export const EVM_TOKENS: Readonly<
     // USDC absent : D-E1.6-7 étendue — pas de bridged/Binance-Peg USDC
     // tant qu'une décision produit explicite n'a pas été prise.
   },
-  // "bsc-testnet" : aucun token. Les contrats Chapel n'ont pas encore
-  // été vérifiés (D-E1.6-1 étendue) — E1.7.d.
+  // ── BNB Smart Chain Testnet (E1.7.d) ────────────────────────
+  "bsc-testnet": {
+    // USDT de test distribué par le faucet officiel BNB Chain.
+    // 18 décimales, comme le USDT BEP-20 mainnet. Nom suffixé
+    // "(BSC Testnet)" pour ne pas confondre avec le Binance-Peg
+    // mainnet ni avec du Tether réel.
+    USDT: {
+      address: "0x337610d27c682E347C9cD60BD4b3b107C9d34dDd" as Address,
+      symbol: "USDT",
+      name: "USDT (BSC Testnet)",
+      decimals: 18,
+      source:
+        "https://developers.binance.com/docs/onchainpay/basics/supported-payment-methods + https://docs.oobit.com/docs/testnet-resources",
+    },
+    // USDC absent : pas de déploiement Circle natif sur BSC Testnet
+    // (D-E1.6-7 étendue). Le mock 0xEC1C60D6… vu chez certains
+    // fournisseurs n'est pas une source Circle officielle.
+  },
 });
 
 /**
