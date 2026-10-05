@@ -14,6 +14,7 @@ import {
   InMemoryAssetList,
   SANGO_NATIVE_ASSET,
   ETH_NATIVE_ASSET,
+  BNB_NATIVE_ASSET,
   createWalletSession,
   signerFromAnyWallet,
   type WalletSession,
@@ -32,9 +33,10 @@ import { WalletSessionContext } from "./wallet-session-context";
 /**
  * Construit la `WalletSession` dès que le wallet passe à `unlocked`.
  *
- * **E1.5 (D-NET-1 étendu)** — deux familles enregistrées :
+ * **E1.7.b (D-NET-1 étendu)** — deux familles enregistrées :
  *   - SANGO_DEVNET       : legacy SANGO Ed25519 (SangoRpcClient).
- *   - 4 réseaux EVM      : Sepolia, Mainnet, Base, Arbitrum One
+ *   - 6 réseaux EVM      : Sepolia, Mainnet, Base, Arbitrum One,
+ *                          BSC, BSC Testnet
  *                          (RpcPool + EvmRpcUsingPool).
  *
  * Le `signer` est multi-courbe (D-SIGNER-1) : `signerFromAnyWallet`
@@ -118,6 +120,7 @@ export function WalletSessionProvider({ children }: WalletSessionProviderProps) 
     const assets = new InMemoryAssetList();
     assets.register(SANGO_NATIVE_ASSET);
     assets.register(ETH_NATIVE_ASSET);
+    assets.register(BNB_NATIVE_ASSET);
 
     return createWalletSession({
       chainRegistry,
