@@ -7,30 +7,64 @@ import { useWalletStore } from "@/stores/wallet-store";
 /**
  * Sélecteur de réseau EVM.
  *
- * Visible uniquement pour un wallet BIP-39. Le changement est
- * **persisté** dans `wallet-store` (D-E2.3-1) — il survit au reload
- * et au prochain unlock (la préférence de session gagne sur le
- * `networkId` du keyring tant qu'elle pointe vers un réseau EVM
- * connu du registre).
+ * **Deux modes (D-E2.3-2)** :
  *
- * **E2.3.a.2** ajoutera un sélecteur équivalent au create/import.
- * Aujourd'hui le défaut de création reste `ethereum-sepolia`
- * (D-UI-3).
+ * - **Uncontrolled** (par défaut) — utilisé dans Settings. Lit
+ *   `wallet-store.networkId`, écrit via `setNetworkId`, notifie par
+ *   toast. Le composant ne s'affiche que pour un wallet BIP-39.
+ *
+ * - **Controlled** — utilisé au create/import EVM. `value` est
+ *   fourni ; le parent garde l'état local. Aucune écriture dans le
+ *   store, aucun toast, et le garde-fou `format === "bip39"` ne
+ *   s'applique pas (précisément parce qu'il n'y a pas encore de
+ *   session).
+ *
+ * Le simple fait que `value !== undefined` bascule entièrement le
+ * composant en controlled. On ne mélange jamais les deux modes
+ * (`value ?? storeNetworkId` avec écriture au store serait un bug).
+ *
+ * `setNetworkId()` garde son garde-fou `format === "bip39"` : le mode
+ * controlled contourne naturellement ce mécanisme puisqu'il n'écrit
+ * pas dans le store.
  */
-export function EvmNetworkSelector() {
-  const format = useWalletStore((s) => s.format);
-  const networkId = useWalletStore((s) => s.networkId);
-  const setNetworkId = useWalletStore((s) => s.setNetworkId);
 
-  // Le composant ne s'affiche que pour un wallet BIP-39.
-  if (format !== "bip39") return null;
+interface EvmNetworkSelectorProps {
+  /**
+   * Mode controlled : identifiant du réseau affiché comme actif.
+   *
+   * Si fourni, bascule entièrement le composant en controlled — pas
+   * d'écriture dans `wallet-store`, pas de toast.
+   */
+  readonly value?: string;
+  /** Mode controlled : notifié au changement de sélection. */
+  readonly onChange?: (networkId: string) => void;
+}
 
-  const active = evmNetworkById(networkId);
-  const activeName = active?.name ?? networkId;
+export function EvmNetworkSelector(props: EvmNetworkSelectorProps = {}) {
+  const { value, onChange } = props;
+  const isControlled = value !== undefined;
 
-  function onChange(next: string) {
-    if (next === networkId) return;
-    setNetworkId(next);
+  const storeFormat = useWalletStore((s) => s.format);
+  const storeNetworkId = useWalletStore((s) => s.networkId);
+  const storeSetNetworkId = useWalletStore((s) => s.setNetworkId);
+
+  // En uncontrolled, on ne s'affiche que pour un wallet BIP-39.
+  // En controlled, on s'affiche toujours (le parent arbitre).
+  if (!isControlled && storeFormat !== "bip39") return null;
+
+  const currentId = isControlled ? value : storeNetworkId;
+  const current = evmNetworkById(currentId);
+  const currentName = current?.name ?? currentId;
+
+  function handleChange(next: string) {
+    if (next === currentId) return;
+
+    if (isControlled) {
+      onChange?.(next);
+      return;
+    }
+
+    storeSetNetworkId(next);
     const target = evmNetworkById(next);
     toast.success(`Réseau changé : ${target?.name ?? next}`);
   }
@@ -44,12 +78,12 @@ export function EvmNetworkSelector() {
 
       <div className="mt-2 space-y-1">
         {ALL_EVM_NETWORKS.map((n) => {
-          const isActive = n.id === networkId;
+          const isActive = n.id === currentId;
           return (
             <button
               key={n.id}
               type="button"
-              onClick={() => onChange(n.id)}
+              onClick={() => handleChange(n.id)}
               disabled={isActive}
               className={[
                 "flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left text-xs transition-colors",
@@ -79,7 +113,7 @@ export function EvmNetworkSelector() {
       </div>
 
       <p className="mt-2 text-[10px] text-muted-foreground">
-        Actif : <span className="font-medium">{activeName}</span>
+        Actif : <span className="font-medium">{currentName}</span>
       </p>
     </div>
   );

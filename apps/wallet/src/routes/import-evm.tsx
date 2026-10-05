@@ -3,10 +3,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-import { AuthShell } from "@/components/branding/auth-shell";
-import { useWalletStore } from "@/stores/wallet-store";
+import { DEFAULT_EVM_NETWORK_ID } from "@sango/wallet-chains";
 
-const EVM_NETWORK_ID = "ethereum-sepolia";
+import { AuthShell } from "@/components/branding/auth-shell";
+import { EvmNetworkSelector } from "@/features/evm/evm-network-selector";
+import { useWalletStore } from "@/stores/wallet-store";
 
 /**
  * Import d'un wallet BIP-39 (EVM, E1).
@@ -15,7 +16,10 @@ const EVM_NETWORK_ID = "ethereum-sepolia";
  * n'est jamais construit avec la mnemonic conservée : `fromMnemonic`
  * dérive le seed et jette la référence (D-HD-1).
  *
- * Réseau fixé à Ethereum Sepolia (D-NET-1).
+ * **E2.3.a.2** : le réseau par défaut est choisi via
+ * `EvmNetworkSelector` en mode controlled (D-E2.3-2), initialisé à
+ * `ethereum-sepolia` (D-E2.3-1). La persistance de session ne
+ * contamine jamais ce défaut.
  */
 export function ImportEvmWallet() {
   const navigate = useNavigate();
@@ -24,6 +28,9 @@ export function ImportEvmWallet() {
   const [mnemonic, setMnemonic] = useState("");
   const [label, setLabel] = useState("");
   const [password, setPassword] = useState("");
+  const [selectedNetworkId, setSelectedNetworkId] = useState<string>(
+    DEFAULT_EVM_NETWORK_ID,
+  );
   const [busy, setBusy] = useState(false);
 
   async function onImport() {
@@ -52,7 +59,7 @@ export function ImportEvmWallet() {
         id,
         label: label.trim() || "EVM wallet importé",
         format: "bip39",
-        networkId: EVM_NETWORK_ID,
+        networkId: selectedNetworkId,
         stored,
         createdAt: Date.now(),
       });
@@ -62,7 +69,7 @@ export function ImportEvmWallet() {
         wallet,
         id,
         format: "bip39",
-        networkId: EVM_NETWORK_ID,
+        networkId: selectedNetworkId,
       });
       toast.success("Wallet EVM importé");
       navigate("/");
@@ -83,6 +90,22 @@ export function ImportEvmWallet() {
       logoSize={56}
     >
       <div className="mt-6 space-y-3">
+        <div>
+          <span className="text-xs font-medium text-muted-foreground">
+            Réseau EVM
+          </span>
+          <div className="mt-1">
+            <EvmNetworkSelector
+              value={selectedNetworkId}
+              onChange={setSelectedNetworkId}
+            />
+          </div>
+          <span className="mt-1 block text-[11px] text-muted-foreground">
+            Le wallet sera importé avec ce réseau par défaut. Tu pourras
+            en changer en session depuis les Paramètres.
+          </span>
+        </div>
+
         <textarea
           value={mnemonic}
           onChange={(e) => setMnemonic(e.target.value)}

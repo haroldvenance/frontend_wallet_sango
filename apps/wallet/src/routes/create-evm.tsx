@@ -4,13 +4,11 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-import { AuthShell } from "@/components/branding/auth-shell";
-import { useClipboard } from "@/hooks/use-clipboard";
-import {
-  ALL_EVM_NETWORKS,
-  DEFAULT_EVM_NETWORK_ID,
-} from "@sango/wallet-chains";
+import { DEFAULT_EVM_NETWORK_ID } from "@sango/wallet-chains";
 
+import { AuthShell } from "@/components/branding/auth-shell";
+import { EvmNetworkSelector } from "@/features/evm/evm-network-selector";
+import { useClipboard } from "@/hooks/use-clipboard";
 import { useWalletStore } from "@/stores/wallet-store";
 
 /**
@@ -20,10 +18,15 @@ import { useWalletStore } from "@/stores/wallet-store";
  * EVM via BIP-44 m/44'/60'/0'/0/0. Nouvelle famille de wallet, distincte
  * du legacy SANGO Ed25519.
  *
- * **D-UI-3** : l'utilisateur choisit son réseau EVM à la création
- * (Sepolia par défaut, Mainnet/Base/Arbitrum disponibles). Le
- * `networkId` canonique est figé dans le wallet et le keyring.
- * Aucun changement de réseau post-création en E1.5.
+ * **E2.3.a.2** : le réseau par défaut est choisi via
+ * `EvmNetworkSelector` en mode controlled (D-E2.3-2). La valeur est
+ * passée à `keyring.put` et à `unlock` — le wallet est créé avec ce
+ * `networkId`. Le sélecteur n'écrit PAS dans le store tant que la
+ * session n'existe pas.
+ *
+ * Défaut : `ethereum-sepolia` (D-E2.3-1). Toujours, quelle que soit
+ * la préférence persistée de session — create/import ne doit pas être
+ * contaminé par la persistance.
  *
  * ⚠️ La mnemonic est affichée **une seule fois** puis jetée — elle
  *    n'est jamais stockée dans le wallet (D-HD-1).
@@ -169,27 +172,21 @@ export function CreateEvmWallet() {
       logoSize={56}
     >
       <div className="mt-6 space-y-3">
-        <label className="block">
+        <div>
           <span className="text-xs font-medium text-muted-foreground">
             Réseau EVM
           </span>
-          <select
-            value={selectedNetworkId}
-            onChange={(e) => setSelectedNetworkId(e.target.value)}
-            className="mt-1 flex h-10 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {ALL_EVM_NETWORKS.map((n) => (
-              <option key={n.id} value={n.id}>
-                {n.name}
-                {n.id === "ethereum-sepolia" ? " (testnet)" : ""}
-              </option>
-            ))}
-          </select>
+          <div className="mt-1">
+            <EvmNetworkSelector
+              value={selectedNetworkId}
+              onChange={setSelectedNetworkId}
+            />
+          </div>
           <span className="mt-1 block text-[11px] text-muted-foreground">
-            Le wallet sera figé sur ce réseau. Pour un autre réseau,
-            crée un wallet séparé.
+            Le wallet sera créé avec ce réseau par défaut. Tu pourras en
+            changer en session depuis les Paramètres.
           </span>
-        </label>
+        </div>
 
         <div className="relative">
           <input
