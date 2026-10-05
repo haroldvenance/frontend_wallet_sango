@@ -21,8 +21,15 @@ import { useWalletStore } from "@/stores/wallet-store";
  * Le `networkId` est lu directement depuis le store, il a été figé au
  * moment de l'unlock (route `/create-evm`, `/import-evm`, `unlock.tsx`).
  *
- * `endpoint` reste le RPC SANGO (sdk-store) — il n'est utilisé que par
- * les hooks SANGO-spécifiques (`use-chain-info`, etc.).
+ * `endpoint` est **contextuel à la famille** (D-E1.7-10) :
+ *   - family === "sango" → RPC SANGO (sdk-store)
+ *   - family === "evm"   → premier endpoint du Network EVM courant
+ *                          (via `defaultRpcEndpoints[0]`)
+ *
+ * **D-E1.7-10** : l'ancien comportement (endpoint SANGO injecté dans
+ * les query keys EVM) faisait qu'un changement d'endpoint SANGO
+ * invalidait des queries EVM sans raison. Correction : chaque famille
+ * porte son endpoint naturel dans la query key.
  */
 export interface NetworkQueryContext {
   readonly endpoint: string;
@@ -46,13 +53,14 @@ export interface NetworkQueryContext {
 }
 
 export function useNetworkQueryContext(): NetworkQueryContext {
-  const endpoint = useSdkStore((s) => s.endpoint);
+  const sangoEndpoint = useSdkStore((s) => s.endpoint);
   const format = useWalletStore((s) => s.format);
   const networkId = useWalletStore((s) => s.networkId);
 
   return useMemo(() => {
     const family = familyFromFormat(format);
     const nativeAsset = resolveNativeAsset(family, networkId);
+    const endpoint = resolveEndpoint(family, sangoEndpoint, networkId);
     return {
       endpoint,
       networkId,
@@ -64,7 +72,28 @@ export function useNetworkQueryContext(): NetworkQueryContext {
         networkId,
       },
     };
-  }, [endpoint, format, networkId]);
+  }, [sangoEndpoint, format, networkId]);
+}
+
+/**
+ * Résout l'endpoint pertinent pour le contexte réseau courant.
+ *
+ * **D-E1.7-10** :
+ *   - SANGO → `sdk-store.endpoint` (injectable par l'utilisateur)
+ *   - EVM   → premier endpoint par défaut du Network EVM
+ *             (fallback `""` si le networkId est inconnu)
+ *
+ * Retourne `""` (chaîne vide) si aucune résolution n'est possible —
+ * c'est un état neutre pour la query key. Aucun endpoint "inventé".
+ */
+function resolveEndpoint(
+  family: ChainFamily,
+  sangoEndpoint: string,
+  networkId: string,
+): string {
+  if (family === "sango") return sangoEndpoint;
+  const network = evmNetworkById(networkId);
+  return network?.defaultRpcEndpoints[0] ?? "";
 }
 
 /**
