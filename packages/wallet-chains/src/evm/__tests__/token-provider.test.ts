@@ -27,6 +27,15 @@ function balanceHex(amount: bigint): `0x${string}` {
   });
 }
 
+/** Encode un uint256 allowance en 32 bytes. */
+function allowanceHex(amount: bigint): `0x${string}` {
+  return encodeFunctionResult({
+    abi: ERC20_ABI,
+    functionName: "allowance",
+    result: amount,
+  });
+}
+
 describe("EvmTokenProvider — listTokens", () => {
   it("returns the configured tokens for the network (Ethereum Mainnet)", async () => {
     const p = new EvmTokenProvider(mockRpc(), "ethereum-mainnet");
@@ -135,6 +144,87 @@ describe("EvmTokenProvider — getTokenBalance", () => {
     });
     const p = new EvmTokenProvider(rpc, "ethereum-mainnet");
     await expect(p.getTokenBalance(ADDR, USDC_TOKEN)).rejects.toThrow(
+      "execution reverted",
+    );
+  });
+});
+
+// ────────────────────────────────────────────────────────────
+//  E2.2.a.1 — getAllowance
+// ────────────────────────────────────────────────────────────
+
+const OWNER = asAddress("aa".repeat(20));
+const SPENDER = asAddress("bb".repeat(20));
+
+describe("EvmTokenProvider — getAllowance (E2.2.a.1)", () => {
+  it("lit allowance(owner, spender) et décode uint256", async () => {
+    const rpc = mockRpc({
+      call: vi.fn(async () => allowanceHex(1_000_000n)),
+    });
+    const p = new EvmTokenProvider(rpc, "ethereum-mainnet");
+    const a = await p.getAllowance(OWNER, SPENDER, USDC_TOKEN);
+    expect(a).toBe(1_000_000n);
+  });
+
+  it("encode le selector 0xdd62ed3e + owner/spender NON inversés", async () => {
+    // 🔒 Ce test attrape la seule erreur vraiment probable : inverser
+    // `owner` et `spender` (les deux sont `address`, TypeScript ne
+    // détecte pas l'inversion).
+    const rpc = mockRpc({
+      call: vi.fn(async () => allowanceHex(0n)),
+    });
+    const p = new EvmTokenProvider(rpc, "ethereum-mainnet");
+    await p.getAllowance(OWNER, SPENDER, USDC_TOKEN);
+
+    const arg = (rpc.call as ReturnType<typeof vi.fn>).mock.calls[0]![0];
+    expect(arg.from).toBe(OWNER);
+    expect(arg.to).toBe(USDC_CONTRACT);
+
+    const data = arg.data as string;
+    // Selector allowance(address,address) = 0xdd62ed3e
+    expect(data.startsWith("0xdd62ed3e")).toBe(true);
+
+    // 32 bytes owner padded + 32 bytes spender padded
+    const ownerPadded = "aa".repeat(20).padStart(64, "0");
+    const spenderPadded = "bb".repeat(20).padStart(64, "0");
+    expect(data).toBe("0xdd62ed3e" + ownerPadded + spenderPadded);
+
+    // Anti-inversion explicite : on ne veut PAS "bbbb… aaaa…"
+    expect(data).not.toBe("0xdd62ed3e" + spenderPadded + ownerPadded);
+  });
+
+  it("retourne 0n quand aucune autorisation", async () => {
+    const rpc = mockRpc({
+      call: vi.fn(async () => allowanceHex(0n)),
+    });
+    const p = new EvmTokenProvider(rpc, "ethereum-mainnet");
+    expect(await p.getAllowance(OWNER, SPENDER, USDC_TOKEN)).toBe(0n);
+  });
+
+  it("supporte MAX_UINT256 (approve illimité)", async () => {
+    const max = (1n << 256n) - 1n;
+    const rpc = mockRpc({
+      call: vi.fn(async () => allowanceHex(max)),
+    });
+    const p = new EvmTokenProvider(rpc, "ethereum-mainnet");
+    expect(await p.getAllowance(OWNER, SPENDER, USDC_TOKEN)).toBe(max);
+  });
+
+  it("rejette un token sur un autre réseau", async () => {
+    const p = new EvmTokenProvider(mockRpc(), "ethereum-mainnet");
+    await expect(
+      p.getAllowance(OWNER, SPENDER, { ...USDC_TOKEN, networkId: "base" }),
+    ).rejects.toThrow(/does not match provider network/);
+  });
+
+  it("propage une erreur eth_call", async () => {
+    const rpc = mockRpc({
+      call: vi.fn(async () => {
+        throw new Error("execution reverted");
+      }),
+    });
+    const p = new EvmTokenProvider(rpc, "ethereum-mainnet");
+    await expect(p.getAllowance(OWNER, SPENDER, USDC_TOKEN)).rejects.toThrow(
       "execution reverted",
     );
   });

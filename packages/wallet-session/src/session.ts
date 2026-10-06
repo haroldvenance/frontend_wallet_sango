@@ -150,6 +150,22 @@ export interface WalletSession {
   getTokenBalance(account: AccountRef, token: Token): Promise<bigint>;
 
   /**
+   * **E2.2.a.1** — Allowance ERC-20 accordée par `account` à `spender`
+   * sur `token` (base units).
+   *
+   * Lecture seule (`eth_call`). L'owner est dérivé de
+   * l'`AccountRef` — on ne peut pas lire l'allowance d'un autre
+   * compte via cette méthode.
+   *
+   * `token.networkId` doit correspondre à `account.networkId`.
+   */
+  getAllowance(
+    account: AccountRef,
+    spender: Address,
+    token: Token,
+  ): Promise<bigint>;
+
+  /**
    * Lien vers l'explorateur pour une tx, ou `undefined` si le réseau
    * n'a pas de config explorer.
    */
@@ -332,6 +348,26 @@ export class WalletSessionImpl implements WalletSession {
     }
     const address = await adapter.addressProvider.deriveAddress(account);
     return adapter.tokenProvider.getTokenBalance(address, token);
+  }
+
+  async getAllowance(
+    account: AccountRef,
+    spender: Address,
+    token: Token,
+  ): Promise<bigint> {
+    if (token.networkId !== account.networkId) {
+      throw new Error(
+        `WalletSession.getAllowance: token network "${token.networkId}" does not match account network "${account.networkId}"`,
+      );
+    }
+    const adapter = this.#adapter(account.networkId);
+    if (!adapter.tokenProvider) {
+      throw new Error(
+        `WalletSession: no token provider for network "${account.networkId}"`,
+      );
+    }
+    const owner = await adapter.addressProvider.deriveAddress(account);
+    return adapter.tokenProvider.getAllowance(owner, spender, token);
   }
 
   explorerLink(account: AccountRef, txHash: string): string | undefined {

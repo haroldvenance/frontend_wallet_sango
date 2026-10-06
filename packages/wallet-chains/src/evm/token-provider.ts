@@ -18,6 +18,9 @@ import { listTokensForNetwork } from "./tokens";
  * `getTokenBalance(address, token)` : lit `balanceOf(address)` sur le
  * contrat via `eth_call`, décode la réponse `uint256`.
  *
+ * `getAllowance(owner, spender, token)` : lit `allowance(address,
+ * address)` sur le contrat via `eth_call` (E2.2.a.1).
+ *
  * **Pas de listTokens dynamique** — un token inconnu (pas dans
  * `EVM_TOKENS`) n'est pas accessible. C'est une décision de sécurité
  * (D-E1.6-1) et de scope.
@@ -83,5 +86,52 @@ export class EvmTokenProvider implements TokenProvider {
       );
     }
     return balance;
+  }
+
+  /**
+   * **E2.2.a.1** — `allowance(owner, spender)` via `eth_call`.
+   *
+   * Selector : `0xdd62ed3e`. Retourne un `uint256` (base units).
+   *
+   * ⚠️ L'ordre `owner, spender` est **normatif** dans l'ABI ERC-20.
+   *    Une inversion produit une lecture silencieusement fausse (les
+   *    deux arguments sont des `address`, aucune validation de type ne
+   *    détecte l'erreur). Les tests couvrent cette signature.
+   */
+  async getAllowance(
+    owner: Address,
+    spender: Address,
+    token: Token,
+  ): Promise<bigint> {
+    if (token.networkId !== this.#networkId) {
+      throw new Error(
+        `EvmTokenProvider: token network "${token.networkId}" does not match provider network "${this.#networkId}"`,
+      );
+    }
+
+    const data = encodeFunctionData({
+      abi: ERC20_ABI,
+      functionName: "allowance",
+      args: [owner as ViemAddress, spender as ViemAddress],
+    });
+
+    const result = await this.#rpc.call({
+      from: owner,
+      to: token.contract as Address,
+      data,
+    });
+
+    const allowance = decodeFunctionResult({
+      abi: ERC20_ABI,
+      functionName: "allowance",
+      data: result as `0x${string}`,
+    });
+
+    if (typeof allowance !== "bigint") {
+      throw new Error(
+        `EvmTokenProvider: allowance returned ${typeof allowance}, expected bigint`,
+      );
+    }
+    return allowance;
   }
 }

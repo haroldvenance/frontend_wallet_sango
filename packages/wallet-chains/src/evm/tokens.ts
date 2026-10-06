@@ -176,3 +176,18 @@ export function isKnownEvmNetwork(networkId: string): boolean {
 
 /** Constante de parité stablecoin — D-E1.6-1, source explicite. */
 export const STABLECOIN_PARITY_USD = 1n;
+
+/**
+ * `2^256 - 1` — montant "illimité" conventionnel pour `approve`.
+ *
+ * **E2.2.a.1 (D-E2.2-1)** — constante ERC-20 générique, définie une
+ * seule fois dans `wallet-chains`. L'UI passe cette valeur au builder
+ * `approveErc20` quand l'utilisateur choisit "Approuver un montant
+ * illimité". Le builder ne connaît **pas** de concept "unlimited" : il
+ * encode simplement le `bigint` reçu.
+ *
+ * Standard de facto (Uniswap, PancakeSwap, 1inch) — pas de division
+ * par 2 comme certains protocoles old-school, dont les edge cases
+ * ont été résolus côté ABI.
+ */
+export const MAX_UINT256 = (1n << 256n) - 1n;

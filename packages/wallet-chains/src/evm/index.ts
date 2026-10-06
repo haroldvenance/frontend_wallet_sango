@@ -4,7 +4,7 @@ export {
   BASE,
   ARBITRUM_ONE,
   ALL_EVM_NETWORKS,
-  EVM_DECIMALS,
+  EVM_NATIVE_DECIMALS,
   DEFAULT_EVM_NETWORK_ID,
   evmNetworkById,
 } from "./config";
@@ -37,6 +37,7 @@ export {
   listTokensForNetwork,
   isKnownEvmNetwork,
   STABLECOIN_PARITY_USD,
+  MAX_UINT256,
 } from "./tokens";
 export type { Erc20Config, Erc20Symbol } from "./tokens";
 export { EvmTokenProvider } from "./token-provider";

@@ -3,6 +3,7 @@ import { getAddress } from "viem";
 
 import {
   EVM_TOKENS,
+  MAX_UINT256,
   STABLECOIN_PARITY_USD,
   getTokenConfig,
   isKnownEvmNetwork,
@@ -240,6 +241,13 @@ describe("Helpers", () => {
 
   it("STABLECOIN_PARITY_USD = 1n (documenté)", () => {
     expect(STABLECOIN_PARITY_USD).toBe(1n);
+  });
+
+  it("MAX_UINT256 = 2^256 - 1 (E2.2.a.1, approve illimité)", () => {
+    expect(MAX_UINT256).toBe((1n << 256n) - 1n);
+    // Sanity checks : positif, > tout montant plausible de token.
+    expect(MAX_UINT256).toBeGreaterThan(0n);
+    expect(MAX_UINT256).toBeGreaterThan(10n ** 40n);
   });
 
   it("snapshot : toutes les adresses figées", () => {
