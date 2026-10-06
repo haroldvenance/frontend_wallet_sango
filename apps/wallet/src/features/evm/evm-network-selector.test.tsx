@@ -152,3 +152,33 @@ describe("EvmNetworkSelector — invariant de séparation", () => {
     expect(useWalletStore.getState().networkId).toBe("ethereum-sepolia");
   });
 });
+
+// ────────────────────────────────────────────────────────────
+//  E2.3.a.3 — Bandeau mainnet (D-E2.3-3)
+// ────────────────────────────────────────────────────────────
+
+describe("EvmNetworkSelector — MainnetWarning (D-E2.3-3)", () => {
+  it("controlled + mainnet → warning rendu", () => {
+    render(<EvmNetworkSelector value="bsc" onChange={() => {}} />);
+    expect(screen.getByTestId("mainnet-warning")).toBeDefined();
+  });
+
+  it("controlled + testnet → warning null", () => {
+    render(
+      <EvmNetworkSelector value="ethereum-sepolia" onChange={() => {}} />,
+    );
+    expect(screen.queryByTestId("mainnet-warning")).toBeNull();
+  });
+
+  it("uncontrolled + mainnet → warning rendu (cohérence modes)", () => {
+    useWalletStore.setState({ networkId: "ethereum-mainnet" });
+    render(<EvmNetworkSelector />);
+    expect(screen.getByTestId("mainnet-warning")).toBeDefined();
+  });
+
+  it("uncontrolled + testnet → warning null", () => {
+    useWalletStore.setState({ networkId: "bsc-testnet" });
+    render(<EvmNetworkSelector />);
+    expect(screen.queryByTestId("mainnet-warning")).toBeNull();
+  });
+});

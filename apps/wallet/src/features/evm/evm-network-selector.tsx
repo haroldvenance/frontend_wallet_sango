@@ -4,6 +4,8 @@ import { toast } from "sonner";
 
 import { useWalletStore } from "@/stores/wallet-store";
 
+import { MainnetWarning } from "./mainnet-warning";
+
 /**
  * Sélecteur de réseau EVM.
  *
@@ -22,6 +24,11 @@ import { useWalletStore } from "@/stores/wallet-store";
  * Le simple fait que `value !== undefined` bascule entièrement le
  * composant en controlled. On ne mélange jamais les deux modes
  * (`value ?? storeNetworkId` avec écriture au store serait un bug).
+ *
+ * **E2.3.a.3 (D-E2.3-3)** — un bandeau `MainnetWarning` s'affiche
+ * sous le nom du réseau actif si celui-ci est un mainnet EVM
+ * (`isTestnet === false`). Fonctionne dans les deux modes : on passe
+ * le `currentId` effectif, pas le store.
  *
  * `setNetworkId()` garde son garde-fou `format === "bip39"` : le mode
  * controlled contourne naturellement ce mécanisme puisqu'il n'écrit
@@ -83,6 +90,7 @@ export function EvmNetworkSelector(props: EvmNetworkSelectorProps = {}) {
             <button
               key={n.id}
               type="button"
+              data-testid={`network-option-${n.id}`}
               onClick={() => handleChange(n.id)}
               disabled={isActive}
               className={[
@@ -113,8 +121,13 @@ export function EvmNetworkSelector(props: EvmNetworkSelectorProps = {}) {
       </div>
 
       <p className="mt-2 text-[10px] text-muted-foreground">
-        Actif : <span className="font-medium">{currentName}</span>
+        Actif :{" "}
+        <span className="font-medium" data-testid="network-active-name">
+          {currentName}
+        </span>
       </p>
+
+      <MainnetWarning networkId={currentId} className="mt-2" />
     </div>
   );
 }

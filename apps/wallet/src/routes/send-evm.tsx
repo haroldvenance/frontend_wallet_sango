@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 import { ExplorerLinkEvm } from "@/features/evm/explorer-link-evm";
+import { MainnetWarning } from "@/features/evm/mainnet-warning";
 import { useEvmAccount } from "@/hooks/use-evm-account";
 import { useEvmTokens } from "@/hooks/use-evm-tokens";
 import { useSendEvm } from "@/hooks/use-send-evm";
@@ -32,6 +33,11 @@ import { useWalletStore } from "@/stores/wallet-store";
  *   - validation : solde du token (pas ETH)
  *   - frais     : en ETH dans tous les cas (gas token)
  *   - MAX       : solde du token (ou ETH − 0.0001 pour réserve de frais)
+ *
+ * **E2.3.a.3 (D-E2.3-3)** — un bandeau `MainnetWarning` s'affiche
+ * au-dessus du formulaire si le réseau actif est un mainnet EVM.
+ * Deuxième rappel après le sélecteur : c'est le point où une erreur
+ * de réseau coûte réellement des fonds.
  */
 export function SendEvmRoute() {
   const session = useWalletSession();
@@ -243,6 +249,8 @@ export function SendEvmRoute() {
           </div>
         </div>
       )}
+
+      <MainnetWarning networkId={networkId} className="mt-4" />
 
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
         <label className="block">
