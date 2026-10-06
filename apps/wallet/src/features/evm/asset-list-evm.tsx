@@ -1,4 +1,5 @@
 import { evmNetworkById } from "@sango/wallet-chains";
+import { Link } from "react-router-dom";
 
 import { NativeAssetIcon } from "@/components/branding/native-asset-icon";
 import { AssetSection, type AssetItem } from "@/components/ui/asset-section";
@@ -87,6 +88,13 @@ export function AssetListEvm() {
             <>
               {" · "}
               <code>eth_call balanceOf</code>
+              {" · "}
+              <Link
+                to="/approvals"
+                className="font-medium text-primary hover:underline"
+              >
+                Gérer les approbations →
+              </Link>
             </>
           )}
         </>

@@ -12,6 +12,7 @@ const CreateEvmWalletRoute = lazy(() =>
 );
 const HistoryDetailRoute = lazy(() => import("@/routes/history-detail").then(m => ({ default: m.HistoryDetailRoute })));
 const HistoryRoute = lazy(() => import("@/routes/history").then(m => ({ default: m.HistoryRoute })));
+const ApprovalsRoute = lazy(() => import("@/routes/approvals").then(m => ({ default: m.ApprovalsRoute })));
 import { ImportWallet } from "@/routes/import-wallet";
 const ImportEvmWalletRoute = lazy(() =>
   import("@/routes/import-evm").then((m) => ({ default: m.ImportEvmWallet })),
@@ -68,6 +69,7 @@ export default function App() {
             <Route path="/become-validator" element={<BecomeValidatorRoute />} />
             <Route path="/history" element={<HistoryRoute />} />
             <Route path="/history-evm" element={<Navigate to="/history" replace />} />
+            <Route path="/approvals" element={<ApprovalsRoute />} />
             <Route path="/history/:hash" element={<HistoryDetailRoute />} />
         </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
