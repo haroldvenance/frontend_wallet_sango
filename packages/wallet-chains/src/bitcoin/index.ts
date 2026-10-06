@@ -15,3 +15,27 @@ export type { BitcoinRpc, Utxo, BitcoinFeeRates } from "./rpc";
 export { BitcoinUtxoProvider } from "./utxo-provider";
 export { BitcoinFeeRateProvider } from "./fee-rate-provider";
 export { BitcoinBalanceProvider } from "./balance-provider";
+
+export {
+  estimateP2WPKHVsize,
+  BITCOIN_DUST_LIMIT,
+} from "./vsize";
+
+export {
+  selectUtxosGreedy,
+  InsufficientFundsError,
+} from "./utxo-selector";
+export type { UtxoSelectionResult } from "./utxo-selector";
+
+export type {
+  BitcoinChangeAddress,
+  BitcoinChangeAddressProvider,
+} from "./change-address-provider";
+
+export {
+  BitcoinTransactionBuilder,
+} from "./transaction-builder";
+export type {
+  BitcoinTransactionBuilderDeps,
+  BitcoinUnsignedPayload,
+} from "./transaction-builder";

@@ -38,7 +38,7 @@ const MAX_FEE_MULTIPLIER = 2n;
  */
 type SangoSendKind = Exclude<
   SendParams["kind"],
-  "transferErc20" | "approveErc20"
+  "transferErc20" | "approveErc20" | "transferBitcoin"
 >;
 
 const GAS_BY_KIND: Readonly<Record<SangoSendKind, bigint>> = {
@@ -207,6 +207,11 @@ export class SangoTransactionBuilder implements TransactionBuilder {
         throw new Error(
           "SangoTransactionBuilder: approveErc20 is EVM-only and not supported on SANGO",
         );
+      case "transferBitcoin":
+        // E2.1.b.3 — Bitcoin-only. SANGO n'a pas d'UTXOs.
+        throw new Error(
+          "SangoTransactionBuilder: transferBitcoin is Bitcoin-only and not supported on SANGO",
+        );
       default: {
         // Exhaustive check : `params` est narrow à `never` ici (tous
         // les variants de SendParams ont été épuisés par les cases
@@ -286,6 +291,11 @@ function buildMeta(params: SendParams, sender: Address): TxMeta {
       // E2.2.a.2 — EVM-only.
       throw new Error(
         "SangoTransactionBuilder.buildMeta: approveErc20 is EVM-only",
+      );
+    case "transferBitcoin":
+      // E2.1.b.3 — Bitcoin-only.
+      throw new Error(
+        "SangoTransactionBuilder.buildMeta: transferBitcoin is Bitcoin-only",
       );
     default:
       // transferErc20 est EVM-only. Throw explicite pour couvrir

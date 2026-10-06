@@ -80,6 +80,8 @@ export {
   BITCOIN_MAINNET_PATH_PARTS,
   BITCOIN_TESTNET_PATH_PARTS,
   encodeBitcoinP2WPKH,
+  decodeBitcoinP2WPKHAddress,
+  scriptPubKeyFromP2WPKHAddress,
   bitcoinP2WPKHScript,
   deriveBitcoinIdentity,
 } from "./derivation";

@@ -22,7 +22,22 @@
  * La validation du format effectif reste la responsabilité de
  * `AddressProvider.validateAddress()` (spec par famille).
  */
-export type Address = `0x${string}`;
+/**
+ * **E2.1.b.3 (D-E2.1-14)** — élargissement multi-format.
+ *
+ * Ajout des préfixes bech32 pour Bitcoin P2WPKH :
+ *   - `0x…`      SANGO + EVM (hex, 20 bytes)
+ *   - `bc1…`     Bitcoin mainnet P2WPKH
+ *   - `tb1…`     Bitcoin testnet P2WPKH
+ *
+ * Chaque `AddressProvider` sait interpréter le format de sa famille.
+ * Une adresse d'une famille passée à un provider d'une autre famille
+ * est rejetée par ce provider (validation métier, pas de type).
+ *
+ * **Non-supporté** : bech32m (P2TR), base58 (legacy `1…`/`3…`),
+ * bech32 P2WSH (`bc1q…` 32-byte). Uniquement P2WPKH pour E2.1.b.
+ */
+export type Address = `0x${string}` | `bc1${string}` | `tb1${string}`;
 
 /**
  * Construit une `Address` depuis un corps hexadécimal **sans** préfixe

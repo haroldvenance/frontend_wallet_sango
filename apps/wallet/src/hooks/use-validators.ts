@@ -33,10 +33,19 @@ export function useValidators(): UseQueryResult<ValidatorInfo[], Error> {
     queryKey: networkQueryKey(["validators"], endpoint, networkId),
     queryFn: async () => {
       if (!session) return [];
-      // `session.listValidators` retourne `readonly ValidatorInfo[]` ;
+      // `session.listValidators` retourne `wallet-chains.ValidatorInfo[]` ;
       // spread pour satisfaire la signature mutable attendue par les
       // composants (ValidatorActionsPanel, validators.tsx).
-      return [...(await session.listValidators(networkId))];
+      //
+      // ⚠️ E2.1.b.3 — le widening d'`Address` (D-E2.1-14) ajoute
+      // `bc1…` / `tb1…` à l'union, ce qui rend `wallet-chains.ValidatorInfo`
+      // structurellement incompatible avec `sango-rpc.ValidatorInfo`
+      // (dont `address: \`0x${string}\``). Au runtime, un validateur
+      // ne peut pas être Bitcoin (le concept n'existe que sur SANGO) —
+      // le cast est un artefact multi-chaîne local.
+      return [
+        ...(await session.listValidators(networkId)),
+      ] as unknown as ValidatorInfo[];
     },
     enabled: isSango && Boolean(session),
     refetchInterval: POLL_MS,
@@ -61,7 +70,12 @@ export function useValidatorInfo(
     queryKey: networkQueryKey(["validator"], endpoint, networkId, address),
     queryFn: async () => {
       if (!session || !address) return null;
-      return session.getValidatorInfo(networkId, address);
+      // Voir useValidators : cast à la frontière pour le widening
+      // d'`Address` (E2.1.b.3).
+      return session.getValidatorInfo(
+        networkId,
+        address,
+      ) as unknown as ValidatorInfo | null;
     },
     enabled: isSango && Boolean(session) && Boolean(address),
     refetchInterval: POLL_MS,

@@ -115,6 +115,70 @@ export function encodeBitcoinP2WPKH(
 }
 
 /**
+ * Décode une adresse P2WPKH bech32 → `{ hrp, program }`.
+ *
+ * Le programme (20 bytes) est le hash160 du pubkey. On peut en
+ * reconstruire le `scriptPubKey` sans avoir besoin du pubkey lui-même
+ * (propriété P2WPKH).
+ *
+ * Refuse :
+ *   - tout checksum non-bech32 ;
+ *   - tout HRP autre que `bc` ou `tb` ;
+ *   - tout witver ≠ 0 (P2WPKH only en E2.1.b) ;
+ *   - tout programme ≠ 20 bytes.
+ */
+export function decodeBitcoinP2WPKHAddress(address: string): {
+  network: BitcoinNetwork;
+  program: Uint8Array;
+} {
+  let decoded: { prefix: string; words: number[] };
+  try {
+    decoded = bech32.decode(address as `${string}1${string}`);
+  } catch (cause) {
+    throw new Error(
+      `decodeBitcoinP2WPKHAddress: invalid bech32 — ${(cause as Error).message}`,
+    );
+  }
+
+  let network: BitcoinNetwork;
+  if (decoded.prefix === MAINNET_HRP) network = "mainnet";
+  else if (decoded.prefix === TESTNET_HRP) network = "testnet";
+  else {
+    throw new Error(
+      `decodeBitcoinP2WPKHAddress: unexpected HRP "${decoded.prefix}" (expected "bc" or "tb")`,
+    );
+  }
+
+  if (decoded.words.length === 0 || decoded.words[0] !== 0) {
+    throw new Error(
+      "decodeBitcoinP2WPKHAddress: only witness v0 (P2WPKH) supported",
+    );
+  }
+
+  const program = bech32.fromWords(decoded.words.slice(1));
+  if (program.length !== HASH160_LENGTH) {
+    throw new Error(
+      `decodeBitcoinP2WPKHAddress: expected 20-byte program, got ${program.length}`,
+    );
+  }
+
+  return { network, program };
+}
+
+/**
+ * Reconstruit le `scriptPubKey` P2WPKH d'une adresse sans connaître
+ * le pubkey : `0x00 0x14 <program>`.
+ */
+export function scriptPubKeyFromP2WPKHAddress(address: string): Uint8Array {
+  const { program } = decodeBitcoinP2WPKHAddress(address);
+  const script = new Uint8Array(SCRIPT_P2WPKH_LENGTH);
+  script[0] = 0x00;
+  script[1] = 0x14;
+  script.set(program, 2);
+  return script;
+}
+
+/**
  * Construit le `scriptPubKey` P2WPKH : `0x00 0x14 <20 bytes>`.
  */
 export function bitcoinP2WPKHScript(

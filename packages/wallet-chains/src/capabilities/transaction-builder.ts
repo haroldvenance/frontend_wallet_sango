@@ -39,6 +39,11 @@ import type { UnsignedTransaction } from "../types/tx";
  * explicitement par `SangoTransactionBuilder`. Le variant ne
  * transfère aucun token : il autorise un `spender` à dépenser les
  * tokens de l'owner.
+ *
+ * **E2.1.b.3** — `transferBitcoin` ajouté pour les transferts natifs
+ * Bitcoin. Le builder Bitcoin construit une `Transaction` PSBT de
+ * `@scure/btc-signer` avec inputs P2WPKH, outputs recipient +
+ * change. Rejeté explicitement par les builders SANGO et EVM.
  */
 export type SendParams =
   // --- Transfert natif ---
@@ -94,6 +99,27 @@ export type SendParams =
        *    reste toujours payé dans `network.nativeAsset` (D-E1.7-2).
        */
       readonly assetRef: AssetRef;
+    }
+  // --- Bitcoin : transfert natif (E2.1.b.3) ---
+  | {
+      readonly kind: "transferBitcoin";
+      /** Adresse de destination (`tb1q…` testnet, `bc1q…` mainnet). */
+      readonly to: Address;
+      /**
+       * AssetRef natif Bitcoin (`kind: "native"`, `assetId: "btc"`,
+       * `networkId` = réseau Bitcoin).
+       */
+      readonly assetRef: AssetRef;
+      /** Montant en satoshis. */
+      readonly amount: bigint;
+      /**
+       * Taux de frais en satoshis / vbyte, **explicite**.
+       *
+       * Vient du `BitcoinFeeRateProvider` (choix utilisateur Fast/Normal/Slow).
+       * Le builder ne lit jamais le réseau pour ce paramètre — pure
+       * fonction déterministe.
+       */
+      readonly feeRate: bigint;
     }
   // --- Staking : self-stake ---
   | {

@@ -15,7 +15,8 @@
   },
   "dependencies": {
     "@sango/wallet-core": "workspace:*",
-    "viem": "^2.57.1"
+    "viem": "^2.57.1",
+    "@scure/btc-signer": "^2.4.1"
   },
   "devDependencies": {
     "@sango/rpc": "workspace:*",

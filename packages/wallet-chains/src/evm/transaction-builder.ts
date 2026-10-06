@@ -59,6 +59,11 @@ export class EvmTransactionBuilder implements TransactionBuilder {
         return this.#buildErc20Transfer(params, sender);
       case "approveErc20":
         return this.#buildErc20Approve(params, sender);
+      case "transferBitcoin":
+        // E2.1.b.3 — Bitcoin-only. Le pipeline EVM n'a pas d'UTXOs.
+        throw new Error(
+          "EvmTransactionBuilder: transferBitcoin is Bitcoin-only and not supported on EVM",
+        );
       default:
         // Les variants staking (bond, delegate…) sont SANGO-spécifiques.
         // SendParams est une union partagée — on n'en supporte qu'un
