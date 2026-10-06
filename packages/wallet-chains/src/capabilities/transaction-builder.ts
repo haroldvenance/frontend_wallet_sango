@@ -33,6 +33,12 @@ import type { UnsignedTransaction } from "../types/tx";
  * USDT). Le variant porte `assetRef: { kind: "token", … }` et un
  * `amount` en base units du token. L'encodage ABI `transfer(address,
  * uint256)` est fait par l'adaptateur EVM.
+ *
+ * **E2.2.a.2** — `approveErc20` ajouté pour la gestion des allowances
+ * ERC-20. Encode `approve(address, uint256)` côté EVM ; rejeté
+ * explicitement par `SangoTransactionBuilder`. Le variant ne
+ * transfère aucun token : il autorise un `spender` à dépenser les
+ * tokens de l'owner.
  */
 export type SendParams =
   // --- Transfert natif ---
@@ -55,6 +61,39 @@ export type SendParams =
       readonly assetRef: AssetRef;
       /** Montant en base units du token (voir `decimals` du token). */
       readonly amount: bigint;
+    }
+  // --- EVM : ERC-20 approve (E2.2.a.2) ---
+  | {
+      readonly kind: "approveErc20";
+      /**
+       * Adresse du contrat ERC-20 dont on modifie l'allowance.
+       *
+       * Doit être **identique** à `assetRef.contract`. Le builder
+       * rejette explicitement toute divergence (défense contre un
+       * désynchro appelant).
+       */
+      readonly token: Address;
+      /** Adresse autorisée à dépenser les tokens de l'owner. */
+      readonly spender: Address;
+      /**
+       * Montant autorisé (base units du token).
+       *
+       * - `0n` → révocation (retire l'autorisation)
+       * - `MAX_UINT256` → autorisation illimitée (convention
+       *   Uniswap / PancakeSwap)
+       * - autre → montant exact
+       *
+       * Le builder valide `0n <= amount <= MAX_UINT256` avant
+       * l'encodage ABI (`uint256`).
+       */
+      readonly amount: bigint;
+      /**
+       * AssetRef du token approuvé (`kind: "token"`).
+       *
+       * ⚠️ Ce n'est **pas** l'asset de paiement des frais — le gas
+       *    reste toujours payé dans `network.nativeAsset` (D-E1.7-2).
+       */
+      readonly assetRef: AssetRef;
     }
   // --- Staking : self-stake ---
   | {

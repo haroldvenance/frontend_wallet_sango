@@ -36,7 +36,10 @@ const MAX_FEE_MULTIPLIER = 2n;
  * `transferErc20` est exclu (EVM-only) — voir le `case` correspondant
  * dans `#encodeParams`.
  */
-type SangoSendKind = Exclude<SendParams["kind"], "transferErc20">;
+type SangoSendKind = Exclude<
+  SendParams["kind"],
+  "transferErc20" | "approveErc20"
+>;
 
 const GAS_BY_KIND: Readonly<Record<SangoSendKind, bigint>> = {
   transfer: 21_000n,
@@ -199,6 +202,11 @@ export class SangoTransactionBuilder implements TransactionBuilder {
         throw new Error(
           "SangoTransactionBuilder: transferErc20 is EVM-only and not supported on SANGO",
         );
+      case "approveErc20":
+        // E2.2.a.2 — EVM-only. SANGO n'a pas d'ERC-20.
+        throw new Error(
+          "SangoTransactionBuilder: approveErc20 is EVM-only and not supported on SANGO",
+        );
       default: {
         // Exhaustive check : `params` est narrow à `never` ici (tous
         // les variants de SendParams ont été épuisés par les cases
@@ -274,6 +282,11 @@ function buildMeta(params: SendParams, sender: Address): TxMeta {
         assetRef: params.assetRef,
         amount: 0n,
       };
+    case "approveErc20":
+      // E2.2.a.2 — EVM-only.
+      throw new Error(
+        "SangoTransactionBuilder.buildMeta: approveErc20 is EVM-only",
+      );
     default:
       // transferErc20 est EVM-only. Throw explicite pour couvrir
       // l'exhaustivité côté TS et future-proof les variants.

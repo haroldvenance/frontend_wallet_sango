@@ -284,3 +284,162 @@ describe("EvmTransactionBuilder — transferErc20", () => {
     ).rejects.toThrow(/network mismatch/);
   });
 });
+
+// ── E2.2.a.2 : approveErc20 ─────────────────────────────────
+
+const SPENDER = "0x" + "dd".repeat(20) as `0x${string}`;
+const APPROVE_MAX = (1n << 256n) - 1n;
+
+function approveParams(
+  overrides: Partial<Extract<SendParams, { kind: "approveErc20" }>> = {},
+): Extract<SendParams, { kind: "approveErc20" }> {
+  return {
+    kind: "approveErc20",
+    token: USDC_CONTRACT,
+    spender: SPENDER,
+    amount: 1_000_000n,
+    assetRef: ERC20_ASSET_REF,
+    ...overrides,
+  };
+}
+
+describe("EvmTransactionBuilder — approveErc20", () => {
+  it("encode approve(spender,amount) en `data`, value=0n, to=token", async () => {
+    const rpc = mockRpc({
+      getTransactionCount: vi.fn(async () => 7),
+      estimateGas: vi.fn(async () => 46_000n),
+      getBaseFeePerGas: vi.fn(async () => 10_000_000_000n),
+      getMaxPriorityFeePerGas: vi.fn(async () => 1_000_000_000n),
+    });
+    const b = makeErc20Builder(rpc);
+    const tx = await b.build(approveParams(), FROM);
+
+    const p = tx.payload as Record<string, unknown>;
+    expect(p.chainId).toBe(ERC20_CHAIN_ID);
+    expect(p.nonce).toBe(7);
+    expect(p.to).toBe(USDC_CONTRACT);
+    expect(p.value).toBe(0n);
+    expect(p.gasLimit).toBe(46_000n);
+
+    const expected = encodeFunctionData({
+      abi: ERC20_ABI,
+      functionName: "approve",
+      args: [SPENDER as `0x${string}`, 1_000_000n],
+    });
+    expect(p.data).toBe(expected);
+  });
+
+  it("selector = 0x095ea7b3 + args padded (spender puis montant)", async () => {
+    const b = makeErc20Builder();
+    const tx = await b.build(
+      approveParams({ amount: 1_000n }),
+      FROM,
+    );
+    const data = (tx.payload as Record<string, unknown>).data as string;
+
+    expect(data.startsWith("0x095ea7b3")).toBe(true);
+
+    const spenderPadded = SPENDER.slice(2).padStart(64, "0");
+    const amountPadded = (1_000n).toString(16).padStart(64, "0");
+    expect(data).toBe("0x095ea7b3" + spenderPadded + amountPadded);
+    // Longueur : "0x" + 8 (selector) + 64 + 64 = 138
+    expect(data.length).toBe(138);
+  });
+
+  it("amount = 0n accepté (revoke)", async () => {
+    const b = makeErc20Builder();
+    const tx = await b.build(approveParams({ amount: 0n }), FROM);
+    const data = (tx.payload as Record<string, unknown>).data as string;
+    // Args amount = 32 zéros
+    expect(data.endsWith("0".repeat(64))).toBe(true);
+  });
+
+  it("amount = MAX_UINT256 accepté (unlimited)", async () => {
+    const b = makeErc20Builder();
+    const tx = await b.build(approveParams({ amount: APPROVE_MAX }), FROM);
+    const data = (tx.payload as Record<string, unknown>).data as string;
+    const expectedAmountPadded = APPROVE_MAX.toString(16).padStart(64, "0");
+    expect(data.endsWith(expectedAmountPadded)).toBe(true);
+  });
+
+  it("amount > MAX_UINT256 rejeté", async () => {
+    const b = makeErc20Builder();
+    await expect(
+      b.build(approveParams({ amount: APPROVE_MAX + 1n }), FROM),
+    ).rejects.toThrow(/exceeds uint256 max/);
+  });
+
+  it("amount < 0n rejeté", async () => {
+    const b = makeErc20Builder();
+    await expect(
+      b.build(approveParams({ amount: -1n }), FROM),
+    ).rejects.toThrow(/must be >= 0/);
+  });
+
+  it("token ≠ assetRef.contract rejeté (anti-désynchro)", async () => {
+    const b = makeErc20Builder();
+    const otherContract = "0x" + "99".repeat(20) as `0x${string}`;
+    await expect(
+      b.build(approveParams({ token: otherContract }), FROM),
+    ).rejects.toThrow(/token\/assetRef mismatch/);
+  });
+
+  it("meta.from = sender, meta.to = spender, meta.amount", async () => {
+    const b = makeErc20Builder();
+    const tx = await b.build(approveParams(), FROM);
+    expect(tx.meta.from).toBe(FROM);
+    expect(tx.meta.to).toBe(SPENDER);
+    expect(tx.meta.amount).toBe(1_000_000n);
+    expect(tx.meta.assetRef).toEqual(ERC20_ASSET_REF);
+  });
+
+  it("rejette un assetRef natif", async () => {
+    const b = makeErc20Builder();
+    await expect(
+      b.build(
+        approveParams({
+          assetRef: {
+            kind: "native",
+            assetId: "eth",
+            networkId: "ethereum-mainnet",
+          },
+        }),
+        FROM,
+      ),
+    ).rejects.toThrow(/requires a token assetRef/);
+  });
+
+  it("rejette un réseau mismatch", async () => {
+    const b = makeErc20Builder();
+    await expect(
+      b.build(
+        approveParams({
+          assetRef: {
+            kind: "token",
+            networkId: "base",
+            contract: USDC_CONTRACT,
+          },
+        }),
+        FROM,
+      ),
+    ).rejects.toThrow(/network mismatch/);
+  });
+
+  it("utilise eth_estimateGas avec to=token + data, value=0n", async () => {
+    const estimateGas = vi.fn<(tx: EvmCallParams) => Promise<bigint>>(async () => 46_000n);
+    const b = makeErc20Builder(
+      mockRpc({
+        estimateGas,
+        getBaseFeePerGas: vi.fn(async () => 1n),
+        getMaxPriorityFeePerGas: vi.fn(async () => 0n),
+      }),
+    );
+    await b.build(approveParams(), FROM);
+
+    const arg = estimateGas.mock.calls[0]![0];
+    expect(arg.from).toBe(FROM);
+    expect(arg.to).toBe(USDC_CONTRACT);
+    expect(arg.value).toBe(0n);
+    expect((arg.data as string).startsWith("0x095ea7b3")).toBe(true);
+  });
+});
