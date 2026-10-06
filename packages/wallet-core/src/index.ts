@@ -74,6 +74,17 @@ export {
 } from "./derivation";
 export type { Bip44PathParts } from "./derivation";
 
+// ── E2.1.b : primitives Bitcoin (BIP-84 / P2WPKH) ────────────────
+
+export {
+  BITCOIN_MAINNET_PATH_PARTS,
+  BITCOIN_TESTNET_PATH_PARTS,
+  encodeBitcoinP2WPKH,
+  bitcoinP2WPKHScript,
+  deriveBitcoinIdentity,
+} from "./derivation";
+export type { BitcoinNetwork, BitcoinIdentity } from "./derivation";
+
 // ── E1 : Bip39Wallet + StoredWalletV2 ────────────────────────────
 
 export { Bip39Wallet, bip39WalletFromMnemonicSync } from "./bip39-wallet";

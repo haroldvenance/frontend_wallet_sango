@@ -13,7 +13,8 @@
     "@sango/types": "workspace:*",
     "@scure/base": "2.4.0",
     "@scure/bip32": "^2.4.0",
-    "@scure/bip39": "^2.4.0"
+    "@scure/bip39": "^2.4.0",
+    "@scure/btc-signer": "^2.4.1"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
