@@ -6,3 +6,4 @@
 
 export * from "./rpc";
 export * from "./evm";
+export * from "./bitcoin";
