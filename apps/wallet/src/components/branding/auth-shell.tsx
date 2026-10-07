@@ -40,7 +40,12 @@ export function AuthShell({
   }[maxWidth];
 
   return (
-    <div className="relative flex min-h-svh items-center justify-center overflow-hidden bg-background px-6 py-12">
+    <div
+      className={[
+        "relative flex min-h-svh items-center justify-center overflow-hidden bg-background px-6",
+        step ? "pt-24 pb-12" : "py-12",
+      ].join(" ")}
+    >
       {halo && (
         <div
           aria-hidden
@@ -60,12 +65,12 @@ export function AuthShell({
       )}
 
       {step && (
-        <div className="absolute left-1/2 top-6 z-10 w-full max-w-md -translate-x-1/2 px-6">
-          <div className="flex items-center gap-2">
-            <p className="text-[11px] text-muted-foreground">
+        <div className="absolute left-0 right-0 top-6 z-10">
+          <div className="mx-auto w-full max-w-md px-6">
+            <p className="mb-2 text-right text-[11px] text-muted-foreground">
               Étape {step.current} sur {step.total}
             </p>
-            <div className="flex flex-1 gap-1.5">
+            <div className="flex gap-1.5">
               {Array.from({ length: step.total }, (_, i) => (
                 <span
                   key={i}

@@ -1,5 +1,12 @@
 import { Bip39Wallet, Keyring, Wallet } from "@sango/wallet-core";
-import { Check, Copy, Eye, EyeOff } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  CheckCircle2,
+  Copy,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -12,31 +19,24 @@ import { useSdkStore } from "@/stores/sdk-store";
 import { useWalletStore } from "@/stores/wallet-store";
 
 /**
- * Flow de création unifié — E2.5.
+ * Flow de création unifié — E2.5 / E2.5.b.
  *
- * **D-E2.5-1** — Point d'entrée unique `/create`. L'utilisateur
- * choisit la famille via des pills (SANGO / Ethereum / Bitcoin /
- * BSC), puis remplit le formulaire. La logique de création est
- * **partagée** :
+ * **3 étapes** :
+ *   1. form    → pills réseau + password + ack "no recovery"
+ *   2. reveal  → 12 mots (ou seed hex) + warning + ack "j'ai noté"
+ *   3. success → check + adresse + "Accéder au portefeuille"
  *
- *   SANGO   → Ed25519, seed 32 bytes, reveal hex
- *   EVM     → BIP-39, mnemonic 12 mots, reveal mnemonic
- *   Bitcoin → BIP-39, mnemonic 12 mots, reveal mnemonic
- *
- * Chaque pill mappe vers un `networkId` **safe par défaut** :
+ * **D-E2.5-1** — Point d'entrée unique `/create`. Chaque pill mappe
+ * vers un `networkId` **safe par défaut** (testnets) :
  *   SANGO     → "sango-devnet"
- *   Ethereum  → "ethereum-sepolia"   (testnet, D-E2.3-1)
- *   Bitcoin   → "bitcoin-testnet"    (testnet, D-E2.1-2)
- *   BSC       → "bsc-testnet"        (testnet)
+ *   Ethereum  → "ethereum-sepolia"
+ *   Bitcoin   → "bitcoin-testnet"
+ *   BSC       → "bsc-testnet"
  *
- * L'utilisateur pourra switcher vers mainnet en session via le
- * sélecteur réseau.
- *
- * **Pas de sélection testnet/mainnet en création** : les defaults
- * sont les testnets (onboarding sans fonds réels), cohérent avec
- * D-E2.3-1 et D-E2.1-2.
+ * La logique de création est **partagée** :
+ *   SANGO   → Ed25519, seed 32 bytes
+ *   EVM/BTC → BIP-39, mnemonic 12 mots
  */
-
 type NetworkChoice = "sango" | "ethereum" | "bitcoin" | "bsc";
 
 interface ChoiceConfig {
@@ -72,6 +72,27 @@ function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/**
+ * Retourne l'adresse à afficher sur l'écran succès selon la famille.
+ *
+ * - SANGO  : bech32m `sango1…` (via `identity.addressBech32`)
+ * - EVM    : `0x…` (via `defaultAddress`)
+ * - Bitcoin : `tb1q…` / `bc1q…` (dérivé du networkId)
+ */
+function deriveDisplayAddress(
+  choice: NetworkChoice,
+  wallet: Wallet | Bip39Wallet,
+): string {
+  if (wallet instanceof Wallet) {
+    return wallet.identity.addressBech32;
+  }
+  if (choice === "bitcoin") {
+    const btcNetwork = "testnet" as const; // pills n'exposent que testnet
+    return wallet.getBitcoinIdentity(btcNetwork, 0, 0).address;
+  }
+  return wallet.defaultAddress;
+}
+
 export function CreateUnified() {
   const navigate = useNavigate();
   const t = useTranslation();
@@ -79,19 +100,22 @@ export function CreateUnified() {
   const { network } = useSdkStore();
   const copy = useClipboard();
 
-  const [step, setStep] = useState<"form" | "reveal">("form");
+  const [step, setStep] = useState<"form" | "reveal" | "success">("form");
   const [choice, setChoice] = useState<NetworkChoice>("sango");
   const [label, setLabel] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [ack, setAck] = useState(false);
+  const [ackPassword, setAckPassword] = useState(false);
+  const [ackNoted, setAckNoted] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  // Secrets temporaires (jamais persistés)
+  // Secrets temporaires
   const [mnemonic, setMnemonic] = useState<string | null>(null);
   const [seedHex, setSeedHex] = useState<string | null>(null);
   const [wallet, setWallet] = useState<Wallet | Bip39Wallet | null>(null);
+  // Adresse figée pour l'écran succès
+  const [displayAddress, setDisplayAddress] = useState<string | null>(null);
 
   const cfg = CHOICES[choice];
 
@@ -104,8 +128,10 @@ export function CreateUnified() {
       toast.error(t.create.passwordMismatch);
       return false;
     }
-    if (!ack) {
-      toast.error("Confirme avoir lu l'avertissement");
+    if (!ackPassword) {
+      toast.error(
+        t.onboarding.create.ackNoRecovery,
+      );
       return false;
     }
     return true;
@@ -116,7 +142,6 @@ export function CreateUnified() {
     setBusy(true);
     try {
       if (cfg.format === "sango-legacy") {
-        // SANGO : Ed25519 seed 32 bytes
         const seed = crypto.getRandomValues(new Uint8Array(32));
         const w = await Wallet.fromSeed(seed, network);
         const seedStr = bytesToHex(seed);
@@ -124,7 +149,6 @@ export function CreateUnified() {
         setSeedHex(seedStr);
         setWallet(w);
       } else {
-        // BIP-39 : mnemonic 12 mots
         const { wallet: w, mnemonic: m } = await Bip39Wallet.generate();
         setMnemonic(m);
         setWallet(w);
@@ -141,6 +165,10 @@ export function CreateUnified() {
 
   async function onPersist() {
     if (!wallet) return;
+    if (!ackNoted) {
+      toast.error(t.onboarding.create.revealAck);
+      return;
+    }
     setBusy(true);
     try {
       const stored = await wallet.exportEncrypted(password);
@@ -178,12 +206,15 @@ export function CreateUnified() {
         });
       }
 
+      // Capture l'adresse AVANT de jeter les refs sensibles.
+      setDisplayAddress(deriveDisplayAddress(choice, wallet));
+
       // Jette les références sensibles
       setMnemonic(null);
       setSeedHex(null);
 
       toast.success(t.create.createdAndSaved);
-      navigate("/");
+      setStep("success");
     } catch (err) {
       toast.error(t.create.saveError, {
         description: (err as Error).message,
@@ -193,7 +224,61 @@ export function CreateUnified() {
     }
   }
 
-  // ── Étape reveal ────────────────────────────────────────────
+  // ── Étape 3 : succès ────────────────────────────────────────
+  if (step === "success" && displayAddress) {
+    return (
+      <AuthShell
+        title={t.onboarding.create.successTitle}
+        subtitle={t.onboarding.create.successSubtitle.replace(
+          "{family}",
+          t.onboarding.networks[choice],
+        )}
+        logoSize={56}
+        step={{ current: 3, total: 3 }}
+      >
+        {/* Check circle */}
+        <div className="mt-2 flex justify-center">
+          <div className="flex size-20 items-center justify-center rounded-full border-2 border-emerald-500/40 bg-emerald-500/10">
+            <CheckCircle2
+              className="size-10 text-emerald-500"
+              strokeWidth={2.5}
+            />
+          </div>
+        </div>
+
+        {/* Address card */}
+        <div className="mt-8 rounded-2xl border bg-card p-5">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">
+            {t.onboarding.create.successAddressLabel}
+          </p>
+          <p className="mt-2 break-all font-mono text-sm font-medium leading-relaxed">
+            {displayAddress}
+          </p>
+          <button
+            type="button"
+            onClick={() =>
+              copy(displayAddress, t.onboarding.create.successCopy)
+            }
+            className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/5 text-sm font-semibold text-primary transition-colors hover:bg-primary/10"
+          >
+            <Copy className="size-4" />
+            {t.onboarding.create.successCopy}
+          </button>
+        </div>
+
+        {/* Enter wallet */}
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          className="mt-6 inline-flex h-12 w-full items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+        >
+          {t.onboarding.create.successEnter}
+        </button>
+      </AuthShell>
+    );
+  }
+
+  // ── Étape 2 : reveal ────────────────────────────────────────
   if (step === "reveal" && (mnemonic || seedHex)) {
     const isSango = seedHex !== null;
     const words = mnemonic ? mnemonic.split(" ") : null;
@@ -211,18 +296,16 @@ export function CreateUnified() {
             : t.onboarding.create.revealSubtitle
         }
         logoSize={56}
-        step={{ current: 2, total: 2 }}
+        step={{ current: 2, total: 3 }}
       >
         {isSango ? (
-          <div className="mt-6 flex items-start gap-2 rounded-2xl border bg-card p-4">
+          <div className="mt-4 flex items-start gap-2 rounded-2xl border bg-card p-4">
             <code className="break-all font-mono text-xs leading-6">
               {seedHex}
             </code>
             <button
               type="button"
-              onClick={() =>
-                copy(`0x${seedHex}`, t.create.seedCopied)
-              }
+              onClick={() => copy(`0x${seedHex}`, t.create.seedCopied)}
               className="shrink-0 rounded-lg p-2 transition-colors hover:bg-accent"
               aria-label={t.onboarding.create.copySeed}
             >
@@ -230,7 +313,7 @@ export function CreateUnified() {
             </button>
           </div>
         ) : (
-          <div className="mt-6 rounded-2xl border bg-card p-4">
+          <div className="mt-4 rounded-2xl border bg-card p-4">
             <div className="grid grid-cols-3 gap-2">
               {words!.map((w, i) => (
                 <div
@@ -257,7 +340,26 @@ export function CreateUnified() {
           </div>
         )}
 
-        <div className="mt-6 space-y-3">
+        {/* Warning */}
+        <div className="mt-4 flex items-start gap-2 rounded-2xl border border-amber-500/40 bg-amber-500/5 p-3 text-[11px] text-amber-700 dark:text-amber-400">
+          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+          <span>{t.onboarding.create.revealWarning}</span>
+        </div>
+
+        {/* Ack noted */}
+        <label className="mt-4 flex cursor-pointer items-start gap-2.5 rounded-xl border bg-muted/30 p-3">
+          <input
+            type="checkbox"
+            checked={ackNoted}
+            onChange={(e) => setAckNoted(e.target.checked)}
+            className="mt-0.5 size-4 shrink-0 cursor-pointer accent-primary"
+          />
+          <span className="text-[11px] leading-snug">
+            {t.onboarding.create.revealAck}
+          </span>
+        </label>
+
+        <div className="mt-4 space-y-3">
           <input
             type="text"
             value={label}
@@ -268,7 +370,7 @@ export function CreateUnified() {
           <button
             type="button"
             onClick={onPersist}
-            disabled={busy}
+            disabled={busy || !ackNoted}
             className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             <Check className="size-4" />
@@ -279,14 +381,14 @@ export function CreateUnified() {
     );
   }
 
-  // ── Étape form ──────────────────────────────────────────────
+  // ── Étape 1 : form ──────────────────────────────────────────
   return (
     <AuthShell
       title={t.onboarding.create.title}
       subtitle={t.onboarding.create.subtitle}
       backTo="/welcome"
       logoSize={56}
-      step={{ current: 1, total: 2 }}
+      step={{ current: 1, total: 3 }}
     >
       <div className="mt-2 space-y-5">
         {/* Pills réseau */}
@@ -369,12 +471,12 @@ export function CreateUnified() {
           />
         </div>
 
-        {/* Ack */}
+        {/* Ack no recovery */}
         <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border bg-muted/30 p-3">
           <input
             type="checkbox"
-            checked={ack}
-            onChange={(e) => setAck(e.target.checked)}
+            checked={ackPassword}
+            onChange={(e) => setAckPassword(e.target.checked)}
             className="mt-0.5 size-4 shrink-0 cursor-pointer accent-primary"
           />
           <span className="text-[11px] leading-snug text-muted-foreground">
