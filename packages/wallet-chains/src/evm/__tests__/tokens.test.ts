@@ -250,14 +250,72 @@ describe("Helpers", () => {
     expect(MAX_UINT256).toBeGreaterThan(10n ** 40n);
   });
 
-  it("snapshot : toutes les adresses figées", () => {
-    const snapshot: Record<string, Record<string, string>> = {};
+  /**
+   * 🔒 Table explicite des adresses gelées (E1.7.g.3).
+   *
+   * **D-E1.7-12** : remplace l'ancien snapshot Vitest. Un snapshot est
+   * opaque dans le diff (`toMatchSnapshot` produit une ligne "1
+   * updated"), ce qui rend un ajout de réseau difficile à reviewer.
+   * Une table explicite produit un diff lisible ligne-à-ligne.
+   *
+   * Modifier une entrée = décision documentée :
+   *   1. Vérifier la source officielle (Circle / Tether / BscScan)
+   *   2. Mettre à jour `EVM_TOKENS` avec `source` explicite
+   *   3. Mettre à jour la table ci-dessous (justification en commit)
+   *   4. Vérifier le frozen test correspondant plus haut
+   */
+  const FROZEN_EVM_TOKEN_ADDRESSES: Readonly<
+    Record<string, Readonly<Record<string, string>>>
+  > = {
+    "ethereum-mainnet": {
+      USDC: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      USDT: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    },
+    "arbitrum-one": {
+      USDC: "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+      USDT: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9",
+    },
+    base: {
+      USDC: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+    },
+    "ethereum-sepolia": {
+      USDC: "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+    },
+    bsc: {
+      USDT: "0x55d398326f99059ff775485246999027b3197955",
+    },
+    "bsc-testnet": {
+      USDT: "0x337610d27c682e347c9cd60bd4b3b107c9d34ddd",
+    },
+  };
+
+  it("🔒 adresses figées (table explicite, diff lisible)", () => {
+    const actual: Record<string, Record<string, string>> = {};
     for (const networkId of Object.keys(EVM_TOKENS).sort()) {
-      snapshot[networkId] = {};
+      actual[networkId] = {};
       for (const token of listTokensForNetwork(networkId)) {
-        snapshot[networkId][token.symbol] = token.address;
+        actual[networkId][token.symbol] = token.address.toLowerCase();
       }
     }
-    expect(snapshot).toMatchSnapshot("evm-tokens-addresses");
+    expect(actual).toEqual(FROZEN_EVM_TOKEN_ADDRESSES);
+  });
+
+  it("🔒 aucun réseau/token orphelin dans la table", () => {
+    // Réciproque : chaque entrée de la table DOIT correspondre à un
+    // token présent dans EVM_TOKENS. Empêche les entrées fantômes.
+    for (const [networkId, symbols] of Object.entries(
+      FROZEN_EVM_TOKEN_ADDRESSES,
+    )) {
+      for (const symbol of Object.keys(symbols)) {
+        const cfg = getTokenConfig(
+          networkId,
+          symbol as Parameters<typeof getTokenConfig>[1],
+        );
+        expect(
+          cfg,
+          `${networkId}/${symbol} attendu dans EVM_TOKENS`,
+        ).toBeDefined();
+      }
+    }
   });
 });

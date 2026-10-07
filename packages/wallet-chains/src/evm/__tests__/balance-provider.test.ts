@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { EvmBalanceProvider } from "../balance-provider";
-import { EVM_DECIMALS } from "../config";
+import { EVM_NATIVE_DECIMALS } from "../config";
 import type { AssetRef } from "../../types/asset";
 import { ANVIL_ADDRESS_0, mockRpc } from "./_helpers";
 
@@ -21,7 +21,7 @@ describe("EvmBalanceProvider", () => {
     expect(bal.amount).toBe(1_234_567_890_000_000_000n);
     expect(bal.assetId).toBe("eth");
     expect(bal.networkId).toBe("ethereum-sepolia");
-    expect(bal.decimals).toBe(EVM_DECIMALS);
+    expect(bal.decimals).toBe(EVM_NATIVE_DECIMALS);
     expect(rpc.getBalance).toHaveBeenCalledWith(ANVIL_ADDRESS_0);
   });
 

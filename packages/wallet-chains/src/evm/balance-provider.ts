@@ -2,7 +2,7 @@ import type { BalanceProvider } from "../capabilities/balance-provider";
 import type { Address } from "../types/address";
 import type { AssetRef } from "../types/asset";
 import type { Balance } from "../types/balance";
-import { EVM_DECIMALS } from "./config";
+import { EVM_NATIVE_DECIMALS } from "./config";
 import type { EvmRpc } from "./rpc";
 
 /**
@@ -30,7 +30,7 @@ export class EvmBalanceProvider implements BalanceProvider {
       assetId: this.#nativeAsset,
       networkId: this.#networkId,
       amount,
-      decimals: EVM_DECIMALS,
+      decimals: EVM_NATIVE_DECIMALS,
     };
   }
 }

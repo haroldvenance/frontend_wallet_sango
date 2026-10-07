@@ -24,7 +24,22 @@ import type { Network } from "../types/network";
  * persistant, pas de round-robin, pas de circuit breaker.
  */
 
-export const EVM_DECIMALS = 18;
+/**
+ * Decimals du natif EVM.
+ *
+ * **Convention EVM** : toutes les chains EVM (Ethereum, BSC, Base,
+ * Arbitrum, Polygon, …) utilisent 18 décimales pour leur natif. C'est
+ * une propriété du protocole (wei = 10^-18 unité), pas du réseau.
+ *
+ * Utilisé par `EvmBalanceProvider` pour peupler `Balance.decimals` du
+ * natif. Pour les tokens ERC-20, `decimals` vient de
+ * `Erc20Config.decimals` (variable selon le token).
+ *
+ * **D-E1.7-11** : ex-`EVM_DECIMALS`. Renommé pour expliciter qu'il
+ * s'agit des decimals du **natif** uniquement, pas d'un concept
+ * générique EVM.
+ */
+export const EVM_NATIVE_DECIMALS = 18;
 
 // ── Testnet ─────────────────────────────────────────────────
 
