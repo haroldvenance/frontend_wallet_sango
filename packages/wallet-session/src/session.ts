@@ -8,6 +8,7 @@ import type {
   Delegation,
   FeeEstimate,
   FeeParams,
+  FeeRates,
   PendingUnbonding,
   SendParams,
   Signer,
@@ -68,6 +69,19 @@ export interface WalletSession {
    * la session dérive l'adresse depuis `account`.
    */
   estimateFee(params: FeeParams, account: AccountRef): Promise<FeeEstimate>;
+
+  /**
+   * **E2.1.b.6.3** — Taux de frais recommandés pour un réseau (fast /
+   * normal / slow). Interface neutre, non spécifique à une famille.
+   *
+   * Retourne `null` si le réseau n'expose pas de capacité
+   * `FeeRateProvider` (cas EVM aujourd'hui).
+   *
+   * Bitcoin retourne 3 niveaux en sats/vbyte. L'UI (SendBitcoinRoute)
+   * les présente comme présets ; l'utilisateur peut aussi saisir un
+   * taux custom.
+   */
+  getFeeRates(networkId: string): Promise<FeeRates | null>;
 
   /**
    * Pipeline complet build → sign → broadcast.
@@ -244,6 +258,12 @@ export class WalletSessionImpl implements WalletSession {
     }
     const from = await adapter.addressProvider.deriveAddress(account);
     return adapter.feeEstimator.estimate({ ...params, from });
+  }
+
+  async getFeeRates(networkId: string): Promise<FeeRates | null> {
+    const adapter = this.#adapter(networkId);
+    if (!adapter.feeRateProvider) return null;
+    return adapter.feeRateProvider.getFeeRates();
   }
 
   async send(params: SendParams, account: AccountRef): Promise<string> {

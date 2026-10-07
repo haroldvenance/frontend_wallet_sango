@@ -3,6 +3,7 @@ import type { AddressProvider } from "../capabilities/address-provider";
 import type { BalanceProvider } from "../capabilities/balance-provider";
 import type { Broadcaster } from "../capabilities/broadcaster";
 import type { FeeEstimator } from "../capabilities/fee-estimator";
+import type { FeeRateProvider } from "../capabilities/fee-rate-provider";
 import type { HistoryProvider } from "../capabilities/history-provider";
 import type { StakingProvider } from "../capabilities/staking-provider";
 import type { TokenProvider } from "../capabilities/token-provider";
@@ -26,5 +27,6 @@ export interface ChainAdapter {
   readonly transactionSigner?: TransactionSigner;
   readonly broadcaster?: Broadcaster;
   readonly feeEstimator?: FeeEstimator;
+  readonly feeRateProvider?: FeeRateProvider;
   readonly tokenProvider?: TokenProvider;
 }

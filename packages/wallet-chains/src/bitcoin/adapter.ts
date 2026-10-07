@@ -5,6 +5,7 @@ import type { Network } from "../types/network";
 import { BitcoinBalanceProvider } from "./balance-provider";
 import { BitcoinBroadcaster } from "./broadcaster";
 import type { BitcoinChangeAddressProvider } from "./change-address-provider";
+import { BitcoinFeeRateProvider } from "./fee-rate-provider";
 import type { BitcoinRpc } from "./rpc";
 import { BitcoinTransactionBuilder } from "./transaction-builder";
 import { BitcoinTransactionSigner } from "./transaction-signer";
@@ -38,6 +39,10 @@ export interface BitcoinAdapterDeps {
  *   - transactionBuilder  : P2WPKH build-only (b.3)
  *   - transactionSigner   : BIP-143 / DER (b.4)
  *   - broadcaster         : POST /tx + commit change (b.5)
+ *
+ * Capacités exposées (E2.1.b.6.3) :
+ *   - feeRateProvider : taux Fast/Normal/Slow (sats/vbyte) pour le
+ *     sélecteur de priorité côté UI.
  *
  * Capacités ABSENTES (non applicables / reportées) :
  *   - addressProvider   : Bitcoin n'a pas d'`AddressProvider` uniforme
@@ -97,5 +102,6 @@ export function bitcoinAdapterFactory(
     ),
     transactionSigner: new BitcoinTransactionSigner(),
     broadcaster: new BitcoinBroadcaster(deps.rpc, deps.changeProvider),
+    feeRateProvider: new BitcoinFeeRateProvider(deps.rpc),
   };
 }

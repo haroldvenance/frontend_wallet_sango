@@ -9,3 +9,4 @@ export * from "./fee-estimator";
 export * from "./token-provider";
 export * from "./staking-provider";
 export * from "./tx-detail-provider";
+export * from "./fee-rate-provider";

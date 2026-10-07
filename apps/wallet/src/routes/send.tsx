@@ -1,4 +1,4 @@
-import { BitcoinComingSoon } from "@/components/branding/bitcoin-coming-soon";
+import { SendBitcoinRoute } from "./send-bitcoin";
 import { useWalletStore } from "@/stores/wallet-store";
 
 import { SangoSendRoute } from "./send-sango";
@@ -13,14 +13,14 @@ import { SendEvmRoute } from "./send-evm";
  *
  *   family === "sango"   → <SangoSendRoute />
  *   family === "evm"     → <SendEvmRoute />
- *   family === "bitcoin" → <BitcoinComingSoon /> (E2.1.b.6.3)
+ *   family === "bitcoin" → <SendBitcoinRoute /> (E2.1.b.6.3)
  *
  * Les routes `/send-evm` et `/send-bitcoin` (à venir) resteront des
  * alias, mais le dispatch canonique est ici.
  */
 export function SendRoute() {
   const family = useWalletStore((s) => s.family);
-  if (family === "bitcoin") return <BitcoinComingSoon feature="Envoi" />;
+  if (family === "bitcoin") return <SendBitcoinRoute />;
   if (family === "evm") return <SendEvmRoute />;
   return <SangoSendRoute />;
 }

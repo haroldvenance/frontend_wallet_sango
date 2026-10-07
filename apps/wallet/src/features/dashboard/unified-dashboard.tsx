@@ -8,6 +8,7 @@ import { NetworkOverviewCard } from "@/components/wallet/network-overview-card";
 import { QuickActions } from "@/components/wallet/quick-actions";
 import { RecentActivity } from "@/components/wallet/recent-activity";
 import { BitcoinAssetList } from "@/features/bitcoin/bitcoin-asset-list";
+import { QuickActionsBitcoin } from "@/features/bitcoin/quick-actions-bitcoin";
 import { BitcoinBalanceCard } from "@/features/bitcoin/bitcoin-balance-card";
 import { AssetListEvm } from "@/features/evm/asset-list-evm";
 import { BalanceCardEvm } from "@/features/evm/balance-card-evm";
@@ -25,16 +26,15 @@ import { useWalletStore } from "@/stores/wallet-store";
  *
  * Slot par slot :
  *
- *   ActionsRow   → QuickActions (SANGO) | QuickActionsEvm | ComingSoon
+ *   ActionsRow   → QuickActions | QuickActionsEvm | QuickActionsBitcoin
  *   HeroCard     → BalanceCard | BalanceCardEvm | BitcoinBalanceCard
  *   AssetSection → AssetList  | AssetListEvm  | BitcoinAssetList
  *   Activity     → RecentActivity | HistoryListEvm | ComingSoon
  *   Staking      → MyStakingCard | (absent)
  *   NetworkInfo  → NetworkOverviewCard | (absent)
  *
- * Les slots Bitcoin "Actions rapides" et "Activité" restent des
- * placeholders (ComingSoon) tant que les livraisons E2.1.b.6.3 (send)
- * et un futur patch history ne sont pas faits.
+ * Le slot Bitcoin "Activité" reste un placeholder (ComingSoon)
+ * jusqu'à un futur patch history Bitcoin.
  */
 export function UnifiedDashboard() {
   const t = useTranslation();
@@ -63,7 +63,7 @@ export function UnifiedDashboard() {
         {/* Actions rapides */}
         {isSango && <QuickActions />}
         {family === "evm" && <QuickActionsEvm />}
-        {isBitcoin && <BitcoinComingSoon feature="Actions rapides" />}
+        {isBitcoin && <QuickActionsBitcoin />}
 
         {/* Hero card (solde + adresse) */}
         {isSango && <BalanceCard />}

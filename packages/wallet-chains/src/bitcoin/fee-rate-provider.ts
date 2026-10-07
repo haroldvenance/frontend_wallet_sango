@@ -1,4 +1,8 @@
-import type { BitcoinFeeRates, BitcoinRpc } from "./rpc";
+import type {
+  FeeRateProvider,
+  FeeRates,
+} from "../capabilities/fee-rate-provider";
+import type { BitcoinRpc } from "./rpc";
 
 /**
  * Accès aux taux de frais Bitcoin (E2.1.b.2).
@@ -15,7 +19,7 @@ import type { BitcoinFeeRates, BitcoinRpc } from "./rpc";
  * Toute valeur invalide retournée par le RPC (0, négative, non
  * entière) est remplacée par un fallback conservateur.
  */
-export class BitcoinFeeRateProvider {
+export class BitcoinFeeRateProvider implements FeeRateProvider {
   readonly #rpc: BitcoinRpc;
 
   constructor(rpc: BitcoinRpc) {
@@ -29,7 +33,7 @@ export class BitcoinFeeRateProvider {
    * trafic, réponse inattendue), on retombe sur un minimum de
    * 1 sat/vbyte. Un fee rate de 0 produirait une tx non relayée.
    */
-  async getFeeRates(): Promise<BitcoinFeeRates> {
+  async getFeeRates(): Promise<FeeRates> {
     const rates = await this.#rpc.getFeeRates();
     return {
       fast: sanitizeRate(rates.fast),

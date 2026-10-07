@@ -1,9 +1,11 @@
+import { decodeBitcoinP2WPKHAddress } from "@sango/wallet-core";
+import type { BitcoinNetwork } from "@sango/wallet-core";
+
 /**
- * Helpers Bitcoin — E2.1.b.6.2.
+ * Helpers Bitcoin — E2.1.b.6.2 / E2.1.b.6.3.
  *
- * Conversions sats ↔ BTC (8 décimales) et formatage pour l'UI.
- * Aucune dépendance à viem ou @scure/btc-signer : ce sont des
- * opérations purement arithmétiques sur bigint.
+ * Conversions sats ↔ BTC (8 décimales), formatage UI, validation
+ * d'adresse P2WPKH stricte.
  */
 
 const SATS_PER_BTC = 100_000_000n;
@@ -62,4 +64,42 @@ export function parseBitcoin(input: string): bigint {
   const frac = fracPadded === "" ? 0n : BigInt(fracPadded);
 
   return whole * SATS_PER_BTC + frac;
+}
+
+/**
+ * Validation **stricte P2WPKH** d'une adresse Bitcoin (E2.1.b.6.3).
+ *
+ * Utilise `decodeBitcoinP2WPKHAddress` (wallet-core) qui effectue
+ * une validation bech32 complète :
+ *   - checksum bech32 (rejet si invalide)
+ *   - HRP `bc` (mainnet) ou `tb` (testnet)
+ *   - witness version 0
+ *   - programme de 20 bytes exactement (donc 42 chars)
+ *
+ * Rejette :
+ *   - `tb1q…` avec mauvais checksum
+ *   - `tb1q…` sur mainnet (network mismatch)
+ *   - `bc1q…` sur testnet (network mismatch)
+ *   - P2WSH 62 chars (programme 32 bytes)
+ *   - Legacy `1…` / `3…` (non-bech32)
+ *   - EVM `0x…`
+ *
+ * **Périmètre** : uniquement P2WPKH (BIP-84). Les autres formats
+ * Bitcoin (P2TR bech32m, P2SH-P2WPKH) sont hors scope tant qu'ils
+ * ne sont pas dans le registre.
+ */
+export function isValidBitcoinAddress(
+  address: string,
+  expectedNetwork: BitcoinNetwork,
+): boolean {
+  if (typeof address !== "string" || address.length === 0) return false;
+  // Filtre rapide : bech32 lowercase uniquement (BIP-173).
+  if (address !== address.toLowerCase()) return false;
+
+  try {
+    const decoded = decodeBitcoinP2WPKHAddress(address);
+    return decoded.network === expectedNetwork;
+  } catch {
+    return false;
+  }
 }
