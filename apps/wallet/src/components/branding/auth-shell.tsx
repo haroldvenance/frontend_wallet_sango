@@ -2,6 +2,9 @@ import { ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
+import { LocaleToggle } from "@/components/settings/locale-toggle";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
+
 import { SangoLogo } from "./sango-logo";
 
 interface Props {
@@ -43,7 +46,9 @@ export function AuthShell({
     <div
       className={[
         "relative flex min-h-svh items-center justify-center overflow-hidden bg-background px-6",
-        step ? "pt-24 pb-12" : "py-12",
+        // pt-28 : toolbar toggles (top-4 + h-9 = ~52px) + step bar (~90px) + marge
+        // pt-20 : toolbar toggles seule
+        step ? "pt-32 pb-12" : "pt-20 pb-12",
       ].join(" ")}
     >
       {halo && (
@@ -64,8 +69,14 @@ export function AuthShell({
         </Link>
       )}
 
+      {/* Toolbar flottant top-right : toggles thème + langue */}
+      <div className="absolute right-4 top-4 z-20 flex items-center gap-2">
+        <ThemeToggle />
+        <LocaleToggle />
+      </div>
+
       {step && (
-        <div className="absolute left-0 right-0 top-6 z-10">
+        <div className="absolute left-0 right-0 top-20 z-10">
           <div className="mx-auto w-full max-w-md px-6">
             <p className="mb-2 text-right text-[11px] text-muted-foreground">
               Étape {step.current} sur {step.total}
