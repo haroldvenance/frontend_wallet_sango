@@ -1,7 +1,7 @@
 import { Bip39Wallet, Keyring, Wallet } from "@sango/wallet-core";
 import type { Network } from "@sango/types";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { useTranslation } from "@/i18n/use-translation";
@@ -31,6 +31,28 @@ export function Unlock() {
   const { unlock } = useWalletStore();
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [activeLabel, setActiveLabel] = useState<string | null>(null);
+
+  // Pré-charge le label du premier wallet du keyring (sans le
+  // déverrouiller). E2.5 — affichage "Portefeuille principal".
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const kr = await Keyring.open();
+        const entries = await kr.list();
+        kr.close();
+        if (cancelled) return;
+        const first = entries.sort((a, b) => b.createdAt - a.createdAt)[0];
+        setActiveLabel(first?.label ?? null);
+      } catch {
+        // Silencieux : le label est purement cosmétique
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function onSubmit() {
     setBusy(true);
@@ -85,27 +107,82 @@ export function Unlock() {
 
   return (
     <AuthShell
-      title="Restaurer un wallet"
-      subtitle={t.unlock.subtitle}
+      title={t.onboarding.unlock.title}
+      subtitle={t.onboarding.unlock.subtitle}
       backTo="/welcome"
-      logoSize={56}
+      logoSize={64}
+      maxWidth="md"
     >
-      <div className="mt-6 space-y-3">
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder={t.unlock.passwordPlaceholder}
-          className="flex h-10 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
+      <div className="mt-2 space-y-4">
+        {/* Card wallet actif */}
+        <div className="flex items-center gap-3 rounded-2xl border bg-card p-3 shadow-sm">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-base font-bold text-primary-foreground">
+            S
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+              {t.onboarding.unlock.activeWallet}
+            </p>
+            <p className="truncate text-sm font-semibold">
+              {activeLabel ?? t.onboarding.unlock.fallbackLabel}
+            </p>
+          </div>
+        </div>
+
+        {/* Mot de passe */}
+        <div>
+          <label
+            htmlFor="unlock-password"
+            className="mb-1.5 block text-xs font-medium"
+          >
+            {t.onboarding.unlock.password}
+          </label>
+          <div className="relative">
+            <input
+              id="unlock-password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={t.onboarding.unlock.passwordPlaceholder}
+              autoComplete="current-password"
+              className="flex h-12 w-full rounded-xl border border-input bg-background px-3 pr-11 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+            <button
+              type="button"
+              aria-label={password ? "Masquer" : "Afficher"}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              {/* Placeholder — œil toggle différé si besoin */}
+            </button>
+          </div>
+        </div>
+
+        {/* Submit */}
         <button
           type="button"
           onClick={onSubmit}
           disabled={busy || !password}
-          className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-primary text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
         >
-          {busy ? t.unlock.unlocking : t.unlock.button}
+          {busy ? t.unlock.unlocking : t.onboarding.unlock.submit}
         </button>
+
+        {/* Liens secondaires */}
+        <div className="space-y-3 pt-4 text-center">
+          <Link
+            to="/import-evm"
+            className="block text-xs font-medium text-primary hover:underline"
+          >
+            {t.onboarding.unlock.forgotPassword}
+          </Link>
+          <button
+            type="button"
+            onClick={() => navigate("/welcome")}
+            className="block w-full text-xs text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {t.onboarding.unlock.useAnother}
+          </button>
+        </div>
       </div>
     </AuthShell>
   );

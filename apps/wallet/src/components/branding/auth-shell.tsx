@@ -14,6 +14,11 @@ interface Props {
   logoSize?: number;
   footer?: ReactNode;
   maxWidth?: "md" | "lg" | "xl";
+  /**
+   * Indicateur d'étape optionnel (E2.5).
+   * Affiche "Étape X sur Y" en haut à droite + barre de progression.
+   */
+  step?: { readonly current: number; readonly total: number };
 }
 
 export function AuthShell({
@@ -26,6 +31,7 @@ export function AuthShell({
   logoSize = 56,
   footer,
   maxWidth = "md",
+  step,
 }: Props) {
   const maxW = {
     md: "max-w-md",
@@ -51,6 +57,27 @@ export function AuthShell({
           <ArrowLeft className="size-4 transition-transform group-hover:-translate-x-0.5" />
           {backLabel}
         </Link>
+      )}
+
+      {step && (
+        <div className="absolute left-1/2 top-6 z-10 w-full max-w-md -translate-x-1/2 px-6">
+          <div className="flex items-center gap-2">
+            <p className="text-[11px] text-muted-foreground">
+              Étape {step.current} sur {step.total}
+            </p>
+            <div className="flex flex-1 gap-1.5">
+              {Array.from({ length: step.total }, (_, i) => (
+                <span
+                  key={i}
+                  className={[
+                    "h-1.5 flex-1 rounded-full transition-colors",
+                    i < step.current ? "bg-primary" : "bg-muted",
+                  ].join(" ")}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       <div className={["w-full", maxW].join(" ")}>

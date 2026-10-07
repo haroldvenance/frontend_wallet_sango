@@ -6,7 +6,9 @@ import { AppShell } from "@/components/layout/app-shell";
 import { useAutoLock } from "@/hooks/use-auto-lock";
 import { useSdkWalletSync } from "@/hooks/use-sdk-wallet-sync";
 import { UnifiedDashboard } from "@/features/dashboard/unified-dashboard";
-import { CreateWallet } from "@/routes/create-wallet";
+const CreateUnifiedRoute = lazy(() =>
+  import("@/routes/create-unified").then((m) => ({ default: m.CreateUnified })),
+);
 const CreateEvmWalletRoute = lazy(() =>
   import("@/routes/create-evm").then((m) => ({ default: m.CreateEvmWallet })),
 );
@@ -55,7 +57,8 @@ export default function App() {
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/welcome" element={<Welcome />} />
-        <Route path="/create" element={<CreateWallet />} />
+        <Route path="/create" element={<CreateUnifiedRoute />} />
+        <Route path="/create-wallet" element={<CreateUnifiedRoute />} />
         <Route path="/import" element={<ImportWallet />} />
         <Route path="/create-evm" element={<CreateEvmWalletRoute />} />
         <Route path="/import-evm" element={<ImportEvmWalletRoute />} />
