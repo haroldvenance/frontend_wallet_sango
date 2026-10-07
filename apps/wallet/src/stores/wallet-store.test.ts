@@ -251,3 +251,67 @@ describe("wallet-store — family", () => {
     expect(useWalletStore.getState().family).toBe("evm");
   });
 });
+
+// ────────────────────────────────────────────────────────────
+//  E2.1.b.7.b — garde-fou cross-family sur setNetworkId (D-E2.1-23)
+// ────────────────────────────────────────────────────────────
+
+describe("wallet-store — setNetworkId cross-family", () => {
+  it("accepte un changement intra-famille Bitcoin (testnet → mainnet)", () => {
+    useWalletStore.setState({
+      format: "bip39",
+      status: "unlocked",
+      networkId: "bitcoin-testnet",
+      family: "bitcoin",
+    });
+    useWalletStore.getState().setNetworkId("bitcoin-mainnet");
+    expect(useWalletStore.getState().networkId).toBe("bitcoin-mainnet");
+    expect(useWalletStore.getState().family).toBe("bitcoin");
+  });
+
+  it("accepte un changement intra-famille EVM (sepolia → bsc)", () => {
+    useWalletStore.setState({
+      format: "bip39",
+      status: "unlocked",
+      networkId: "ethereum-sepolia",
+      family: "evm",
+    });
+    useWalletStore.getState().setNetworkId("bsc");
+    expect(useWalletStore.getState().networkId).toBe("bsc");
+    expect(useWalletStore.getState().family).toBe("evm");
+  });
+
+  it("refuse Bitcoin → EVM", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    useWalletStore.setState({
+      format: "bip39",
+      status: "unlocked",
+      networkId: "bitcoin-testnet",
+      family: "bitcoin",
+    });
+    useWalletStore.getState().setNetworkId("ethereum-sepolia");
+    expect(useWalletStore.getState().networkId).toBe("bitcoin-testnet");
+    expect(useWalletStore.getState().family).toBe("bitcoin");
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("cross-family"),
+    );
+    warn.mockRestore();
+  });
+
+  it("refuse EVM → Bitcoin", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    useWalletStore.setState({
+      format: "bip39",
+      status: "unlocked",
+      networkId: "ethereum-mainnet",
+      family: "evm",
+    });
+    useWalletStore.getState().setNetworkId("bitcoin-mainnet");
+    expect(useWalletStore.getState().networkId).toBe("ethereum-mainnet");
+    expect(useWalletStore.getState().family).toBe("evm");
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("cross-family"),
+    );
+    warn.mockRestore();
+  });
+});

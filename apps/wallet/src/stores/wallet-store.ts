@@ -78,11 +78,16 @@ interface WalletState {
   noWallet: () => void;
   setNetwork: (network: Network) => void;
   /**
-   * Change le `networkId` EVM/Bitcoin actif (persisté depuis
-   * E2.3.a.1). Recalcule `family` dans le même `set()`.
+   * Change le `networkId` actif (persisté depuis E2.3.a.1).
+   * Recalcule `family` dans le même `set()`.
    *
-   * Réservé aux wallets BIP-39 (EVM/Bitcoin). Sans effet sur les
-   * wallets SANGO legacy.
+   * **D-E2.1-23** — refusé si :
+   *   - le format n'est pas `"bip39"` (SANGO legacy) ;
+   *   - le `networkId` cible appartient à une **autre famille** que
+   *     le réseau courant (EVM ↔ Bitcoin).
+   *
+   * Le changement intra-famille est autorisé (ex. EVM : sepolia →
+   * bsc, Bitcoin : testnet → mainnet).
    */
   setNetworkId: (networkId: string) => void;
 }
@@ -135,19 +140,36 @@ export const useWalletStore = create<WalletState>()(
       setNetwork: (network) => set({ network }),
 
       setNetworkId: (networkId) => {
-        // Sécurité : refuse si le wallet actif n'est pas EVM/Bitcoin.
-        const { format } = get();
+        // Sécurité 1 : refuse si le wallet actif n'est pas EVM/Bitcoin.
+        const { format, family: currentFamily } = get();
         if (format !== "bip39") {
           console.warn(
             `wallet-store.setNetworkId: ignored (format="${format}", expected "bip39")`,
           );
           return;
         }
+
+        // Sécurité 2 (D-E2.1-23) : refuse un changement de famille.
+        // Un sélecteur Bitcoin ne doit pas pouvoir basculer vers EVM,
+        // et inversement. Le dispatch par `family` (D-E2.1-18)
+        // suppose que la famille reste stable pendant toute la
+        // session d'un wallet.
+        const nextFamily = resolveChainFamily(networkId);
+        if (nextFamily !== currentFamily) {
+          console.warn(
+            `wallet-store.setNetworkId: ignored cross-family switch ` +
+              `(current="${currentFamily}", next="${nextFamily}", networkId="${networkId}")`,
+          );
+          return;
+        }
+
         // Recalcule family dans le même set() pour éviter toute
-        // fenêtre où (networkId, family) sont incohérents.
+        // fenêtre où (networkId, family) sont incohérents. En
+        // pratique family ne change pas (garde ci-dessus), mais on
+        // garde la cohérence défensive.
         set({
           networkId,
-          family: resolveChainFamily(networkId),
+          family: nextFamily,
         });
       },
     }),

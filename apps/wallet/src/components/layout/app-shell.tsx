@@ -14,6 +14,7 @@ import { NavLink } from "react-router-dom";
 import { LocaleToggle } from "@/components/settings/locale-toggle";
 import { NetworkSelector } from "@/components/settings/network-selector";
 import { BitcoinNetworkBadge } from "@/features/bitcoin/bitcoin-network-badge";
+import { BitcoinNetworkSelector } from "@/features/bitcoin/bitcoin-network-selector";
 import { EvmNetworkBadge } from "@/features/evm/evm-network-badge";
 import { EvmNetworkSelector } from "@/features/evm/evm-network-selector";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
@@ -175,7 +176,14 @@ export function AppShell({ children }: AppShellProps) {
                 <EvmNetworkBadge />
               </>
             )}
-            {isBitcoin && <BitcoinNetworkBadge />}
+            {isBitcoin && (
+              <>
+                <div className="mt-3">
+                  <BitcoinNetworkSelector />
+                </div>
+                <BitcoinNetworkBadge />
+              </>
+            )}
           </div>
         </aside>
 
