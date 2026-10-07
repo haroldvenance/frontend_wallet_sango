@@ -72,4 +72,16 @@ export interface BitcoinRpc {
    * @returns Trois niveaux (fast / normal / slow) en sats/vbyte.
    */
   getFeeRates(): Promise<BitcoinFeeRates>;
+
+  /**
+   * **E2.1.b.5** — broadcast une transaction signée.
+   *
+   * @param rawHex Transaction sérialisée (hex SANS préfixe `0x`).
+   *               Esplora attend ce format exact.
+   * @returns Le txid canonique (hex sans préfixe, 32 bytes).
+   *
+   * L'implémentation concrète (MempoolSpaceRpc) fait un POST
+   * `text/plain` sur `/tx` et valide la réponse.
+   */
+  broadcastTx(rawHex: string): Promise<string>;
 }

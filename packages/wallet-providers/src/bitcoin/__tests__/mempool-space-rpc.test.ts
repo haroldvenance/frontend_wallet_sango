@@ -152,3 +152,80 @@ describe("MempoolSpaceRpc — getFeeRates", () => {
     await expect(rpc.getFeeRates()).rejects.toThrow(/invalid fastestFee/);
   });
 });
+
+describe("MempoolSpaceRpc — broadcastTx", () => {
+  const TXID = "a".repeat(64);
+  const RAW_HEX = "0200000001" + "a".repeat(64) + "00000000";
+
+  it("POST /tx avec body text/plain et retourne le txid", async () => {
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      expect(url).toBe(`${BASE}/tx`);
+      expect(init?.method).toBe("POST");
+      expect(init?.headers).toMatchObject({ "content-type": "text/plain" });
+      expect(init?.body).toBe(RAW_HEX);
+      return new Response(TXID, {
+        status: 200,
+        headers: { "content-type": "text/plain" },
+      });
+    });
+    const rpc = new MempoolSpaceRpc({ baseUrl: BASE, fetch: fetchMock as never });
+    const hash = await rpc.broadcastTx(RAW_HEX);
+    expect(hash).toBe(TXID);
+  });
+
+  it("accepte une réponse 201", async () => {
+    const rpc = new MempoolSpaceRpc({
+      baseUrl: BASE,
+      fetch: vi.fn(async () => new Response(TXID, { status: 201 })) as never,
+    });
+    expect(await rpc.broadcastTx(RAW_HEX)).toBe(TXID);
+  });
+
+  it("rejette un rawHex vide", async () => {
+    const rpc = new MempoolSpaceRpc({
+      baseUrl: BASE,
+      fetch: vi.fn() as never,
+    });
+    await expect(rpc.broadcastTx("")).rejects.toThrow(/non-empty even-length hex/);
+  });
+
+  it("rejette un rawHex impair", async () => {
+    const rpc = new MempoolSpaceRpc({
+      baseUrl: BASE,
+      fetch: vi.fn() as never,
+    });
+    await expect(rpc.broadcastTx("020")).rejects.toThrow(/non-empty even-length hex/);
+  });
+
+  it("rejette un rawHex non-hex", async () => {
+    const rpc = new MempoolSpaceRpc({
+      baseUrl: BASE,
+      fetch: vi.fn() as never,
+    });
+    await expect(rpc.broadcastTx("zzzz")).rejects.toThrow(/non-empty even-length hex/);
+  });
+
+  it("propage un HTTP 400 avec le message d'erreur Esplora", async () => {
+    const rpc = new MempoolSpaceRpc({
+      baseUrl: BASE,
+      fetch: vi.fn(async () =>
+        new Response("bad-txns-inputs-missingorspent", { status: 400 }),
+      ) as never,
+    });
+    await expect(rpc.broadcastTx(RAW_HEX)).rejects.toThrow(
+      /HTTP 400.*bad-txns-inputs-missingorspent/,
+    );
+  });
+
+  it("rejette une réponse 200 avec txid malformé", async () => {
+    const rpc = new MempoolSpaceRpc({
+      baseUrl: BASE,
+      fetch: vi.fn(async () =>
+        new Response("not-a-txid", { status: 200 }),
+      ) as never,
+    });
+    await expect(rpc.broadcastTx(RAW_HEX)).rejects.toThrow(
+      /expected 32-byte hex txid/,
+    );
+  });
+});

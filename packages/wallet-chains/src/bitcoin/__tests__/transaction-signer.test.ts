@@ -41,17 +41,18 @@ const NATIVE_BTC = {
   networkId: "bitcoin-testnet",
 };
 
-function makeChangeProvider() {
+function makeChangeProvider(): BitcoinChangeAddressProvider {
   return {
-    next: vi.fn(
+    getChangeAddress: vi.fn(
       async (): Promise<BitcoinChangeAddress> => ({
         address: "tb1q9u62588spffmq4dzjxsr5l297znf3z6j5p2688",
         script: new Uint8Array([0x00, 0x14, ...new Uint8Array(20)]),
+        derivationIndex: 0,
       }),
     ),
     commit: vi.fn(),
     currentIndex: () => 0,
-  } satisfies BitcoinChangeAddressProvider;
+  };
 }
 
 function makeBuilder(utxoValues: bigint[]) {

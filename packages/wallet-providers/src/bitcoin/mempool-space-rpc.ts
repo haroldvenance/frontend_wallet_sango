@@ -12,8 +12,9 @@ import type { FetchLike } from "../rpc/rpc-pool";
  *
  * **D-E2.1-4** — mempool.space est le backend unique du MVP. Il
  * expose l'Esplora API :
- *   - `GET {baseUrl}/address/{addr}/utxo`
- *   - `GET {baseUrl}/v1/fees/recommended`
+ *   - `GET  {baseUrl}/address/{addr}/utxo`
+ *   - `GET  {baseUrl}/v1/fees/recommended`
+ *   - `POST {baseUrl}/tx` (body = raw hex, text/plain, réponse = txid)
  *
  * La `baseUrl` inclut déjà le préfixe réseau :
  *   - mainnet  : `https://mempool.space/api`
@@ -82,10 +83,63 @@ export class MempoolSpaceRpc implements BitcoinRpc {
     };
   }
 
-  async #fetchOrThrow(url: string, ctx: string): Promise<Response> {
+  async broadcastTx(rawHex: string): Promise<string> {
+    // Validation basique : hex pair, non-vide.
+    if (
+      typeof rawHex !== "string" ||
+      rawHex.length === 0 ||
+      rawHex.length % 2 !== 0 ||
+      !/^[0-9a-fA-F]+$/.test(rawHex)
+    ) {
+      throw new Error(
+        `MempoolSpaceRpc.broadcastTx: expected non-empty even-length hex, got "${rawHex.slice(0, 32)}…"`,
+      );
+    }
+
+    const url = `${this.#baseUrl}/tx`;
     let response: Response;
     try {
-      response = await this.#fetch(url);
+      response = await this.#fetch(url, {
+        method: "POST",
+        headers: { "content-type": "text/plain" },
+        body: rawHex,
+      });
+    } catch (cause) {
+      throw new Error(
+        `MempoolSpaceRpc.broadcastTx: transport error — ${(cause as Error).message}`,
+      );
+    }
+
+    // Esplora retourne :
+    //  - 200/201 : txid en text/plain (succès)
+    //  - 400     : message d'erreur (rejet consensus / mempool)
+    //  - autre   : erreur serveur
+    const text = (await response.text()).trim();
+
+    if (!response.ok) {
+      throw new Error(
+        `MempoolSpaceRpc.broadcastTx: HTTP ${response.status} — ${text || response.statusText}`,
+      );
+    }
+
+    // Validation du txid (32 bytes hex, sans 0x).
+    if (!/^[0-9a-fA-F]{64}$/.test(text)) {
+      throw new Error(
+        `MempoolSpaceRpc.broadcastTx: expected 32-byte hex txid, got "${text.slice(0, 40)}…"`,
+      );
+    }
+
+    return text;
+  }
+
+  async #fetchOrThrow(
+    url: string,
+    ctx: string,
+    init?: RequestInit,
+  ): Promise<Response> {
+    let response: Response;
+    try {
+      response = await this.#fetch(url, init);
     } catch (cause) {
       throw new Error(
         `MempoolSpaceRpc.${ctx}: transport error — ${(cause as Error).message}`,

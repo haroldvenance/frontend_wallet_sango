@@ -15,6 +15,7 @@ export function mockBitcoinRpc(overrides: Partial<BitcoinRpc> = {}): BitcoinRpc 
         slow: 1n,
       }),
     ),
+    broadcastTx: vi.fn(async () => "a".repeat(64)),
     ...overrides,
   };
 }

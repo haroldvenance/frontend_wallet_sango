@@ -41,3 +41,11 @@ export type {
 } from "./transaction-builder";
 
 export { BitcoinTransactionSigner } from "./transaction-signer";
+
+export {
+  BitcoinChangeAddressProviderImpl,
+} from "./change-address-provider";
+
+export { BitcoinBroadcaster } from "./broadcaster";
+export { bitcoinAdapterFactory } from "./adapter";
+export type { BitcoinAdapterDeps } from "./adapter";

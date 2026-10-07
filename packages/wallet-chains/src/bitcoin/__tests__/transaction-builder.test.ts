@@ -30,25 +30,28 @@ function makeChangeProvider(
 ): {
   provider: BitcoinChangeAddressProvider;
   commit: ReturnType<typeof vi.fn>;
-  next: ReturnType<typeof vi.fn>;
+  getChangeAddress: ReturnType<typeof vi.fn>;
 } {
   const commit = vi.fn();
-  const next = vi.fn(async (): Promise<BitcoinChangeAddress> => {
-    return {
-      address,
-      // script trivial pour le test — le builder ne le vérifie pas,
-      // il fait confiance au provider. Le signer (b.4) l'utilisera.
-      script: new Uint8Array([0x00, 0x14, ...new Uint8Array(20)]),
-    };
-  });
+  const getChangeAddress = vi.fn(
+    async (): Promise<BitcoinChangeAddress> => {
+      return {
+        address,
+        // script trivial pour le test — le builder ne le vérifie pas,
+        // il fait confiance au provider. Le signer (b.4) l'utilisera.
+        script: new Uint8Array([0x00, 0x14, ...new Uint8Array(20)]),
+        derivationIndex: 0,
+      };
+    },
+  );
   return {
     provider: {
-      next,
+      getChangeAddress,
       commit,
       currentIndex: () => 0,
     },
     commit,
-    next,
+    getChangeAddress,
   };
 }
 
@@ -68,7 +71,7 @@ function makeBuilder(deps: {
 
 describe("BitcoinTransactionBuilder — happy path", () => {
   it("1 UTXO + change → 1 input + 2 outputs", async () => {
-    const { provider, commit, next } = makeChangeProvider();
+    const { provider, commit, getChangeAddress } = makeChangeProvider();
     const builder = makeBuilder({
       rpc: { getUtxos: vi.fn(async () => [utxo({ value: 100_000n })]) },
       changeProvider: provider,
@@ -97,13 +100,13 @@ describe("BitcoinTransactionBuilder — happy path", () => {
     expect(payload.feeRate).toBe(5n);
     expect(payload.spentUtxos).toHaveLength(1);
 
-    expect(next).toHaveBeenCalledTimes(1);
+    expect(getChangeAddress).toHaveBeenCalledTimes(1);
     // Le builder ne commit PAS — c'est le broadcaster (b.5).
     expect(commit).not.toHaveBeenCalled();
   });
 
   it("sans change → 1 input + 1 output, changeProvider non appelé", async () => {
-    const { provider, commit, next } = makeChangeProvider();
+    const { provider, commit, getChangeAddress } = makeChangeProvider();
     const builder = makeBuilder({
       rpc: { getUtxos: vi.fn(async () => [utxo({ value: 100_000n })]) },
       changeProvider: provider,
@@ -125,7 +128,7 @@ describe("BitcoinTransactionBuilder — happy path", () => {
     expect(payload.tx.outputsLength).toBe(1);
     expect(payload.changeAddress).toBeNull();
     expect(payload.fee).toBe(200n);
-    expect(next).not.toHaveBeenCalled();
+    expect(getChangeAddress).not.toHaveBeenCalled();
     expect(commit).not.toHaveBeenCalled();
   });
 

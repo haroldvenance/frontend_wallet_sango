@@ -36,10 +36,11 @@ import { selectUtxosGreedy } from "./utxo-selector";
  *   - Aucun appel réseau direct : UTXOs et change viennent de
  *     providers injectés.
  *   - Aucun accès au seed : le change est fourni par le
- *     `BitcoinChangeAddressProvider` (b.4/b.5 l'implémentera).
+ *     `BitcoinChangeAddressProvider` (b.5 l'implémente).
  *
  * **Invariant** : aucun appel à `changeAddressProvider.commit()` ici.
- * Le commit n'a lieu qu'après broadcast réussi (D-E2.1-3).
+ * Le commit n'a lieu qu'après broadcast réussi (D-E2.1-3), et c'est
+ * le `BitcoinBroadcaster` qui l'orchestre (b.5).
  */
 
 export interface BitcoinTransactionBuilderDeps {
@@ -128,9 +129,11 @@ export class BitcoinTransactionBuilder implements TransactionBuilder {
     const senderScript = scriptPubKeyFromP2WPKHAddress(sender);
 
     // 7. Réservation d'adresse change (sans commit — D-E2.1-3).
+    //    L'adresse porte son `derivationIndex` explicite (E2.1.b.5),
+    //    ce qui permettra au broadcaster de commit sans parsing.
     let changeAddress: BitcoinChangeAddress | null = null;
     if (selection.hasChange) {
-      changeAddress = await this.#changeProvider.next(this.#btcNetwork);
+      changeAddress = await this.#changeProvider.getChangeAddress();
       assertAddressNetwork(changeAddress.address, this.#btcNetwork);
     }
 

@@ -50,3 +50,11 @@ export const BNB_NATIVE_ASSET: Asset = {
   decimals: 18,
   kind: "native",
 };
+
+/** Asset natif BTC — à enregistrer au boot par l'app (E2.1.b+). */
+export const BTC_NATIVE_ASSET: Asset = {
+  id: "btc",
+  symbol: "BTC",
+  decimals: 8,
+  kind: "native",
+};
