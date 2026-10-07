@@ -33,7 +33,14 @@ beforeEach(() => {
 
 describe("wallet-store — persistance", () => {
   it("persiste networkId après setNetworkId sur BIP-39", () => {
-    useWalletStore.setState({ format: "bip39", status: "unlocked" });
+    // On part d'un EVM (family:"evm") pour que le switch intra-famille
+    // vers "bsc" soit autorisé par le garde-fou D-E2.1-23.
+    useWalletStore.setState({
+      format: "bip39",
+      status: "unlocked",
+      networkId: "ethereum-sepolia",
+      family: "evm",
+    });
     useWalletStore.getState().setNetworkId("bsc");
 
     const raw = localStorage.getItem(PERSIST_KEY);
@@ -195,15 +202,27 @@ describe("wallet-store — family", () => {
     expect(useWalletStore.getState().family).toBe("sango");
   });
 
-  it("setNetworkId met à jour family dans le même set", () => {
+  it("setNetworkId : switch EVM intra-famille conserve family=evm", () => {
     useWalletStore.setState({
       format: "bip39",
       status: "unlocked",
       networkId: "ethereum-sepolia",
       family: "evm",
     });
-    useWalletStore.getState().setNetworkId("bitcoin-testnet");
-    expect(useWalletStore.getState().networkId).toBe("bitcoin-testnet");
+    useWalletStore.getState().setNetworkId("bsc");
+    expect(useWalletStore.getState().networkId).toBe("bsc");
+    expect(useWalletStore.getState().family).toBe("evm");
+  });
+
+  it("setNetworkId : switch Bitcoin intra-famille conserve family=bitcoin", () => {
+    useWalletStore.setState({
+      format: "bip39",
+      status: "unlocked",
+      networkId: "bitcoin-testnet",
+      family: "bitcoin",
+    });
+    useWalletStore.getState().setNetworkId("bitcoin-mainnet");
+    expect(useWalletStore.getState().networkId).toBe("bitcoin-mainnet");
     expect(useWalletStore.getState().family).toBe("bitcoin");
   });
 
