@@ -1,0 +1,51 @@
+# Configuration Netlify — Sango Wallet
+#
+# **Ce fichier vit à la RACINE du repo**. Netlify lit d'abord ce
+# toml, applique `base = "apps/wallet"`, puis se déplace dans ce
+# dossier AVANT d'exécuter la commande.
+#
+# Conséquence : `cd ../..` ramène bien à `/opt/build/repo` (racine),
+# et `publish = "dist"` est résolu relatif à `apps/wallet/`.
+#
+# Sans `base = "apps/wallet"`, Netlify exécute la commande depuis
+# la racine et `publish = "dist"` pointerait sur `/opt/build/repo/dist`
+# (qui n'existe pas).
+
+[build]
+  # Netlify se déplace dans ce dossier avant d'exécuter la commande.
+  base = "apps/wallet"
+
+  # `cd ../..` ramène à la racine du repo (là où est le workspace pnpm).
+  # Puis install du workspace complet + build ciblé sur wallet.
+  command = "cd ../.. && pnpm install --frozen-lockfile && pnpm --filter wallet build"
+
+  # Relatif à `base` (apps/wallet) → /opt/build/repo/apps/wallet/dist
+  publish = "dist"
+
+  environment = { NODE_VERSION = "20", PNPM_VERSION = "9" }
+
+# SPA fallback (react-router BrowserRouter)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers de sécurité
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Cache immutable pour les assets hashés Vite
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# index.html jamais mis en cache long
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
