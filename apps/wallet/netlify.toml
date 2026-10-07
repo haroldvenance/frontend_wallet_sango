@@ -1,0 +1,43 @@
+# Configuration Netlify — Sango Wallet
+#
+# Ce fichier vit dans `apps/wallet/` et est lu par Netlify APRÈS
+# avoir sélectionné "wallet" dans "Project to deploy".
+#
+# Base directory effective : apps/wallet
+# Les chemins publish/redirects sont donc RELATIFS à apps/wallet.
+
+[build]
+  # Netlify a besoin d'installer le workspace pnpm à la racine AVANT
+  # de builder. On remonte (`cd ../..`) et on lance le build ciblé.
+  command = "cd ../.. && pnpm install --frozen-lockfile && pnpm --filter wallet build"
+
+  # Dossier publié, relatif au base (apps/wallet)
+  publish = "dist"
+
+  environment = { NODE_VERSION = "20", PNPM_VERSION = "9" }
+
+# SPA fallback : react-router BrowserRouter
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers de sécurité
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Cache immutable pour les assets hashés par Vite
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# index.html jamais mis en cache long
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
