@@ -1,24 +1,31 @@
-import { evmNetworkById } from "@sango/wallet-chains";
+import {
+  bitcoinNetworkById,
+  evmNetworkById,
+} from "@sango/wallet-chains";
 import { AlertTriangle } from "lucide-react";
 
 /**
- * Bandeau d'avertissement "fonds réels" — E2.3.a.3 (D-E2.3-3).
+ * Bandeau d'avertissement "fonds réels" — E2.3.a.3 / E2.1.b.7.c.
  *
  * Affiche un bandeau ambre si le `networkId` correspond à un réseau
- * **mainnet** EVM connu. Rendu `null` sinon :
- *   - testnet (`isTestnet === true`)      → null
- *   - `networkId` inconnu du registre     → null
- *   - `networkId` SANGO                   → null
+ * **mainnet** d'une famille supportée. Rendu `null` sinon :
+ *   - testnet (`isTestnet === true`)          → null
+ *   - `networkId` inconnu du registre         → null
+ *   - réseau SANGO (`sango-devnet`)           → null
  *
- * **Purement informatif** : pas de confirmation bloquante, pas de
- * case à cocher, pas de modal. Le but est de rendre le réseau visible
- * au moment du choix (sélecteur) et au moment de l'action risquée
- * (envoi).
+ * **D-E2.1-24** — le composant couvre désormais EVM **et** Bitcoin.
+ * Avant, il utilisait `evmNetworkById()` uniquement, ce qui laissait
+ * `bitcoin-mainnet` sans avertissement. Correction : résolution par
+ * famille (`evmNetworkById` puis `bitcoinNetworkById`).
  *
- * **Source de vérité** : `evmNetworkById()` + `network.isTestnet`
- * (D-E1.7-4). Pas de liste locale `["ethereum-mainnet", "base", …]`
- * dans ce composant — la logique testnet/mainnet reste centralisée
- * dans le registre.
+ * **Source de vérité** : `isTestnet` du `Network` (D-E1.7-4). Pas de
+ * liste locale de réseaux.
+ *
+ * **Purement informatif** : pas de confirmation bloquante.
+ *
+ * Le nom du fichier reste `mainnet-warning.tsx` dans
+ * `features/evm/` (compat E2.3.a.3), mais le composant est
+ * maintenant multi-famille.
  */
 
 interface MainnetWarningProps {
@@ -30,8 +37,8 @@ export function MainnetWarning({
   networkId,
   className = "",
 }: MainnetWarningProps) {
-  const network = evmNetworkById(networkId);
-  if (!network || network.isTestnet) return null;
+  const isMainnet = resolveIsMainnet(networkId);
+  if (!isMainnet) return null;
 
   return (
     <div
@@ -51,4 +58,20 @@ export function MainnetWarning({
       </span>
     </div>
   );
+}
+
+/**
+ * Résout "est-ce un mainnet connu ?". Retourne `false` si :
+ *   - réseau inconnu (aucun registre ne matche)
+ *   - réseau testnet
+ *   - famille non supportée par le warning (SANGO)
+ */
+function resolveIsMainnet(networkId: string): boolean {
+  const evm = evmNetworkById(networkId);
+  if (evm) return !evm.isTestnet;
+
+  const btc = bitcoinNetworkById(networkId);
+  if (btc) return !btc.isTestnet;
+
+  return false;
 }

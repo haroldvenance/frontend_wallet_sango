@@ -96,3 +96,28 @@ describe("MainnetWarning — contenu", () => {
     expect(el.className).toContain("custom-xyz");
   });
 });
+
+// ────────────────────────────────────────────────────────────
+//  E2.1.b.7.c — support Bitcoin (D-E2.1-24)
+// ────────────────────────────────────────────────────────────
+
+describe("MainnetWarning — Bitcoin", () => {
+  it("Bitcoin mainnet → bandeau", () => {
+    render(<MainnetWarning networkId="bitcoin-mainnet" />);
+    expect(screen.getByTestId("mainnet-warning")).toBeDefined();
+  });
+
+  it("Bitcoin testnet → null", () => {
+    const { container } = render(
+      <MainnetWarning networkId="bitcoin-testnet" />,
+    );
+    expect(container.firstChild).toBeNull();
+  });
+
+  it("containteur de texte 'fonds réels' affiché sur Bitcoin mainnet", () => {
+    render(<MainnetWarning networkId="bitcoin-mainnet" />);
+    expect(screen.getByTestId("mainnet-warning").textContent).toMatch(
+      /fonds réels/,
+    );
+  });
+});
