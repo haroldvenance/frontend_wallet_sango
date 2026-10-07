@@ -2,8 +2,8 @@ import { useMemo, type ReactNode } from "react";
 
 import { SangoRpcClient } from "@sango/rpc";
 import {
+  ALL_BITCOIN_NETWORKS,
   ALL_EVM_NETWORKS,
-  BITCOIN_TESTNET,
   SANGO_DEVNET,
   bitcoinAdapterFactory,
   createChainRegistry,
@@ -23,6 +23,7 @@ import {
   type WalletSession,
 } from "@sango/wallet-session";
 import { Bip39Wallet } from "@sango/wallet-core";
+import type { BitcoinNetwork } from "@sango/wallet-core";
 import {
   BitcoinChangeAddressProviderImpl,
 } from "@sango/wallet-chains";
@@ -46,9 +47,10 @@ import { WalletSessionContext } from "./wallet-session-context";
  *   - 6 réseaux EVM      : Sepolia, Mainnet, Base, Arbitrum One,
  *                          BSC, BSC Testnet
  *                          (RpcPool + EvmRpcUsingPool).
- *   - BITCOIN_TESTNET    : Bitcoin testnet3 (mempool.space via
- *                          MempoolSpaceRpc + BitcoinChangeAddressProvider).
- *                          Uniquement enregistré si le wallet est BIP-39.
+ *   - Bitcoin            : testnet3 + mainnet (mempool.space via
+ *                          MempoolSpaceRpc + BitcoinChangeAddressProvider,
+ *                          un par réseau). Uniquement enregistrés si le
+ *                          wallet est BIP-39.
  *
  * Le `signer` est multi-courbe (D-SIGNER-1) : `signerFromAnyWallet`
  * route selon le type concret du wallet.
@@ -127,25 +129,32 @@ export function WalletSessionProvider({ children }: WalletSessionProviderProps) 
       );
     }
 
-    // ── Bitcoin (E2.1.b.5) ───────────────────────────────────
+    // ── Bitcoin (E2.1.b.5, étendu E2.1.b.7) ──────────────────
     // Uniquement si le wallet est BIP-39 — sinon pas de dérivation
-    // Bitcoin possible.
+    // Bitcoin possible. Chaque réseau (testnet, mainnet) a son propre
+    // MempoolSpaceRpc + BitcoinChangeAddressProvider (les index de
+    // change sont par-réseau).
     if (wallet instanceof Bip39Wallet) {
-      const mempoolRpc = new MempoolSpaceRpc({
-        baseUrl: BITCOIN_TESTNET.defaultRpcEndpoints[0]!,
-      });
-      const changeProvider = new BitcoinChangeAddressProviderImpl(
-        wallet,
-        "testnet",
-        BITCOIN_TESTNET.id,
-      );
-      chainRegistry.register(BITCOIN_TESTNET, (network) =>
-        bitcoinAdapterFactory(network, {
-          rpc: mempoolRpc,
-          changeProvider,
-          btcNetwork: "testnet",
-        }),
-      );
+      for (const btcNetwork of ALL_BITCOIN_NETWORKS) {
+        const btcFamily: BitcoinNetwork = btcNetwork.isTestnet
+          ? "testnet"
+          : "mainnet";
+        const mempoolRpc = new MempoolSpaceRpc({
+          baseUrl: btcNetwork.defaultRpcEndpoints[0]!,
+        });
+        const changeProvider = new BitcoinChangeAddressProviderImpl(
+          wallet,
+          btcFamily,
+          btcNetwork.id,
+        );
+        chainRegistry.register(btcNetwork, (network) =>
+          bitcoinAdapterFactory(network, {
+            rpc: mempoolRpc,
+            changeProvider,
+            btcNetwork: btcFamily,
+          }),
+        );
+      }
     }
 
     // ── Assets ───────────────────────────────────────────────

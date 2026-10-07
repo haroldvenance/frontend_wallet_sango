@@ -3,10 +3,10 @@ import type { Network } from "../types/network";
 /**
  * Réseaux Bitcoin (E2.1.b).
  *
- * **D-E2.1-2** — Testnet uniquement pour le MVP. Le mainnet sera
- * ajouté dans un patch ultérieur (E2.1.b.7) une fois que le pipeline
- * complet (build → sign → broadcast) est couvert par des fixtures
- * déterministes. Aucun fallback mainnet implicite.
+ * **D-E2.1-2 / D-E2.1-22** — Testnet d'abord (MVP), puis mainnet
+ * ajouté en E2.1.b.7 une fois le pipeline testnet validé. Aucun
+ * fallback mainnet implicite : chaque réseau est une entrée
+ * explicite du registre.
  *
  * **D-E2.1-3** — Bitcoin n'utilise **pas** de `chainId` numérique
  * comme EVM. On expose les magic bytes du réseau (Bitcoin Core
@@ -31,6 +31,9 @@ import type { Network } from "../types/network";
  * **nativeAsset = "btc"** : même convention que ETH/BNB (D-E1.7-2) —
  * on identifie l'asset natif de la chaîne, pas sa variante testnet
  * (pas de "tBTC"). Bitcoin a 8 décimales (1 satoshi = 10^-8 BTC).
+ *
+ * **Défaut de création** (`DEFAULT_BITCOIN_NETWORK_ID`) — conservé
+ * après E2.1.b.7 : onboarding sans fonds réels.
  */
 export const BITCOIN_TESTNET: Network = {
   id: "bitcoin-testnet",
@@ -53,13 +56,52 @@ export const BITCOIN_TESTNET: Network = {
 };
 
 /**
+ * Bitcoin mainnet.
+ *
+ * **D-E2.1-22** — mainnet ajouté en E2.1.b.7 après validation du
+ * pipeline testnet (E2.1.b.1 → E2.1.b.6.4). Même structure que le
+ * testnet : P2WPKH BIP-84, mempool.space, nativeAsset `"btc"`, 8
+ * décimales.
+ *
+ * Différences vs testnet :
+ *   - `chainId` : magic bytes mainnet (Bitcoin Core `pchMessageStart`)
+ *   - HRP bech32 : `bc` (au lieu de `tb`)
+ *   - coinType BIP-44 : `0'` (mainnet) au lieu de `1'` (testnet)
+ *   - explorer / RPC : pas de préfixe `/testnet`
+ *   - `isTestnet: false`
+ *
+ * **Attention** : mainnet utilise des fonds réels. Le faucet
+ * (`BitcoinFaucetButton`) gate sur `bitcoin-testnet` et ne s'affiche
+ * pas ici. `MainnetWarning` s'affiche sur les écrans d'envoi.
+ */
+export const BITCOIN_MAINNET: Network = {
+  id: "bitcoin-mainnet",
+  family: "bitcoin",
+  name: "Bitcoin",
+  // Magic bytes mainnet (Bitcoin Core pchMessageStart).
+  chainId: "0xd9b4bef9",
+  nativeAsset: "btc",
+  isTestnet: false,
+  defaultRpcEndpoints: [
+    "https://mempool.space/api",
+  ],
+  explorer: {
+    baseUrl: "https://mempool.space",
+    txPath: "/tx/{hash}",
+    addressPath: "/address/{addr}",
+  },
+};
+
+/**
  * Tous les réseaux Bitcoin supportés.
  *
- * **D-E2.1-2** — mainnet explicitement absent en E2.1.b. Ajout dans
- * E2.1.b.7 après validation du pipeline testnet.
+ * **Ordre (E2.1.b.7)** : Testnet → Mainnet. Cohérent avec EVM
+ * (Sepolia en premier). Testnet reste le défaut de création pour
+ * l'instant (`DEFAULT_BITCOIN_NETWORK_ID` inchangé).
  */
 export const ALL_BITCOIN_NETWORKS: readonly Network[] = Object.freeze([
   BITCOIN_TESTNET,
+  BITCOIN_MAINNET,
 ]);
 
 /** Raccourci — recherche par id. */

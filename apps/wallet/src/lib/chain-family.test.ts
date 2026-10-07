@@ -23,9 +23,12 @@ describe("resolveChainFamily", () => {
     expect(resolveChainFamily(networkId)).toBe("evm");
   });
 
-  it("Bitcoin : bitcoin-testnet → bitcoin", () => {
-    expect(resolveChainFamily("bitcoin-testnet")).toBe("bitcoin");
-  });
+  it.each(["bitcoin-testnet", "bitcoin-mainnet"])(
+    "Bitcoin : %s → bitcoin",
+    (networkId) => {
+      expect(resolveChainFamily(networkId)).toBe("bitcoin");
+    },
+  );
 
   it.each(["sango-devnet", "sango-testnet", "sango-mainnet"])(
     "SANGO : %s → sango",
@@ -54,8 +57,9 @@ describe("isKnownNetworkId", () => {
     }
   });
 
-  it("Bitcoin : bitcoin-testnet → true", () => {
+  it("Bitcoin : testnet + mainnet → true", () => {
     expect(isKnownNetworkId("bitcoin-testnet")).toBe(true);
+    expect(isKnownNetworkId("bitcoin-mainnet")).toBe(true);
   });
 
   it("SANGO : préfixe sango- → true", () => {
