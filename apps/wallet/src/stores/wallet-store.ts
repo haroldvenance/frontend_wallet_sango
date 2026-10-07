@@ -1,11 +1,13 @@
 import type { Network } from "@sango/types";
 import type { Bip39Wallet, Wallet, WalletFormat } from "@sango/wallet-core";
-import { evmNetworkById } from "@sango/wallet-chains";
+import type { ChainFamily } from "@sango/wallet-chains";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+import { isKnownNetworkId, resolveChainFamily } from "@/lib/chain-family";
+
 /**
- * Union des wallets supportés (legacy SANGO + BIP-39 EVM).
+ * Union des wallets supportés (legacy SANGO + BIP-39 EVM/Bitcoin).
  *
  * Dupliqué de `@sango/wallet-session` pour éviter une dépendance
  * circulaire (session → store, store → session).
@@ -18,19 +20,20 @@ export type AnyWallet = Wallet | Bip39Wallet;
  * ⚠️ Ne contient JAMAIS de seed en clair : uniquement l'instance
  *    `Wallet`/`Bip39Wallet` (dont le secret est privé au runtime JS).
  *
- * **Patch 5 (D-NET-2)** — deux champs de réseau distincts :
- *   - `networkId` : identifiant canonique wallet-chains
- *                   (`"sango-devnet"`, `"ethereum-sepolia"`, …).
- *   - `network`   : label SANGO `"mainnet" | "testnet"` (HRP bech32m,
- *                   pilote les query keys existantes). Dérivé de
- *                   `networkId` pour SANGO ; `"testnet"` par défaut
- *                   pour BIP-39 (aucun sens fonctionnel, les hooks
- *                   EVM lisent `networkId`).
+ * **E2.1.b.6.1 (D-E2.1-18)** — `family` est dérivée de `networkId`
+ * par `resolveChainFamily()`. Elle n'est **jamais** fournie par
+ * l'UI ni persistée. Toute mutation de `networkId` recalcule
+ * `family` dans le même `set()` pour éviter la divergence.
  *
- * **E2.3.a.1 (D-E2.3-1)** — `networkId` est désormais **persisté**
- * dans localStorage (`sango.wallet-session.v1`) pour survivre au
- * reload. Voir `resolveUnlockedNetworkId` pour la logique de fusion
- * entre préférence de session et `networkId` du keyring.
+ * Deux champs de réseau :
+ *   - `networkId` : identifiant canonique wallet-chains
+ *                   (`"sango-devnet"`, `"ethereum-sepolia"`,
+ *                   `"bitcoin-testnet"`, …). **Persisté**.
+ *   - `network`   : label SANGO `"mainnet" | "testnet"` (HRP
+ *                   bech32m, pilote les query keys existantes).
+ *                   Dérivé pour SANGO ; `"testnet"` par défaut pour
+ *                   BIP-39 (aucun sens fonctionnel, les hooks
+ *                   EVM/Bitcoin lisent `networkId`).
  */
 export type WalletStatus = "no-wallet" | "locked" | "unlocked";
 
@@ -42,8 +45,8 @@ export interface UnlockArgs {
    * `networkId` **structurel** du wallet (issu du keyring au
    * déverrouillage, ou du formulaire de création).
    *
-   * Ne pas confondre avec la préférence de session persistée :
-   * `unlock()` arbitre entre les deux via `resolveUnlockedNetworkId`.
+   * ⚠️ La `family` N'EST PAS dans cet objet — elle est dérivée du
+   *    `networkId` par le store (D-E2.1-18).
    */
   readonly networkId: string;
   /** Optionnel — défaut "testnet". Utile uniquement pour SANGO. */
@@ -57,6 +60,11 @@ interface WalletState {
   format: WalletFormat | null;
   /** Identifiant canonique wallet-chains. */
   networkId: string;
+  /**
+   * Famille de chaîne, **dérivée** de `networkId` (D-E2.1-18).
+   * Non persistée — recalculée à chaque mutation de `networkId`.
+   */
+  family: ChainFamily;
   /** Label SANGO (HRP bech32m) — pilote les query keys SANGO. */
   network: Network;
   /** Statut de session. */
@@ -70,10 +78,11 @@ interface WalletState {
   noWallet: () => void;
   setNetwork: (network: Network) => void;
   /**
-   * Change le `networkId` EVM actif (persisté depuis E2.3.a.1).
+   * Change le `networkId` EVM/Bitcoin actif (persisté depuis
+   * E2.3.a.1). Recalcule `family` dans le même `set()`.
    *
-   * Réservé aux wallets BIP-39 (EVM). Sans effet sur les wallets
-   * SANGO legacy — leur réseau est figé par le keyring.
+   * Réservé aux wallets BIP-39 (EVM/Bitcoin). Sans effet sur les
+   * wallets SANGO legacy.
    */
   setNetworkId: (networkId: string) => void;
 }
@@ -87,6 +96,7 @@ export const useWalletStore = create<WalletState>()(
       wallet: null,
       format: null,
       networkId: "sango-devnet",
+      family: "sango",
       network: "testnet",
       status: "no-wallet",
       activeId: null,
@@ -101,6 +111,7 @@ export const useWalletStore = create<WalletState>()(
           wallet,
           format,
           networkId,
+          family: resolveChainFamily(networkId),
           network: network ?? "testnet",
           status: "unlocked",
           activeId: id,
@@ -124,7 +135,7 @@ export const useWalletStore = create<WalletState>()(
       setNetwork: (network) => set({ network }),
 
       setNetworkId: (networkId) => {
-        // Sécurité : refuse si le wallet actif n'est pas EVM.
+        // Sécurité : refuse si le wallet actif n'est pas EVM/Bitcoin.
         const { format } = get();
         if (format !== "bip39") {
           console.warn(
@@ -132,7 +143,12 @@ export const useWalletStore = create<WalletState>()(
           );
           return;
         }
-        set({ networkId });
+        // Recalcule family dans le même set() pour éviter toute
+        // fenêtre où (networkId, family) sont incohérents.
+        set({
+          networkId,
+          family: resolveChainFamily(networkId),
+        });
       },
     }),
     {
@@ -142,26 +158,29 @@ export const useWalletStore = create<WalletState>()(
         : undefined,
       /**
        * **D-E2.3-1** — seule la préférence de session (`networkId`)
-       * est persistée. Ni le wallet (non sérialisable), ni le format,
-       * ni le statut, ni l'activeId ne survivent au reload.
+       * est persistée. `family` est dérivée à la rehydratation.
+       * Ni wallet, ni format, ni statut, ni activeId.
        */
       partialize: (state) => ({ networkId: state.networkId }),
       /**
-       * Au rehydrate, on valide le `networkId` persisté contre le
-       * registre EVM. Un `networkId` inconnu (registre modifié,
-       * localStorage corrompu) est ignoré — on retombe sur la
-       * valeur initiale du store. Le vrai arbitrage (préférence
-       * vs keyring) se fait ensuite dans `unlock()`.
+       * Au rehydrate, on valide le `networkId` persisté contre les
+       * registres EVM/Bitcoin/SANGO. Un `networkId` inconnu est
+       * ignoré — on retombe sur la valeur initiale. `family` est
+       * recalculée pour cohérence (D-E2.1-18).
        */
       merge: (persisted, current) => {
         const p = persisted as { networkId?: unknown } | undefined;
         const candidate =
           typeof p?.networkId === "string" ? p.networkId : null;
         const valid =
-          candidate && evmNetworkById(candidate)
+          candidate && isKnownNetworkId(candidate)
             ? candidate
             : current.networkId;
-        return { ...current, networkId: valid };
+        return {
+          ...current,
+          networkId: valid,
+          family: resolveChainFamily(valid),
+        };
       },
     },
   ),
@@ -171,23 +190,18 @@ export const useWalletStore = create<WalletState>()(
  * Arbitre entre la préférence de session (persistée) et le
  * `networkId` structurel du keyring au moment de l'unlock.
  *
- * **D-E2.3-1** :
+ * **D-E2.3-1 + D-E2.1-18** — la préférence de session est acceptée
+ * **uniquement si** :
+ *   1. elle pointe vers un réseau connu (`isKnownNetworkId`), ET
+ *   2. elle appartient à la **même famille** que le keyring.
  *
- * ```
- *   create/import  →  keyring networkId
- *                          ↓
- *                    préférence session valide ?
- *                    ├─ oui (EVM connu)  →  préférence
- *                    └─ non              →  keyring
- * ```
+ * Cela empêche un wallet Bitcoin de se retrouver sur un réseau EVM
+ * par préférence résiduelle (et vice-versa) — cas réel dès qu'on
+ * ajoute Bitcoin à une app multi-chaînes.
  *
- * - Les wallets **SANGO** ne consultent JAMAIS la préférence : leur
- *   réseau (`sango-devnet`) est figé au create/import.
- * - `ethereum-sepolia` **n'est pas** un fallback. C'est uniquement
- *   le défaut de **création** (choix produit E2.3.a.2). Un couple
- *   (préférence invalide, keyring invalide) signale un état
- *   incohérent : on log une erreur explicite plutôt que de masquer
- *   le problème avec un réseau arbitraire.
+ * `ethereum-sepolia` **n'est pas** un fallback. Un couple
+ * (préférence invalide, keyring invalide) signale un état incohérent :
+ * on log une erreur explicite plutôt que de masquer le problème.
  */
 function resolveUnlockedNetworkId(
   format: WalletFormat,
@@ -199,18 +213,20 @@ function resolveUnlockedNetworkId(
     return keyringNetworkId;
   }
 
-  // BIP-39 : la préférence de session gagne si elle pointe vers un
-  // réseau EVM connu du registre.
-  if (sessionPreference && evmNetworkById(sessionPreference)) {
+  const keyringFamily = resolveChainFamily(keyringNetworkId);
+
+  // Préférence acceptée seulement si connue ET même famille.
+  if (
+    sessionPreference &&
+    isKnownNetworkId(sessionPreference) &&
+    resolveChainFamily(sessionPreference) === keyringFamily
+  ) {
     return sessionPreference;
   }
 
-  // Pas de préférence valide → keyring. Vérifier que le keyring
-  // lui-même n'est pas dans un état invalide (registre modifié,
-  // config drift). On ne masque pas avec un fallback arbitraire.
-  if (!evmNetworkById(keyringNetworkId)) {
+  if (!isKnownNetworkId(keyringNetworkId)) {
     console.error(
-      `[wallet-store] keyring networkId "${keyringNetworkId}" is not a known EVM network. ` +
+      `[wallet-store] keyring networkId "${keyringNetworkId}" is not a known network. ` +
         `Unlocking with the invalid value — downstream reads will fail explicitly.`,
     );
   }

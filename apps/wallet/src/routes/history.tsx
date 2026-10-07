@@ -1,22 +1,22 @@
+import { BitcoinComingSoon } from "@/components/branding/bitcoin-coming-soon";
 import { useWalletStore } from "@/stores/wallet-store";
 
 import { HistoryEvmRoute } from "./history-evm";
 import { SangoHistoryRoute } from "./history-sango";
 
 /**
- * Dispatcher `/history` — UX-2.b.
+ * Dispatcher `/history` — UX-2.b + E2.1.b.6.1.
  *
- * Route canonique unique pour l'historique. Dispatch sur
- * `wallet.format` (pas sur l'URL, pas sur `networkId`) :
+ * **D-E2.1-18** — dispatch sur `family`, pas `format`. Voir la note
+ * dans `send.tsx` : `format === "bip39"` couvre EVM + Bitcoin.
  *
- *   format === "sango-legacy" → <SangoHistoryRoute />
- *   format === "bip39"        → <HistoryEvmRoute />
- *
- * La route `/history-evm` reste publique comme alias, mais redirige
- * ici (via `<Navigate replace />` dans App.tsx).
+ *   family === "sango"   → <SangoHistoryRoute />
+ *   family === "evm"     → <HistoryEvmRoute />
+ *   family === "bitcoin" → <BitcoinComingSoon /> (E2.1.b.6.2)
  */
 export function HistoryRoute() {
-  const format = useWalletStore((s) => s.format);
-  if (format === "bip39") return <HistoryEvmRoute />;
+  const family = useWalletStore((s) => s.family);
+  if (family === "bitcoin") return <BitcoinComingSoon feature="Historique" />;
+  if (family === "evm") return <HistoryEvmRoute />;
   return <SangoHistoryRoute />;
 }

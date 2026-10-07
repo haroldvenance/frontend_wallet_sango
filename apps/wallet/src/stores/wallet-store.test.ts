@@ -20,6 +20,7 @@ beforeEach(() => {
     wallet: null,
     format: null,
     networkId: "sango-devnet",
+    family: "sango",
     network: "testnet",
     status: "no-wallet",
     activeId: null,
@@ -156,5 +157,97 @@ describe("wallet-store — resolveUnlockedNetworkId", () => {
       networkId: "ethereum-sepolia",
     });
     expect(useWalletStore.getState().networkId).toBe("base");
+  });
+});
+
+// ────────────────────────────────────────────────────────────
+//  E2.1.b.6.1 — family dérivée de networkId (D-E2.1-18)
+// ────────────────────────────────────────────────────────────
+
+describe("wallet-store — family", () => {
+  it("unlock BIP-39 EVM → family=evm", () => {
+    useWalletStore.getState().unlock({
+      wallet: fakeBip39Wallet,
+      id: "0xabc",
+      format: "bip39",
+      networkId: "ethereum-sepolia",
+    });
+    expect(useWalletStore.getState().family).toBe("evm");
+  });
+
+  it("unlock BIP-39 Bitcoin → family=bitcoin", () => {
+    useWalletStore.getState().unlock({
+      wallet: fakeBip39Wallet,
+      id: "0xabc",
+      format: "bip39",
+      networkId: "bitcoin-testnet",
+    });
+    expect(useWalletStore.getState().family).toBe("bitcoin");
+  });
+
+  it("unlock SANGO → family=sango", () => {
+    useWalletStore.getState().unlock({
+      wallet: fakeSangoWallet,
+      id: "0xabc",
+      format: "sango-legacy",
+      networkId: "sango-devnet",
+    });
+    expect(useWalletStore.getState().family).toBe("sango");
+  });
+
+  it("setNetworkId met à jour family dans le même set", () => {
+    useWalletStore.setState({
+      format: "bip39",
+      status: "unlocked",
+      networkId: "ethereum-sepolia",
+      family: "evm",
+    });
+    useWalletStore.getState().setNetworkId("bitcoin-testnet");
+    expect(useWalletStore.getState().networkId).toBe("bitcoin-testnet");
+    expect(useWalletStore.getState().family).toBe("bitcoin");
+  });
+
+  it("préférence EVM ignorée pour un keyring Bitcoin", () => {
+    // Store préférence = EVM, keyring = Bitcoin. Familles différentes
+    // → préférence rejetée, family=bitcoin cohérent avec keyring.
+    useWalletStore.setState({
+      networkId: "ethereum-sepolia",
+      family: "evm",
+    });
+    useWalletStore.getState().unlock({
+      wallet: fakeBip39Wallet,
+      id: "0xabc",
+      format: "bip39",
+      networkId: "bitcoin-testnet",
+    });
+    expect(useWalletStore.getState().networkId).toBe("bitcoin-testnet");
+    expect(useWalletStore.getState().family).toBe("bitcoin");
+  });
+
+  it("préférence Bitcoin ignorée pour un keyring EVM", () => {
+    useWalletStore.setState({
+      networkId: "bitcoin-testnet",
+      family: "bitcoin",
+    });
+    useWalletStore.getState().unlock({
+      wallet: fakeBip39Wallet,
+      id: "0xabc",
+      format: "bip39",
+      networkId: "ethereum-sepolia",
+    });
+    expect(useWalletStore.getState().networkId).toBe("ethereum-sepolia");
+    expect(useWalletStore.getState().family).toBe("evm");
+  });
+
+  it("préférence mainnet EVM conservée pour un keyring EVM (D-E2.3-1)", () => {
+    useWalletStore.setState({ networkId: "bsc", family: "evm" });
+    useWalletStore.getState().unlock({
+      wallet: fakeBip39Wallet,
+      id: "0xabc",
+      format: "bip39",
+      networkId: "ethereum-sepolia",
+    });
+    expect(useWalletStore.getState().networkId).toBe("bsc");
+    expect(useWalletStore.getState().family).toBe("evm");
   });
 });
