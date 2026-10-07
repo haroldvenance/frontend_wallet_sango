@@ -39,3 +39,5 @@ export type {
   BitcoinTransactionBuilderDeps,
   BitcoinUnsignedPayload,
 } from "./transaction-builder";
+
+export { BitcoinTransactionSigner } from "./transaction-signer";

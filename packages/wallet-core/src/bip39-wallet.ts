@@ -1,8 +1,15 @@
 import { mnemonicToSeed, mnemonicToSeedSync } from "./bip39";
 import { deriveEvmKeypair, EVM_DEFAULT_PATH } from "./derivation";
+import {
+  deriveBitcoinIdentity,
+  type BitcoinIdentity,
+  type BitcoinNetwork,
+} from "./derivation/bitcoin";
 import { deriveEthereumAddress } from "./secp256k1";
 import {
+  secp256k1KeypairFromPrivateKey,
   secp256k1SignDigest,
+  secp256k1SignDigestDer,
   secp256k1SignDigestRecoverable,
   secp256k1SignMessage,
 } from "./secp256k1/keypair";
@@ -181,6 +188,70 @@ export class Bip39Wallet {
     }
     const kp = deriveEvmKeypair(this.#seed, index);
     return secp256k1SignDigestRecoverable(kp, digest);
+  }
+
+  // ── Bitcoin (E2.1.b.4) ───────────────────────────────────
+
+  /**
+   * Dérive l'identité Bitcoin (clé + adresse + script) pour un index.
+   *
+   * **D-E2.1-16** — `change = 0` par défaut (réception). Le change
+   * (`m/84'/…/1/index`) n'est pas signé dans ce MVP — le change index
+   * tracking complet viendra plus tard.
+   */
+  getBitcoinIdentity(
+    network: BitcoinNetwork,
+    change: 0 | 1 = 0,
+    index = 0,
+  ): BitcoinIdentity {
+    this.#assertAlive();
+    return deriveBitcoinIdentity(this.#seed, { network, change, index });
+  }
+
+  /**
+   * **E2.1.b.4 (D-E2.1-10)** — signe un digest 32 bytes et retourne
+   * une signature **DER** (Bitcoin / BIP-143).
+   *
+   * Pour `family === "evm"` : dérive la clé EVM (coinType 60) —
+   * utile pour signature générique ECDSA DER si un protocole EVM
+   * le demande (rare).
+   *
+   * Pour `family === "bitcoin"` : dérive la clé Bitcoin (coinType
+   * 0 ou 1 selon `network`), puis signe.
+   *
+   * ⚠️ Ne PAS concaténer le sighash byte ici — c'est le
+   *    `BitcoinTransactionSigner` qui produit `der || sighashByte`.
+   */
+  async signEcdsaDer(
+    digest: Uint8Array,
+    args: {
+      readonly family: "evm" | "bitcoin";
+      readonly network?: BitcoinNetwork;
+      readonly index?: number;
+    },
+  ): Promise<Uint8Array> {
+    this.#assertAlive();
+    if (digest.length !== 32) {
+      throw new Error(`digest must be 32 bytes, got ${digest.length}`);
+    }
+    const index = args.index ?? 0;
+    if (args.family === "evm") {
+      const kp = deriveEvmKeypair(this.#seed, index);
+      return secp256k1SignDigestDer(kp, digest);
+    }
+    if (args.family === "bitcoin") {
+      const network: BitcoinNetwork = args.network ?? "testnet";
+      const identity = deriveBitcoinIdentity(this.#seed, {
+        network,
+        change: 0,
+        index,
+      });
+      const kp = secp256k1KeypairFromPrivateKey(identity.privateKey);
+      return secp256k1SignDigestDer(kp, digest);
+    }
+    // Exhaustive check
+    const _exhaustive: never = args.family;
+    throw new Error(`signEcdsaDer: unsupported family "${_exhaustive}"`);
   }
 
   // ── Persistence ─────────────────────────────────────────────

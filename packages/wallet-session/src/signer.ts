@@ -1,4 +1,5 @@
 import { Bip39Wallet, Wallet } from "@sango/wallet-core";
+import type { BitcoinNetwork } from "@sango/wallet-core";
 
 import type { AccountRef, Signer } from "@sango/wallet-chains";
 
@@ -23,7 +24,7 @@ export type AnyWallet = Wallet | Bip39Wallet;
 export function signerFromWallet(wallet: Wallet): Signer {
   return {
     async getPublicKey(account: AccountRef): Promise<Uint8Array> {
-      assertFamily(account, "sango", "signerFromWallet");
+      assertFamily(account, ["sango"], "signerFromWallet");
       return wallet.identity.publicKey;
     },
     async signDomain(
@@ -31,7 +32,7 @@ export function signerFromWallet(wallet: Wallet): Signer {
       payload: Uint8Array,
       account: AccountRef,
     ): Promise<Uint8Array> {
-      assertFamily(account, "sango", "signerFromWallet");
+      assertFamily(account, ["sango"], "signerFromWallet");
       return wallet.signDomain(domain, payload);
     },
     // Pas de signDigestRecoverable — Ed25519 n'a pas de recovery bit.
@@ -49,26 +50,79 @@ export function signerFromWallet(wallet: Wallet): Signer {
  */
 export function signerFromBip39Wallet(wallet: Bip39Wallet): Signer {
   return {
+    /**
+     * **E2.1.b.4** — dispatch multi-famille :
+     *   - `family === "evm"` → clé publique **non-compressed** 65 bytes
+     *     (requis par `deriveEthereumAddress`).
+     *   - `family === "bitcoin"` → clé publique **compressed** 33 bytes
+     *     (requis par P2WPKH, vérifiable contre le `witnessUtxo`).
+     *
+     * **D-E2.1-16** : c'est le premier endroit où une méthode du
+     * `Signer` retourne un format **différent** selon la famille.
+     * Chaque consommateur sait ce qu'il attend de sa famille.
+     */
     async getPublicKey(account: AccountRef): Promise<Uint8Array> {
-      assertFamily(account, "evm", "signerFromBip39Wallet");
-      return wallet.getIdentity(account.accountIndex).publicKeyUncompressed;
+      assertFamily(account, ["evm", "bitcoin"], "signerFromBip39Wallet");
+      if (account.family === "evm") {
+        return wallet.getIdentity(account.accountIndex).publicKeyUncompressed;
+      }
+      // bitcoin
+      const network = btcNetworkFromNetworkId(account.networkId);
+      const identity = wallet.getBitcoinIdentity(network, 0, account.accountIndex);
+      return identity.publicKeyCompressed;
     },
+
     async signDomain(
       domain: Uint8Array,
       payload: Uint8Array,
       account: AccountRef,
     ): Promise<Uint8Array> {
-      assertFamily(account, "evm", "signerFromBip39Wallet");
+      assertFamily(account, ["evm"], "signerFromBip39Wallet.signDomain");
       return wallet.signDomain(domain, payload, account.accountIndex);
     },
+
     async signDigestRecoverable(
       digest: Uint8Array,
       account: AccountRef,
     ): Promise<{ compact: Uint8Array; recovery: 0 | 1 }> {
-      assertFamily(account, "evm", "signerFromBip39Wallet");
+      assertFamily(account, ["evm"], "signerFromBip39Wallet.signDigestRecoverable");
       return wallet.signDigestRecoverable(digest, account.accountIndex);
     },
+
+    /**
+     * **E2.1.b.4 (D-E2.1-10)** — signature ECDSA DER. Supporte EVM
+     * (usage générique) et Bitcoin (BIP-143 / P2WPKH).
+     */
+    async signEcdsaDer(
+      digest: Uint8Array,
+      account: AccountRef,
+    ): Promise<Uint8Array> {
+      assertFamily(account, ["evm", "bitcoin"], "signerFromBip39Wallet.signEcdsaDer");
+      if (account.family === "evm") {
+        return wallet.signEcdsaDer(digest, {
+          family: "evm",
+          index: account.accountIndex,
+        });
+      }
+      const network = btcNetworkFromNetworkId(account.networkId);
+      return wallet.signEcdsaDer(digest, {
+        family: "bitcoin",
+        network,
+        index: account.accountIndex,
+      });
+    },
   };
+}
+
+/**
+ * Résout le réseau Bitcoin depuis un `networkId` wallet-chains.
+ *
+ * **Limitation MVP** : mainnet non enregistré (D-E2.1-2). Toute
+ * valeur non "bitcoin-testnet" renvoie "testnet" pour rester
+ * tolérant, mais un futur patch mainnet devra être plus strict.
+ */
+function btcNetworkFromNetworkId(networkId: string): BitcoinNetwork {
+  return networkId === "bitcoin-mainnet" ? "mainnet" : "testnet";
 }
 
 /**
@@ -95,12 +149,12 @@ export function signerFromAnyWallet(wallet: AnyWallet): Signer {
 
 function assertFamily(
   account: AccountRef,
-  expected: "sango" | "evm",
+  expected: readonly ("sango" | "evm" | "bitcoin")[],
   ctx: string,
 ): void {
-  if (account.family !== expected) {
+  if (!expected.includes(account.family as "sango" | "evm" | "bitcoin")) {
     throw new Error(
-      `${ctx}: account.family is "${account.family}" but this signer only handles "${expected}"`,
+      `${ctx}: account.family is "${account.family}" but this signer only handles ${expected.map((f) => `"${f}"`).join(" | ")}`,
     );
   }
 }

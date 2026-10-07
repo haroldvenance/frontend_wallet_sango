@@ -72,6 +72,36 @@ export function secp256k1SignMessage(
 }
 
 /**
+ * **E2.1.b.4** — signe un digest 32 bytes et retourne une signature
+ * **DER** (ASN.1). Requis par Bitcoin (BIP-143 / P2WPKH).
+ *
+ * Différent de `secp256k1SignDigest` (compact 64 bytes, format EVM).
+ * Bitcoin impose un DER strictement encodé (avec low-S, ce que
+ * @noble/curves produit par défaut).
+ *
+ * ⚠️ Ne PAS concaténer le `sighashType` ici : c'est la responsabilité
+ *    du caller (BitcoinTransactionSigner), qui produit
+ *    `der || sighashByte`.
+ */
+export function secp256k1SignDigestDer(
+  keypair: Secp256k1Keypair,
+  digest: Uint8Array,
+): Uint8Array {
+  assertLength(digest, 32, "digest");
+  const der = secp256k1.sign(digest, keypair.privateKey, {
+    prehash: false,
+    format: "der",
+  });
+  if (!(der instanceof Uint8Array)) {
+    throw new Error(
+      "secp256k1SignDigestDer: secp256k1.sign did not return Uint8Array — " +
+        "check @noble/curves version supports format: 'der'",
+    );
+  }
+  return der;
+}
+
+/**
  * Signature secp256k1 **recoverable** — utile pour Ethereum (EIP-1559
  * yParity 0 | 1) et Bitcoin (v 27..34).
  *

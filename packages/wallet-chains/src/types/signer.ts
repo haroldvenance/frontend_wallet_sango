@@ -51,4 +51,23 @@ export interface Signer {
     digest: Uint8Array,
     account: AccountRef,
   ): Promise<RecoverableDigestSignature>;
+
+  /**
+   * **E2.1.b.4 (D-E2.1-10)** — signe un digest 32 bytes et retourne
+   * une signature **DER** (ASN.1, low-S).
+   *
+   * Requis par Bitcoin (BIP-143 / P2WPKH). Générique ECDSA —
+   * utilisable par tout protocole exigeant du DER.
+   *
+   * **Optionnel** — présent uniquement sur les signers qui savent
+   * dériver une clé secp256k1 pour la famille de l'`account`.
+   * Un Signer Ed25519 (SANGO) peut l'omettre.
+   *
+   * ⚠️ Retourne UNIQUEMENT la signature DER. Le caller concatène
+   *    le `sighashType` byte si son protocole le requiert (Bitcoin).
+   */
+  signEcdsaDer?(
+    digest: Uint8Array,
+    account: AccountRef,
+  ): Promise<Uint8Array>;
 }
