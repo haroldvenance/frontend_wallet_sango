@@ -72,6 +72,7 @@ describe("useEvmAllowance — lecture", () => {
       format: "bip39",
       status: "unlocked",
       networkId: "bsc",
+    family: "evm",
     });
     const { session, getAllowance } = makeSession(5_000n);
     const qc = makeQc();
@@ -96,6 +97,7 @@ describe("useEvmAllowance — lecture", () => {
       format: "bip39",
       status: "unlocked",
       networkId: "bsc",
+    family: "evm",
     });
     const { session, getAllowance } = makeSession();
     const qc = makeQc();
@@ -114,6 +116,7 @@ describe("useEvmAllowance — lecture", () => {
       format: "bip39",
       status: "unlocked",
       networkId: "bsc",
+    family: "evm",
     });
     const { session, getAllowance } = makeSession();
     const qc = makeQc();
@@ -132,6 +135,7 @@ describe("useEvmAllowance — lecture", () => {
       format: "bip39",
       status: "unlocked",
       networkId: "bsc",
+    family: "evm",
     });
     const qc = makeQc();
 
@@ -148,6 +152,7 @@ describe("useEvmAllowance — lecture", () => {
       format: "sango-legacy",
       status: "unlocked",
       networkId: "sango-devnet",
+    family: "sango",
     });
     const { session, getAllowance } = makeSession();
     const qc = makeQc();
@@ -168,6 +173,7 @@ describe("useEvmAllowance — clé de cache", () => {
       format: "bip39",
       status: "unlocked",
       networkId: "bsc",
+    family: "evm",
     });
     const { session } = makeSession();
     const qc = makeQc();
@@ -198,6 +204,7 @@ describe("useEvmAllowance — erreurs", () => {
       format: "bip39",
       status: "unlocked",
       networkId: "bsc",
+    family: "evm",
     });
     const session = {
       getAllowance: vi.fn(async () => {

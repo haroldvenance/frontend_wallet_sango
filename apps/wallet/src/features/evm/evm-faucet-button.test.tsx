@@ -19,6 +19,7 @@ beforeEach(() => {
     format: "bip39",
     status: "unlocked",
     networkId: "ethereum-sepolia",
+    family: "evm",
   });
 });
 

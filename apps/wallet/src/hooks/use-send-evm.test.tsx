@@ -77,6 +77,7 @@ describe("🔒 useSendEvm — nativeAsset par réseau", () => {
       format: "bip39",
       status: "unlocked",
       networkId: "ethereum-mainnet",
+    family: "evm",
     });
     const { session, send } = makeSession();
     const qc = makeQc();
@@ -106,6 +107,7 @@ describe("🔒 useSendEvm — nativeAsset par réseau", () => {
       format: "bip39",
       status: "unlocked",
       networkId: "bsc",
+    family: "evm",
     });
     const { session, send } = makeSession();
     const qc = makeQc();
@@ -134,6 +136,7 @@ describe("🔒 useSendEvm — nativeAsset par réseau", () => {
       format: "bip39",
       status: "unlocked",
       networkId: "bsc-testnet",
+    family: "evm",
     });
     const { session, send } = makeSession();
     const qc = makeQc();

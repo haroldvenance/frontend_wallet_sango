@@ -111,6 +111,7 @@ describe("useApproveEvm — mapping SendParams", () => {
       format: "bip39",
       status: "unlocked",
       networkId: "ethereum-mainnet",
+    family: "evm",
     });
     const { session, send } = makeSession();
     const qc = makeQc();
@@ -144,6 +145,7 @@ describe("useApproveEvm — mapping SendParams", () => {
       format: "bip39",
       status: "unlocked",
       networkId: "bsc",
+    family: "evm",
     });
     const { session, send } = makeSession();
     const qc = makeQc();
@@ -169,6 +171,7 @@ describe("useApproveEvm — mapping SendParams", () => {
       format: "bip39",
       status: "unlocked",
       networkId: "bsc",
+    family: "evm",
     });
     const { session, send } = makeSession();
     const qc = makeQc();
@@ -192,6 +195,7 @@ describe("useApproveEvm — mapping SendParams", () => {
       format: "bip39",
       status: "unlocked",
       networkId: "ethereum-mainnet",
+    family: "evm",
     });
     const { session, send } = makeSession();
     const qc = makeQc();
@@ -215,6 +219,7 @@ describe("useApproveEvm — mapping SendParams", () => {
       format: "sango-legacy",
       status: "unlocked",
       networkId: "sango-devnet",
+    family: "sango",
     });
     const { session, send } = makeSession();
     const qc = makeQc();
@@ -238,6 +243,7 @@ describe("useApproveEvm — mapping SendParams", () => {
       format: "bip39",
       status: "unlocked",
       networkId: "ethereum-mainnet",
+    family: "evm",
     });
     const qc = makeQc();
 
