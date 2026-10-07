@@ -1,11 +1,14 @@
-import { evmNetworkById } from "@sango/wallet-chains";
+import { bitcoinNetworkById, evmNetworkById } from "@sango/wallet-chains";
 
+import { BitcoinComingSoon } from "@/components/branding/bitcoin-coming-soon";
 import { AssetList } from "@/components/wallet/asset-list";
 import { BalanceCard } from "@/components/wallet/balance-card";
 import { MyStakingCard } from "@/components/wallet/my-staking-card";
 import { NetworkOverviewCard } from "@/components/wallet/network-overview-card";
 import { QuickActions } from "@/components/wallet/quick-actions";
 import { RecentActivity } from "@/components/wallet/recent-activity";
+import { BitcoinAssetList } from "@/features/bitcoin/bitcoin-asset-list";
+import { BitcoinBalanceCard } from "@/features/bitcoin/bitcoin-balance-card";
 import { AssetListEvm } from "@/features/evm/asset-list-evm";
 import { BalanceCardEvm } from "@/features/evm/balance-card-evm";
 import { HistoryListEvm } from "@/features/evm/history-list-evm";
@@ -14,32 +17,38 @@ import { useTranslation } from "@/i18n/use-translation";
 import { useWalletStore } from "@/stores/wallet-store";
 
 /**
- * Dashboard unifié SANGO + EVM (UX-1).
+ * Dashboard unifié SANGO + EVM + Bitcoin (E2.1.b.6.2).
  *
- * Un seul layout visuel pour les deux formats. Dispatch slot par slot :
+ * **D-E2.1-18** — dispatch sur `family` (dérivée de `networkId`), pas
+ * sur `format`. `format === "bip39"` couvre EVM **et** Bitcoin :
+ * ce n'est pas un discriminant valide pour la famille.
  *
- *   ActionsRow    → QuickActions (SANGO) | QuickActionsEvm
- *   HeroCard      → BalanceCard (SANGO) | BalanceCardEvm
- *   AssetSection  → AssetList (SANGO)   | AssetListEvm
- *   Activity      → RecentActivity      | HistoryListEvm
- *   Staking       → MyStakingCard       | (absent)
- *   NetworkInfo   → NetworkOverviewCard | (absent)
+ * Slot par slot :
  *
- * La cohérence visuelle est assurée par les composants UI universels
- * (`HeroAssetCard`, `AssetSection`, `ActionsRow`, `ActivitySection`).
+ *   ActionsRow   → QuickActions (SANGO) | QuickActionsEvm | ComingSoon
+ *   HeroCard     → BalanceCard | BalanceCardEvm | BitcoinBalanceCard
+ *   AssetSection → AssetList  | AssetListEvm  | BitcoinAssetList
+ *   Activity     → RecentActivity | HistoryListEvm | ComingSoon
+ *   Staking      → MyStakingCard | (absent)
+ *   NetworkInfo  → NetworkOverviewCard | (absent)
  *
- * **Aucun changement de modèle** — wallet-store reste la source de
- * vérité pour `format` et `networkId`.
+ * Les slots Bitcoin "Actions rapides" et "Activité" restent des
+ * placeholders (ComingSoon) tant que les livraisons E2.1.b.6.3 (send)
+ * et un futur patch history ne sont pas faits.
  */
 export function UnifiedDashboard() {
   const t = useTranslation();
-  const format = useWalletStore((s) => s.format);
+  const family = useWalletStore((s) => s.family);
   const networkId = useWalletStore((s) => s.networkId);
-  const isSango = format === "sango-legacy";
+
+  const isSango = family === "sango";
+  const isBitcoin = family === "bitcoin";
 
   const subtitle = isSango
     ? t.dashboard.overview
-    : `Wallet EVM · ${evmNetworkById(networkId)?.name ?? networkId}`;
+    : isBitcoin
+      ? `Wallet Bitcoin · ${bitcoinNetworkById(networkId)?.name ?? networkId}`
+      : `Wallet EVM · ${evmNetworkById(networkId)?.name ?? networkId}`;
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -51,20 +60,28 @@ export function UnifiedDashboard() {
       </div>
 
       <div className="space-y-8">
-        {/* Actions */}
-        {isSango ? <QuickActions /> : <QuickActionsEvm />}
+        {/* Actions rapides */}
+        {isSango && <QuickActions />}
+        {family === "evm" && <QuickActionsEvm />}
+        {isBitcoin && <BitcoinComingSoon feature="Actions rapides" />}
 
         {/* Hero card (solde + adresse) */}
-        {isSango ? <BalanceCard /> : <BalanceCardEvm />}
+        {isSango && <BalanceCard />}
+        {family === "evm" && <BalanceCardEvm />}
+        {isBitcoin && <BitcoinBalanceCard />}
 
         {/* Assets */}
-        {isSango ? <AssetList /> : <AssetListEvm />}
+        {isSango && <AssetList />}
+        {family === "evm" && <AssetListEvm />}
+        {isBitcoin && <BitcoinAssetList />}
 
         {/* Staking (SANGO uniquement) */}
         {isSango && <MyStakingCard />}
 
         {/* Activité récente */}
-        {isSango ? <RecentActivity /> : <HistoryListEvm />}
+        {isSango && <RecentActivity />}
+        {family === "evm" && <HistoryListEvm />}
+        {isBitcoin && <BitcoinComingSoon feature="Activité" />}
 
         {/* Réseau SANGO (height, validators — SANGO uniquement) */}
         {isSango && <NetworkOverviewCard />}

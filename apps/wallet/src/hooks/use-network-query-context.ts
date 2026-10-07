@@ -1,8 +1,10 @@
 import { useMemo } from "react";
 
-import { evmNetworkById } from "@sango/wallet-chains";
+import {
+  bitcoinNetworkById,
+  evmNetworkById,
+} from "@sango/wallet-chains";
 import type { AccountRef, ChainFamily } from "@sango/wallet-chains";
-import type { WalletFormat } from "@sango/wallet-core";
 
 import { useSdkStore } from "@/stores/sdk-store";
 import { useWalletStore } from "@/stores/wallet-store";
@@ -54,11 +56,10 @@ export interface NetworkQueryContext {
 
 export function useNetworkQueryContext(): NetworkQueryContext {
   const sangoEndpoint = useSdkStore((s) => s.endpoint);
-  const format = useWalletStore((s) => s.format);
+  const family = useWalletStore((s) => s.family);
   const networkId = useWalletStore((s) => s.networkId);
 
   return useMemo(() => {
-    const family = familyFromFormat(format);
     const nativeAsset = resolveNativeAsset(family, networkId);
     const endpoint = resolveEndpoint(family, sangoEndpoint, networkId);
     return {
@@ -72,7 +73,7 @@ export function useNetworkQueryContext(): NetworkQueryContext {
         networkId,
       },
     };
-  }, [sangoEndpoint, format, networkId]);
+  }, [sangoEndpoint, family, networkId]);
 }
 
 /**
@@ -92,6 +93,10 @@ function resolveEndpoint(
   networkId: string,
 ): string {
   if (family === "sango") return sangoEndpoint;
+  if (family === "bitcoin") {
+    const network = bitcoinNetworkById(networkId);
+    return network?.defaultRpcEndpoints[0] ?? "";
+  }
   const network = evmNetworkById(networkId);
   return network?.defaultRpcEndpoints[0] ?? "";
 }
@@ -107,18 +112,9 @@ function resolveNativeAsset(
   networkId: string,
 ): string | null {
   if (family === "sango") return "sango";
+  if (family === "bitcoin") return "btc";
   const network = evmNetworkById(networkId);
   return network?.nativeAsset ?? null;
 }
 
-/**
- * Dérive la famille wallet-chains depuis le format wallet-core.
- *
- * `null` (aucun wallet) → `"sango"` par défaut. Les hooks protégés par
- * `status === "unlocked"` ne s'exécutent de toute façon pas avant le
- * déverrouillage.
- */
-function familyFromFormat(format: WalletFormat | null): ChainFamily {
-  if (format === "bip39") return "evm";
-  return "sango";
-}
+
