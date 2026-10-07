@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ActionsRow } from "@/components/ui/actions-row";
+import { BitcoinFaucetButton } from "./bitcoin-faucet-button";
 import { useBitcoinAddress } from "@/hooks/use-bitcoin-address";
 import { useClipboard } from "@/hooks/use-clipboard";
 
@@ -11,8 +12,7 @@ import { useClipboard } from "@/hooks/use-clipboard";
  * Send → /send (dispatch vers SendBitcoinRoute).
  * Receive → copie l'adresse `tb1q…` (pas de modal dédié en 6.3,
  * même pattern que `QuickActionsEvm`).
- *
- * Pas de faucet en 6.3 (viendra en 6.4).
+ * Faucet → lien externe testnet (E2.1.b.6.4).
  */
 export function QuickActionsBitcoin() {
   const navigate = useNavigate();
@@ -32,6 +32,7 @@ export function QuickActionsBitcoin() {
       }}
       sendLabel="Envoyer"
       receiveLabel="Recevoir"
+      trailing={<BitcoinFaucetButton variant="ghost" />}
     />
   );
 }

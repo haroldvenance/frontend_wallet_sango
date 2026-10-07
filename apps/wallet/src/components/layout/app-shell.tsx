@@ -13,6 +13,7 @@ import { NavLink } from "react-router-dom";
 
 import { LocaleToggle } from "@/components/settings/locale-toggle";
 import { NetworkSelector } from "@/components/settings/network-selector";
+import { BitcoinNetworkBadge } from "@/features/bitcoin/bitcoin-network-badge";
 import { EvmNetworkBadge } from "@/features/evm/evm-network-badge";
 import { EvmNetworkSelector } from "@/features/evm/evm-network-selector";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
@@ -75,8 +76,9 @@ export function AppShell({ children }: AppShellProps) {
   const t = useTranslation();
   const [keyfileOpen, setKeyfileOpen] = useState(false);
   const { data, isError } = useChainInfo();
-  const format = useWalletStore((s) => s.format);
-  const isSango = format === "sango-legacy";
+  const family = useWalletStore((s) => s.family);
+  const isSango = family === "sango";
+  const isBitcoin = family === "bitcoin";
 
   // Nav UX-2.c : routes canoniques `/send` et `/history`, dispatchées
   // par `SendRoute`/`HistoryRoute` selon `wallet.format`. Seul
@@ -157,14 +159,15 @@ export function AppShell({ children }: AppShellProps) {
               Explorer
             </a>
 
-            {isSango ? (
+            {isSango && (
               <>
                 <div className="mt-3">
                   <NetworkSelector />
                 </div>
                 <NetworkBadge />
               </>
-            ) : (
+            )}
+            {family === "evm" && (
               <>
                 <div className="mt-3">
                   <EvmNetworkSelector />
@@ -172,6 +175,7 @@ export function AppShell({ children }: AppShellProps) {
                 <EvmNetworkBadge />
               </>
             )}
+            {isBitcoin && <BitcoinNetworkBadge />}
           </div>
         </aside>
 
