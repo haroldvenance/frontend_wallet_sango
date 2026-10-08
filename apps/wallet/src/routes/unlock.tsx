@@ -73,11 +73,17 @@ export function Unlock() {
         })),
       });
 
+      // D-Phase3-5 (D32·A) — label UI dérivé du tri `createdAt`
+      // (même source que `useWallets()`). On n'utilise plus
+      // `entry.label` (souvent dupliqué "Mon portefeuille").
       const activeId = useWalletStore.getState().activeId;
-      const active = decrypted.find((d) => d.id === activeId);
-      toast.success(
-        `${t.unlock.unlocked} : ${active?.label ?? decrypted[0]!.label}`,
+      const sorted = [...decrypted].sort(
+        (a, b) => a.createdAt - b.createdAt,
       );
+      const activeIdx = sorted.findIndex((d) => d.id === activeId);
+      const position = activeIdx >= 0 ? activeIdx + 1 : 1;
+      const label = t.wallets.labelPattern.replace("{n}", String(position));
+      toast.success(`${t.unlock.unlocked} : ${label}`);
       navigate("/");
     } finally {
       setBusy(false);

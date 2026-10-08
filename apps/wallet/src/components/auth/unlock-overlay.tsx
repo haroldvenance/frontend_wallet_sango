@@ -2,9 +2,8 @@ import { Lock, Unlock } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
-import { Keyring, Wallet } from "@sango/wallet-core";
-
 import { useTranslation } from "@/i18n/use-translation";
+import { decryptAllWallets } from "@/lib/decrypt-wallets";
 import { useWalletStore } from "@/stores/wallet-store";
 import { SangoLogo } from "@/components/branding/sango-logo";
 
@@ -14,32 +13,38 @@ import { SangoLogo } from "@/components/branding/sango-logo";
  *
  * Décision UX A : dashboard flouté en arrière-plan, l'utilisateur saisit
  * son password pour déverrouiller.
+ *
+ * **Phase 3.5** — migré vers `decryptAllWallets` (session keyring) :
+ * le password déverrouille **toutes** les entrées keyring, pas
+ * seulement `activeId`. Cohérent avec `unlock.tsx` (route).
  */
 export function UnlockOverlay() {
   const t = useTranslation();
-  const { activeId, unlock } = useWalletStore();
+  const { unlock } = useWalletStore();
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!activeId || busy) return;
+    if (busy) return;
     setBusy(true);
     try {
-      const keyring = await Keyring.open();
-      const entry = await keyring.get(activeId);
-      keyring.close();
-      if (!entry) {
-        toast.error(t.overlay.walletNotFound);
+      const { decrypted } = await decryptAllWallets(password);
+
+      if (decrypted.length === 0) {
+        toast.error(t.overlay.wrongPassword);
         return;
       }
-      const wallet = await Wallet.importEncrypted(entry.stored, password);
+
       unlock({
-        wallet,
-        id: entry.id,
-        format: entry.format,
-        networkId: entry.networkId,
-        network: entry.format === "sango-legacy" ? "testnet" : "testnet",
+        wallets: decrypted.map((d) => ({
+          id: d.id,
+          wallet: d.wallet,
+          format: d.format,
+          networkId: d.networkId,
+          label: d.label,
+          createdAt: d.createdAt,
+        })),
       });
       toast.success(t.overlay.unlocked);
       setPassword("");
@@ -58,32 +63,24 @@ export function UnlockOverlay() {
         <div className="mb-5 flex justify-center">
           <SangoLogo size={56} />
         </div>
-
-        <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Lock className="size-5" />
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <Lock className="size-4" />
+            {t.overlay.title}
           </div>
-          <div>
-            <h2 className="text-sm font-semibold">{t.overlay.title}</h2>
-            <p className="text-xs text-muted-foreground">
-              {t.overlay.subtitle}
-            </p>
-          </div>
-        </div>
-
-        <form onSubmit={onSubmit} className="mt-6 space-y-3">
+          <p className="text-xs text-muted-foreground">{t.overlay.subtitle}</p>
           <input
             type="password"
-            autoFocus
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder={t.overlay.passwordPlaceholder}
-            className="flex h-10 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            autoComplete="current-password"
+            className="flex h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
           <button
             type="submit"
             disabled={busy || !password}
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             <Unlock className="size-4" />
             {busy ? t.overlay.unlocking : t.overlay.button}

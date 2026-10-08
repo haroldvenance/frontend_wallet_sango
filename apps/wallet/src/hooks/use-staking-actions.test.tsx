@@ -88,6 +88,7 @@ function setupClient() {
 beforeEach(() => {
   vi.clearAllMocks();
   useWalletStore.setState({
+    format: "sango-legacy",
     wallet: fakeWallet,
     status: "unlocked",
     activeId: ADDRESS_HEX,

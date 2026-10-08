@@ -106,10 +106,16 @@ describe("wallet-store — resolveUnlockedNetworkId", () => {
   it("BIP-39 : préférence valide gagne sur le keyring", () => {
     useWalletStore.setState({ walletNetworks: { "0xabc": "bsc" } });
     useWalletStore.getState().unlock({
-      wallet: fakeBip39Wallet,
-      id: "0xabc",
-      format: "bip39",
-      networkId: "ethereum-sepolia",
+      wallets: [
+        {
+          wallet: fakeBip39Wallet,
+          id: "0xabc",
+          format: "bip39",
+          networkId: "ethereum-sepolia",
+          label: "Test",
+          createdAt: 1,
+        },
+      ],
     });
     expect(useWalletStore.getState().networkId).toBe("bsc");
   });
@@ -119,10 +125,16 @@ describe("wallet-store — resolveUnlockedNetworkId", () => {
       walletNetworks: { "0xabc": "sango-devnet" },
     });
     useWalletStore.getState().unlock({
-      wallet: fakeBip39Wallet,
-      id: "0xabc",
-      format: "bip39",
-      networkId: "ethereum-sepolia",
+      wallets: [
+        {
+          wallet: fakeBip39Wallet,
+          id: "0xabc",
+          format: "bip39",
+          networkId: "ethereum-sepolia",
+          label: "Test",
+          createdAt: 1,
+        },
+      ],
     });
     expect(useWalletStore.getState().networkId).toBe("ethereum-sepolia");
   });
@@ -132,10 +144,16 @@ describe("wallet-store — resolveUnlockedNetworkId", () => {
       walletNetworks: { "0xabc": "unknown-evm-net" },
     });
     useWalletStore.getState().unlock({
-      wallet: fakeBip39Wallet,
-      id: "0xabc",
-      format: "bip39",
-      networkId: "ethereum-sepolia",
+      wallets: [
+        {
+          wallet: fakeBip39Wallet,
+          id: "0xabc",
+          format: "bip39",
+          networkId: "ethereum-sepolia",
+          label: "Test",
+          createdAt: 1,
+        },
+      ],
     });
     expect(useWalletStore.getState().networkId).toBe("ethereum-sepolia");
   });
@@ -145,10 +163,16 @@ describe("wallet-store — resolveUnlockedNetworkId", () => {
       walletNetworks: { "0xabc": "bsc" },
     });
     useWalletStore.getState().unlock({
-      wallet: fakeSangoWallet,
-      id: "0xabc",
-      format: "sango-legacy",
-      networkId: "sango-devnet",
+      wallets: [
+        {
+          wallet: fakeSangoWallet,
+          id: "0xabc",
+          format: "sango-legacy",
+          networkId: "sango-devnet",
+          label: "Test",
+          createdAt: 1,
+        },
+      ],
     });
     expect(useWalletStore.getState().networkId).toBe("sango-devnet");
   });
@@ -160,10 +184,16 @@ describe("wallet-store — resolveUnlockedNetworkId", () => {
       walletNetworks: { "0xabc": "unknown-evm-1" },
     });
     useWalletStore.getState().unlock({
-      wallet: fakeBip39Wallet,
-      id: "0xabc",
-      format: "bip39",
-      networkId: "unknown-evm-2",
+      wallets: [
+        {
+          wallet: fakeBip39Wallet,
+          id: "0xabc",
+          format: "bip39",
+          networkId: "unknown-evm-2",
+          label: "Test",
+          createdAt: 1,
+        },
+      ],
     });
     const resolved = useWalletStore.getState().networkId;
     expect(resolved).toBe("unknown-evm-2");
@@ -176,10 +206,16 @@ describe("wallet-store — resolveUnlockedNetworkId", () => {
       walletNetworks: { "0xabc": "arbitrum-one" },
     });
     useWalletStore.getState().unlock({
-      wallet: fakeBip39Wallet,
-      id: "0xabc",
-      format: "bip39",
-      networkId: "ethereum-sepolia",
+      wallets: [
+        {
+          wallet: fakeBip39Wallet,
+          id: "0xabc",
+          format: "bip39",
+          networkId: "ethereum-sepolia",
+          label: "Test",
+          createdAt: 1,
+        },
+      ],
     });
     expect(useWalletStore.getState().networkId).toBe("arbitrum-one");
 
@@ -187,10 +223,16 @@ describe("wallet-store — resolveUnlockedNetworkId", () => {
       walletNetworks: { "0xabc": "base" },
     });
     useWalletStore.getState().unlock({
-      wallet: fakeBip39Wallet,
-      id: "0xabc",
-      format: "bip39",
-      networkId: "ethereum-sepolia",
+      wallets: [
+        {
+          wallet: fakeBip39Wallet,
+          id: "0xabc",
+          format: "bip39",
+          networkId: "ethereum-sepolia",
+          label: "Test",
+          createdAt: 1,
+        },
+      ],
     });
     expect(useWalletStore.getState().networkId).toBe("base");
   });
@@ -203,30 +245,48 @@ describe("wallet-store — resolveUnlockedNetworkId", () => {
 describe("wallet-store — family", () => {
   it("unlock BIP-39 EVM → family=evm", () => {
     useWalletStore.getState().unlock({
-      wallet: fakeBip39Wallet,
-      id: "0xabc",
-      format: "bip39",
-      networkId: "ethereum-sepolia",
+      wallets: [
+        {
+          wallet: fakeBip39Wallet,
+          id: "0xabc",
+          format: "bip39",
+          networkId: "ethereum-sepolia",
+          label: "Test",
+          createdAt: 1,
+        },
+      ],
     });
     expect(useWalletStore.getState().family).toBe("evm");
   });
 
   it("unlock BIP-39 Bitcoin → family=bitcoin", () => {
     useWalletStore.getState().unlock({
-      wallet: fakeBip39Wallet,
-      id: "0xabc",
-      format: "bip39",
-      networkId: "bitcoin-testnet",
+      wallets: [
+        {
+          wallet: fakeBip39Wallet,
+          id: "0xabc",
+          format: "bip39",
+          networkId: "bitcoin-testnet",
+          label: "Test",
+          createdAt: 1,
+        },
+      ],
     });
     expect(useWalletStore.getState().family).toBe("bitcoin");
   });
 
   it("unlock SANGO → family=sango", () => {
     useWalletStore.getState().unlock({
-      wallet: fakeSangoWallet,
-      id: "0xabc",
-      format: "sango-legacy",
-      networkId: "sango-devnet",
+      wallets: [
+        {
+          wallet: fakeSangoWallet,
+          id: "0xabc",
+          format: "sango-legacy",
+          networkId: "sango-devnet",
+          label: "Test",
+          createdAt: 1,
+        },
+      ],
     });
     expect(useWalletStore.getState().family).toBe("sango");
   });
@@ -262,10 +322,16 @@ describe("wallet-store — family", () => {
       walletNetworks: { "0xabc": "ethereum-sepolia" },
     });
     useWalletStore.getState().unlock({
-      wallet: fakeBip39Wallet,
-      id: "0xabc",
-      format: "bip39",
-      networkId: "bitcoin-testnet",
+      wallets: [
+        {
+          wallet: fakeBip39Wallet,
+          id: "0xabc",
+          format: "bip39",
+          networkId: "bitcoin-testnet",
+          label: "Test",
+          createdAt: 1,
+        },
+      ],
     });
     expect(useWalletStore.getState().networkId).toBe("bitcoin-testnet");
     expect(useWalletStore.getState().family).toBe("bitcoin");
@@ -276,10 +342,16 @@ describe("wallet-store — family", () => {
       walletNetworks: { "0xabc": "bitcoin-testnet" },
     });
     useWalletStore.getState().unlock({
-      wallet: fakeBip39Wallet,
-      id: "0xabc",
-      format: "bip39",
-      networkId: "ethereum-sepolia",
+      wallets: [
+        {
+          wallet: fakeBip39Wallet,
+          id: "0xabc",
+          format: "bip39",
+          networkId: "ethereum-sepolia",
+          label: "Test",
+          createdAt: 1,
+        },
+      ],
     });
     expect(useWalletStore.getState().networkId).toBe("ethereum-sepolia");
     expect(useWalletStore.getState().family).toBe("evm");
@@ -290,10 +362,16 @@ describe("wallet-store — family", () => {
       walletNetworks: { "0xabc": "bsc" },
     });
     useWalletStore.getState().unlock({
-      wallet: fakeBip39Wallet,
-      id: "0xabc",
-      format: "bip39",
-      networkId: "ethereum-sepolia",
+      wallets: [
+        {
+          wallet: fakeBip39Wallet,
+          id: "0xabc",
+          format: "bip39",
+          networkId: "ethereum-sepolia",
+          label: "Test",
+          createdAt: 1,
+        },
+      ],
     });
     expect(useWalletStore.getState().networkId).toBe("bsc");
     expect(useWalletStore.getState().family).toBe("evm");
@@ -372,10 +450,16 @@ describe("wallet-store — walletAccounts", () => {
   it("unlock initialise walletAccounts[activeId] si absent", () => {
     useWalletStore.setState({ walletAccounts: {} });
     useWalletStore.getState().unlock({
-      wallet: fakeBip39Wallet,
-      id: "0xnew",
-      format: "bip39",
-      networkId: "ethereum-sepolia",
+      wallets: [
+        {
+          wallet: fakeBip39Wallet,
+          id: "0xnew",
+          format: "bip39",
+          networkId: "ethereum-sepolia",
+          label: "Test",
+          createdAt: 1,
+        },
+      ],
     });
     expect(useWalletStore.getState().walletAccounts["0xnew"]).toEqual({
       highestIndex: 0,
@@ -388,10 +472,16 @@ describe("wallet-store — walletAccounts", () => {
       walletAccounts: { "0xnew": { highestIndex: 2, activeIndex: 1 } },
     });
     useWalletStore.getState().unlock({
-      wallet: fakeBip39Wallet,
-      id: "0xnew",
-      format: "bip39",
-      networkId: "ethereum-sepolia",
+      wallets: [
+        {
+          wallet: fakeBip39Wallet,
+          id: "0xnew",
+          format: "bip39",
+          networkId: "ethereum-sepolia",
+          label: "Test",
+          createdAt: 1,
+        },
+      ],
     });
     expect(useWalletStore.getState().walletAccounts["0xnew"]).toEqual({
       highestIndex: 2,
@@ -666,19 +756,6 @@ describe("wallet-store — Phase 3.1 (multi-wallet)", () => {
     expect(s.activeId).toBeNull();
   });
 
-  it("ancienne forme unlock() reste supportée (compat)", () => {
-    useWalletStore.getState().unlock({
-      wallet: fakeBip39Wallet,
-      id: "0xlegacy",
-      format: "bip39",
-      networkId: "ethereum-sepolia",
-    });
-    const s = useWalletStore.getState();
-    expect(s.status).toBe("unlocked");
-    expect(s.activeId).toBe("0xlegacy");
-    expect(s.wallets["0xlegacy"]).toBeDefined();
-    expect(s.wallets["0xlegacy"]!.label).toBe("Mon portefeuille");
-  });
 });
 
 // ────────────────────────────────────────────────────────────

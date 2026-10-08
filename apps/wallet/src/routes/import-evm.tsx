@@ -55,21 +55,31 @@ export function ImportEvmWallet() {
       const stored = await wallet.exportEncrypted(password);
       const keyring = await Keyring.open();
       const id = wallet.defaultAddress.toLowerCase();
+      const trimmedLabel = label.trim() || "EVM wallet importé";
+      const createdAt = Date.now();
       await keyring.put({
         id,
-        label: label.trim() || "EVM wallet importé",
+        label: trimmedLabel,
         format: "bip39",
         networkId: selectedNetworkId,
         stored,
-        createdAt: Date.now(),
+        createdAt,
       });
       keyring.close();
 
+      // Phase 3.5 — forme canonique (l'ancienne forme mono-wallet a
+      // été retirée).
       unlock({
-        wallet,
-        id,
-        format: "bip39",
-        networkId: selectedNetworkId,
+        wallets: [
+          {
+            id,
+            wallet,
+            format: "bip39",
+            networkId: selectedNetworkId,
+            label: trimmedLabel,
+            createdAt,
+          },
+        ],
       });
       toast.success("Wallet EVM importé");
       navigate("/");

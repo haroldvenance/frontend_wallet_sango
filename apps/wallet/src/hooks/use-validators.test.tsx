@@ -54,7 +54,7 @@ function makeQc() {
 beforeEach(() => {
   vi.clearAllMocks();
   useSdkStore.setState({ endpoint: "http://test", customEndpoint: null });
-  useWalletStore.setState({ network: "testnet" });
+  useWalletStore.setState({ network: "testnet", format: "sango-legacy" });
 });
 
 describe("useValidators (session-backed)", () => {

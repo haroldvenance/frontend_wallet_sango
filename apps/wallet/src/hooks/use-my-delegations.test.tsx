@@ -66,6 +66,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   useSdkStore.setState({ endpoint: "http://test", customEndpoint: null });
   useWalletStore.setState({
+    format: "sango-legacy",
     wallet: fakeWallet,
     status: "unlocked",
     activeId: ADDRESS_HEX,

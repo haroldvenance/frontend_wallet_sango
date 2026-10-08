@@ -71,9 +71,9 @@ export function UnifiedDashboard() {
         {family === "evm" && <BalanceCardEvm />}
         {isBitcoin && <BitcoinBalanceCard />}
 
-        {/* Card wallet unifiée (Phase 3.3, D1·A) — remplace
-            AccountSwitcher. Affiche wallet + compte actif en une ligne.
-            `useWallets().activeWallet` est null après lock() → cachée. */}
+        {/* Card wallet unifiée (Phase 3.3, D1·A). Affiche wallet +
+            compte actif en une ligne. `useWallets().activeWallet` est
+            null après lock() → cachée. */}
         <WalletSwitcher />
 
         {/* Assets */}

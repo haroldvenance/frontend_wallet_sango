@@ -37,7 +37,7 @@ function makeQueryClient() {
 }
 
 beforeEach(() => {
-  useWalletStore.setState({ network: "testnet" });
+  useWalletStore.setState({ network: "testnet", format: "sango-legacy" });
   useSdkStore.setState({
     endpoint: "http://test",
     customEndpoint: null,

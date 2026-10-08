@@ -74,28 +74,18 @@ export interface UnlockedWalletArg {
 }
 
 /**
- * Nouvelle forme d'unlock : plusieurs wallets déverrouillés en une
- * passe (session keyring).
+ * Forme canonique de `unlock()` : plusieurs wallets déverrouillés en
+ * une passe (session keyring).
+ *
+ * **D-Phase3-5** — depuis la clôture de Phase 3, c'est la seule forme.
+ * L'ancien mode mono-wallet (`{ wallet, id, format, networkId }`,
+ * E1 → Phase 3.4) a été retiré : tous les call sites (`unlock.tsx`,
+ * `create-unified.tsx`, `import-evm.tsx`, `import-sango.tsx`,
+ * `import-bitcoin.tsx`) ont migré.
  */
-export interface UnlockArgsMulti {
+export interface UnlockArgs {
   readonly wallets: readonly UnlockedWalletArg[];
 }
-
-/**
- * Ancienne forme d'unlock (E1 → Phase 2.3).
- *
- * ⚠️ **Compatibilité de migration uniquement.** Aucun nouveau
- * consommateur ne doit l'utiliser. Sera retirée en Phase 3.5.
- */
-export interface UnlockArgsLegacy {
-  readonly wallet: AnyWallet;
-  readonly id: string;
-  readonly format: WalletFormat;
-  readonly networkId: string;
-  readonly network?: Network;
-}
-
-export type UnlockArgs = UnlockArgsMulti | UnlockArgsLegacy;
 
 export interface WalletAccountState {
   readonly highestIndex: number;
@@ -175,26 +165,6 @@ function resolveSangoLabel(networkId: string): Network {
 }
 
 /**
- * Normalise les deux formes d'unlock en une liste unique.
- */
-function normalizeUnlockArgs(args: UnlockArgs): UnlockedWalletArg[] {
-  if ("wallets" in args) {
-    return [...args.wallets];
-  }
-  // Legacy : forme mono-wallet. Label par défaut "Mon portefeuille".
-  return [
-    {
-      id: args.id,
-      wallet: args.wallet,
-      format: args.format,
-      networkId: args.networkId,
-      label: "Mon portefeuille",
-      createdAt: Date.now(),
-    },
-  ];
-}
-
-/**
  * Choisit le `networkId` effectif pour un wallet donné.
  *
  * Préserve l'invariant **D-E2.3-1** : une préférence invalide ou
@@ -247,7 +217,7 @@ export const useWalletStore = create<WalletState>()(
       status: "no-wallet",
 
       unlock: (args) => {
-        const list = normalizeUnlockArgs(args);
+        const list = args.wallets;
         if (list.length === 0) return;
 
         const {

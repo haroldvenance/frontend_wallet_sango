@@ -25,8 +25,8 @@ import { useNetworkQueryContext } from "./use-network-query-context";
  *   - `useAccounts()` → comptes du wallet **actif** (`activeId`) ;
  *   - `useAccounts("0xabc")` → comptes de ce wallet précis.
  *
- * L'appel sans argument préserve le contrat Phase 2.3 (utilisé par
- * `AccountSwitcher` / `AccountPickerModal` legacy).
+ * L'appel sans argument préserve le contrat Phase 2.3 (utilisé
+ * historiquement par l'ancien `AccountSwitcher`, supprimé en Phase 3.5).
  *
  * **Limites Phase 3.3** :
  *   - `setAccountIndex` / `addAccount` du store opèrent sur `activeId`.

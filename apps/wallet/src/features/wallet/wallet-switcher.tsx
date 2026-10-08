@@ -11,14 +11,12 @@ import { WalletsAndAccountsModal } from "./wallets-and-accounts-modal";
 /**
  * Card dashboard du wallet actif — Phase 3.3 (D1·A).
  *
- * Remplace `AccountSwitcher` : affiche **wallet + compte** en une
- * ligne, comme dans le mockup :
+ * Affiche **wallet + compte** en une ligne, comme dans le mockup :
  *
  *   W1  Portefeuille 1  [Principal]                       ⌄
  *       Compte 1 · sango1q8…x7k4f          2 comptes
  *
  * **D13·A** — `null` si aucun wallet déverrouillé (après `lock()`).
- * Comportement identique à `AccountSwitcher` historique.
  *
  * **D14·A** — l'état `open` est local. Un futur second point
  * d'entrée (Settings, Autres cryptos) réutilisera directement
