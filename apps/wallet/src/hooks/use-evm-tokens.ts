@@ -43,7 +43,14 @@ export function useEvmTokens(): UseQueryResult<
   const enabled = format === "bip39" && status === "unlocked" && Boolean(session);
 
   return useQuery<readonly TokenWithBalance[], Error>({
-    queryKey: networkQueryKey(["evm-tokens"], endpoint, networkId),
+    // D-Phase2-4 : `accountIndex` explicite dans la query key — les
+    // soldes de Compte 1 et Compte 2 ne partagent pas de cache.
+    queryKey: networkQueryKey(
+      ["evm-tokens"],
+      endpoint,
+      networkId,
+      account.accountIndex,
+    ),
     queryFn: async () => {
       if (!session) return [];
       const tokens = await session.listTokens(networkId);

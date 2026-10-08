@@ -93,3 +93,54 @@ describe("useNetworkQueryContext — accountIndex", () => {
     expect(result.current.family).toBe("sango");
   });
 });
+
+// ────────────────────────────────────────────────────────────
+//  Phase 2.2 — propagation accountIndex
+// ────────────────────────────────────────────────────────────
+
+describe("useNetworkQueryContext — accountIndex", () => {
+  it("reflète walletAccountIndexes[activeId]", async () => {
+    useSdkStore.setState({ endpoint: "http://test", customEndpoint: null });
+    useWalletStore.setState({
+      format: "bip39",
+      status: "unlocked",
+      networkId: "ethereum-sepolia",
+      family: "evm",
+      activeId: "0xabc",
+      walletAccountIndexes: { "0xabc": 2 },
+    });
+
+    const { result } = renderHook(() => useNetworkQueryContext());
+    expect(result.current.account.accountIndex).toBe(2);
+  });
+
+  it("fallback 0 si activeId absent du record", async () => {
+    useSdkStore.setState({ endpoint: "http://test", customEndpoint: null });
+    useWalletStore.setState({
+      format: "bip39",
+      status: "unlocked",
+      networkId: "ethereum-sepolia",
+      family: "evm",
+      activeId: "0xnew",
+      walletAccountIndexes: { "0xother": 3 },
+    });
+
+    const { result } = renderHook(() => useNetworkQueryContext());
+    expect(result.current.account.accountIndex).toBe(0);
+  });
+
+  it("fallback 0 si activeId null", async () => {
+    useSdkStore.setState({ endpoint: "http://test", customEndpoint: null });
+    useWalletStore.setState({
+      format: "bip39",
+      status: "unlocked",
+      networkId: "ethereum-sepolia",
+      family: "evm",
+      activeId: null,
+      walletAccountIndexes: {},
+    });
+
+    const { result } = renderHook(() => useNetworkQueryContext());
+    expect(result.current.account.accountIndex).toBe(0);
+  });
+});

@@ -33,7 +33,13 @@ export function useBitcoinBalance(): UseQueryResult<Balance | null, Error> {
     family === "bitcoin";
 
   return useQuery<Balance | null, Error>({
-    queryKey: networkQueryKey(["bitcoin-balance"], endpoint, networkId),
+    // D-Phase2-4 : `accountIndex` explicite — solde BTC par compte.
+    queryKey: networkQueryKey(
+      ["bitcoin-balance"],
+      endpoint,
+      networkId,
+      account.accountIndex,
+    ),
     queryFn: async () => {
       if (!session) return null;
       return session.getBalance(account, {

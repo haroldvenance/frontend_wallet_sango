@@ -24,7 +24,14 @@ export function useEvmAccount(): UseQueryResult<AccountState | null, Error> {
   const enabled = format === "bip39" && status === "unlocked" && Boolean(session);
 
   return useQuery<AccountState | null, Error>({
-    queryKey: networkQueryKey(["evm-account"], endpoint, networkId),
+    // D-Phase2-4 : `accountIndex` explicite dans la query key — un
+    // switch de compte produit une nouvelle clé, isolant les données.
+    queryKey: networkQueryKey(
+      ["evm-account"],
+      endpoint,
+      networkId,
+      account.accountIndex,
+    ),
     queryFn: async () => {
       if (!session) return null;
       return session.getAccount(account);

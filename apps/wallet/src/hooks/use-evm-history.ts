@@ -25,10 +25,13 @@ export function useEvmHistory(limit = 20): UseQueryResult<TxHistory, Error> {
     format === "bip39" && status === "unlocked" && Boolean(session);
 
   return useQuery<TxHistory, Error>({
+    // D-Phase2-4 : `accountIndex` explicite — historique par compte.
+    // (`account.networkId` reste en extra, héritage E1.5.)
     queryKey: networkQueryKey(
       ["evm-history"],
       endpoint,
       networkId,
+      account.accountIndex,
       account.networkId,
     ),
     queryFn: async () => {
