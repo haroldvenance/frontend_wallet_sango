@@ -155,23 +155,36 @@ et `apps/wallet/src/hooks/use-bitcoin-address.test.tsx`.
 
 Vecteur BIP-84 officiel.
 
-### 3.6 Vecteur SANGO — `m/44'/9999'/0'/0'/0'` ⏳
+### 3.6 Vecteur SANGO — `m/44'/9999'/0'/0'/0'` ✅ *(figé en 5.1.bis)*
 
-**À remplir en 5.1** après implémentation de référence.
+**Entrée** : même mnemonic de référence que §3.2.
 
-    chain code : <à figer>
-    private    : <à figer>
-    public     : <à figer>
-    address    : <à figer>   (20 bytes)
-    bech32m    : <à figer>   (tsango1…)
+    mnemonic   = abandon abandon abandon abandon abandon abandon
+                 abandon abandon abandon abandon abandon about
+    passphrase = ""
 
-**Procédure** :
-1. 5.1 (wallet-core TS) implémente SLIP-0010 + dérive ce chemin.
-2. Le test correspondant **fige les valeurs** (snapshot).
-3. Les valeurs sont copiées dans ce doc **et** dans un test Rust.
+**Chemin** : `m/44'/9999'/0'/0'/0'` (tous durcis — SLIP-0010 Ed25519).
 
-Cette procédure garantit que TS et Rust produisent **la même clé
-privée, la même clé publique, la même adresse** pour la même mnemonic.
+**Sortie** :
+
+    private    = b736c780921580894aacf48b5d4b0f8e8557472f408ded838a680bf636a6d110
+    public     = f9dbc57dc6652dc4183bd47f31cfce4671d448571204de0dcdd6fb752ed7d94e
+    address    = 16e6e7257de0d84e50c3f99c5470e5226893f420
+    addressHex = 0x16e6e7257de0d84e50c3f99c5470e5226893f420
+    bech32m    = tsango1zmnwwftaurvyu5xrlxw9gu89yf5f8apq464ne9
+
+**Procédure de validation** :
+
+- `packages/wallet-core/src/derivation/__tests__/sango.test.ts`
+  (5 assertions déterministes, `describe("vecteur §3.6 (figé 5.1.bis)")`).
+- Le wallet Rust `sango-wallet` devra passer **exactement** ces 5
+  assertions. Un écart est un bug bloquant côté implémentation —
+  jamais une adaptation du test.
+
+**Complément (optionnel)** : le chain code n'est pas exposé par
+`SangoIdentity` (inutile pour signer/adresser), mais reste vérifiable
+via `slip10DerivePath(seed, [44, 9999, 0, 0, 0]).chainCode` si un
+outil tiers en a besoin.
 
 ---
 

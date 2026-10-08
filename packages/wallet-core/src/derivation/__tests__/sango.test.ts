@@ -63,17 +63,40 @@ describe("deriveSangoIdentity", () => {
     expect(a.addressHex).not.toBe(b.addressHex);
   });
 
-  // ⚠️ EXTRACTION TEMPORAIRE — 5.1.bis fige le vecteur et supprime ce test.
-  it("EXTRACTION vecteur §3.6 (temporaire — à figer en 5.1.bis)", () => {
+  // ═══════════════════════════════════════════════════════════
+  //  Vecteur officiel §3.6 (figé en 5.1.bis)
+  //  Contrat interopérable TS ↔ Rust — toute divergence est un bug
+  //  bloquant. Voir docs/design/hd-derivation.md §3.6.
+  // ═══════════════════════════════════════════════════════════
+  describe("vecteur §3.6 (figé 5.1.bis)", () => {
     const id = deriveSangoIdentity(seed);
-    console.log("═══ SANGO_VECTOR_START ═══");
-    console.log("mnemonic =", MNEMONIC);
-    console.log("path     =", id.path);
-    console.log("privkey  =", toHex(id.privateKey));
-    console.log("pubkey   =", toHex(id.publicKey));
-    console.log("address  =", toHex(id.address));
-    console.log("addressHex =", id.addressHex);
-    console.log("bech32m  =", id.addressBech32Testnet);
-    console.log("═══ SANGO_VECTOR_END ═══");
+
+    it("path = m/44'/9999'/0'/0'/0'", () => {
+      expect(id.path).toBe("m/44'/9999'/0'/0'/0'");
+    });
+
+    it("privkey = b736c780...a6d110", () => {
+      expect(toHex(id.privateKey)).toBe(
+        "b736c780921580894aacf48b5d4b0f8e8557472f408ded838a680bf636a6d110",
+      );
+    });
+
+    it("pubkey = f9dbc57d...d7d94e", () => {
+      expect(toHex(id.publicKey)).toBe(
+        "f9dbc57dc6652dc4183bd47f31cfce4671d448571204de0dcdd6fb752ed7d94e",
+      );
+    });
+
+    it("address = 0x16e6e725...93f420", () => {
+      expect(id.addressHex).toBe(
+        "0x16e6e7257de0d84e50c3f99c5470e5226893f420",
+      );
+    });
+
+    it("bech32m = tsango1zmnwwftaurvyu5xrlxw9gu89yf5f8apq464ne9", () => {
+      expect(id.addressBech32Testnet).toBe(
+        "tsango1zmnwwftaurvyu5xrlxw9gu89yf5f8apq464ne9",
+      );
+    });
   });
 });
