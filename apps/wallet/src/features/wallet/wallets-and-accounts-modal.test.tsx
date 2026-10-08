@@ -6,7 +6,17 @@ import {
   screen,
 } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { MemoryRouter } from "react-router-dom";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("sonner", () => ({
+  toast: {
+    info: vi.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+  },
+}));
 
 import { Bip39Wallet } from "@sango/wallet-core";
 import type { WalletSession } from "@sango/wallet-session";
@@ -35,11 +45,13 @@ function Wrapper({ children }: { children: ReactNode }) {
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   return (
-    <QueryClientProvider client={qc}>
-      <WalletSessionContext.Provider value={makeSession()}>
-        {children}
-      </WalletSessionContext.Provider>
-    </QueryClientProvider>
+    <MemoryRouter>
+      <QueryClientProvider client={qc}>
+        <WalletSessionContext.Provider value={makeSession()}>
+          {children}
+        </WalletSessionContext.Provider>
+      </QueryClientProvider>
+    </MemoryRouter>
   );
 }
 
@@ -136,30 +148,6 @@ describe("WalletsAndAccountsModal — Phase 3.3", () => {
     expect(screen.getByTestId("wallet-add-account-0xb")).toBeTruthy();
   });
 
-  it("pas de bouton ⋯ (D16·C)", () => {
-    seedTwoWallets();
-    render(
-      <WalletsAndAccountsModal open={true} onClose={() => {}} />,
-      { wrapper: Wrapper },
-    );
-    // Aucun bouton ⋯ / aria-label "Menu" / etc.
-    const buttons = document.querySelectorAll("button");
-    const hasEllipsis = Array.from(buttons).some((b) =>
-      b.textContent?.includes("⋯"),
-    );
-    expect(hasEllipsis).toBe(false);
-  });
-
-  it("pas de footer Créer/Importer (D17·C)", () => {
-    seedTwoWallets();
-    render(
-      <WalletsAndAccountsModal open={true} onClose={() => {}} />,
-      { wrapper: Wrapper },
-    );
-    expect(screen.queryByText(/Créer un portefeuille/i)).toBeNull();
-    expect(screen.queryByText(/Importer un portefeuille/i)).toBeNull();
-  });
-
   it("bouton Ajouter un compte présent sous le wallet déplié", () => {
     seedTwoWallets();
     render(
@@ -184,5 +172,55 @@ describe("WalletsAndAccountsModal — Phase 3.3", () => {
     // Le bouton X a aria-label="Fermer"
     fireEvent.click(screen.getByLabelText("Fermer"));
     expect(closed).toBe(true);
+  });
+});
+
+// ────────────────────────────────────────────────────────────
+//  Phase 3.4 — actions (footer + forget)
+// ────────────────────────────────────────────────────────────
+
+describe("WalletsAndAccountsModal — Phase 3.4 (actions)", () => {
+  it("footer : boutons Créer + Importer présents", () => {
+    seedTwoWallets();
+    render(
+      <WalletsAndAccountsModal open={true} onClose={() => {}} />,
+      { wrapper: Wrapper },
+    );
+    expect(screen.getByTestId("footer-create-wallet")).toBeTruthy();
+    expect(screen.getByTestId("footer-import-wallet")).toBeTruthy();
+  });
+
+  it("⋯ visible uniquement sur la row active", () => {
+    seedTwoWallets();
+    render(
+      <WalletsAndAccountsModal open={true} onClose={() => {}} />,
+      { wrapper: Wrapper },
+    );
+    const triggers = screen.getAllByTestId("wallet-actions-trigger");
+    expect(triggers).toHaveLength(1);
+  });
+
+  it("⋯ absent si un seul wallet (rien à switcher)", () => {
+    useWalletStore.getState().unlock({
+      wallets: [
+        {
+          id: "0xa",
+          wallet: fakeBip39,
+          format: "bip39",
+          networkId: "ethereum-sepolia",
+          label: "A",
+          createdAt: 100,
+        },
+      ],
+    });
+    render(
+      <WalletsAndAccountsModal open={true} onClose={() => {}} />,
+      { wrapper: Wrapper },
+    );
+    // Row unique = row active → ⋯ présent mais son item Forget est disabled.
+    const trigger = screen.getByTestId("wallet-actions-trigger");
+    fireEvent.click(trigger);
+    const forgetItem = screen.getByTestId("wallet-action-forget");
+    expect((forgetItem as HTMLButtonElement).disabled).toBe(true);
   });
 });
