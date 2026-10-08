@@ -13,17 +13,20 @@ import {
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 import { SettingsModal } from "@/components/settings/settings-modal";
 import { useTranslation } from "@/i18n/use-translation";
 import { useLocaleStore } from "@/stores/locale-store";
+import {
+  AUTO_LOCK_OPTIONS_MS,
+  usePreferencesStore,
+} from "@/stores/preferences-store";
 import { useThemeStore } from "@/stores/theme-store";
 import { useWalletStore } from "@/stores/wallet-store";
 
 /**
- * Page Paramètres — Phase 1 (E2.5.d).
- *
- * Remplace la modale `SettingsModal` par une route pleine page.
+ * Page Paramètres — Phase 1 (E2.5.d) + fixes E2.5.e.
  *
  * Sections :
  *   - Card wallet (label + badge Principal + Gérer)
@@ -33,8 +36,13 @@ import { useWalletStore } from "@/stores/wallet-store";
  *   - SUPPORT     : Aide & à propos (v0.3)
  *   - Déconnexion
  *
+ * Handlers (E2.5.e) :
+ *   - Phrase de récupération → navigate `/settings/recovery-phrase`
+ *   - Mot de passe          → toast "Bientôt disponible" (désactivé Phase 1)
+ *   - Verrouillage auto     → picker inline 5/15/30/60 min
+ *
  * **D-E2.5.d-2** — Déconnexion = `lock()` + navigate `/welcome`.
- * Le keyring reste intact, l'utilisateur peut se reconnecter.
+ * Le keyring reste intact.
  */
 export function SettingsRoute() {
   const t = useTranslation();
@@ -42,11 +50,13 @@ export function SettingsRoute() {
   const { lock, activeId, networkId } = useWalletStore();
   const { locale, toggle: toggleLocale } = useLocaleStore();
   const { theme, toggle: toggleTheme } = useThemeStore();
+  const autoLockMs = usePreferencesStore((s) => s.autoLockMs);
+  const setAutoLockMs = usePreferencesStore((s) => s.setAutoLockMs);
 
   const [keyfileOpen, setKeyfileOpen] = useState(false);
   const [activeLabel, setActiveLabel] = useState<string | null>(null);
+  const [autoLockExpanded, setAutoLockExpanded] = useState(false);
 
-  // Charge le label du wallet actif depuis le keyring
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -73,6 +83,10 @@ export function SettingsRoute() {
     navigate("/welcome");
   }
 
+  function onPasswordClick() {
+    toast.info(t.settings.password.comingSoon);
+  }
+
   const localeLabel =
     locale === "fr"
       ? t.settings.languageValues.fr
@@ -82,6 +96,8 @@ export function SettingsRoute() {
     theme === "dark"
       ? t.settings.themeValues.dark
       : t.settings.themeValues.light;
+
+  const autoLockLabel = formatAutoLockLabel(autoLockMs, t);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6">
@@ -123,18 +139,52 @@ export function SettingsRoute() {
         <SettingRow
           icon={<ShieldCheck className="size-4" />}
           label={t.settings.items.recoveryPhrase}
-          onClick={() => setKeyfileOpen(true)}
+          onClick={() => navigate("/settings/recovery-phrase")}
         />
         <SettingRow
           icon={<Lock className="size-4" />}
           label={t.settings.items.password}
-          onClick={() => setKeyfileOpen(true)}
+          onClick={onPasswordClick}
         />
+
+        {/* Auto-lock : picker inline */}
         <SettingRow
           icon={<Clock className="size-4" />}
-          label={t.settings.items.autoLock}
-          value={t.settings.items.autoLockShort}
+          label={t.settings.autoLock.title}
+          value={autoLockExpanded ? undefined : autoLockLabel}
+          onClick={() => setAutoLockExpanded((v) => !v)}
         />
+        {autoLockExpanded && (
+          <div className="border-b bg-muted/20 px-4 py-3 last:border-b-0">
+            <p className="mb-2 text-[11px] text-muted-foreground">
+              {t.settings.autoLock.help}
+            </p>
+            <div className="space-y-1">
+              {AUTO_LOCK_OPTIONS_MS.map((ms) => {
+                const isActive = ms === autoLockMs;
+                return (
+                  <button
+                    key={ms}
+                    type="button"
+                    onClick={() => {
+                      setAutoLockMs(ms);
+                      setAutoLockExpanded(false);
+                    }}
+                    className={[
+                      "flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors",
+                      isActive
+                        ? "bg-primary/10 font-medium text-primary"
+                        : "text-muted-foreground hover:bg-accent",
+                    ].join(" ")}
+                  >
+                    <span>{formatAutoLockLabel(ms, t)}</span>
+                    {isActive && <CheckCircle2 className="size-4" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </SettingsSection>
 
       <SettingsSection title={t.settings.sections.networks}>
@@ -173,7 +223,6 @@ export function SettingsRoute() {
         />
       </SettingsSection>
 
-      {/* Logout */}
       <button
         type="button"
         onClick={onLogout}
@@ -183,7 +232,6 @@ export function SettingsRoute() {
         {t.settings.logout}
       </button>
 
-      {/* Modal réutilisée pour keyfile export/import */}
       <SettingsModal
         open={keyfileOpen}
         onClose={() => setKeyfileOpen(false)}
@@ -194,6 +242,30 @@ export function SettingsRoute() {
 }
 
 // ── Helpers ─────────────────────────────────────────────────
+
+/**
+ * Résout le libellé d'un `autoLockMs` selon les clés i18n.
+ *
+ * Les valeurs sont figées (5/15/30/60 min) donc un switch est plus
+ * lisible qu'un calcul `ms / 60000` + interpolation.
+ */
+function formatAutoLockLabel(
+  ms: number,
+  t: ReturnType<typeof useTranslation>,
+): string {
+  switch (ms) {
+    case 5 * 60 * 1000:
+      return t.settings.autoLock.m5;
+    case 15 * 60 * 1000:
+      return t.settings.autoLock.m15;
+    case 30 * 60 * 1000:
+      return t.settings.autoLock.m30;
+    case 60 * 60 * 1000:
+      return t.settings.autoLock.m60;
+    default:
+      return `${Math.round(ms / 60000)} min`;
+  }
+}
 
 function SettingsSection({
   title,

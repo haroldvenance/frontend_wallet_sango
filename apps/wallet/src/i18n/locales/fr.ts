@@ -506,6 +506,33 @@ export const fr: TranslationSchema = {
     },
     logout: "Déconnexion",
     version: "v0.3",
+    autoLock: {
+      title: "Verrouillage auto",
+      help: "Durée d'inactivité avant que ton wallet se verrouille.",
+      m5: "5 minutes",
+      m15: "15 minutes",
+      m30: "30 minutes",
+      m60: "60 minutes",
+    },
+    password: {
+      comingSoon: "Le changement de mot de passe sera disponible dans une prochaine mise à jour.",
+    },
+    recoveryPhrase: {
+      title: "Phrase de récupération",
+      intro:
+        "Pour la sécurité de ton wallet, la phrase de récupération n'est jamais stockée sur ton appareil ni sur nos serveurs.",
+      explanation:
+        "Elle t'a été affichée une seule fois au moment de la création. Si tu ne l'as pas notée, il est impossible de la retrouver — c'est une garantie : personne (pas même Sango) ne peut la lire.",
+      backupTitle: "Sauvegarder ton wallet",
+      backupDescription:
+        "Le seul backup possible est le keyfile chiffré. Conserve-le en lieu sûr avec ton mot de passe — sans les deux, le wallet est irrécupérable.",
+      exportButton: "Exporter le keyfile",
+      backButton: "Retour aux paramètres",
+      formatSango:
+        "Ton wallet utilise un seed Ed25519 (32 bytes). Le keyfile contient ce seed chiffré.",
+      formatBip39:
+        "Ton wallet utilise une phrase BIP-39 (12 mots). Le keyfile contient le seed dérivé chiffré.",
+    },
   },
   fiat: {
     indicative: "≈",

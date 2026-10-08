@@ -500,6 +500,33 @@ export const en = {
     },
     logout: "Log out",
     version: "v0.3",
+    autoLock: {
+      title: "Auto-lock",
+      help: "Inactivity duration before your wallet locks itself.",
+      m5: "5 minutes",
+      m15: "15 minutes",
+      m30: "30 minutes",
+      m60: "60 minutes",
+    },
+    password: {
+      comingSoon: "Password change will be available in an upcoming update.",
+    },
+    recoveryPhrase: {
+      title: "Recovery phrase",
+      intro:
+        "For your wallet's security, the recovery phrase is never stored on your device nor on our servers.",
+      explanation:
+        "It was shown to you only once when you created the wallet. If you didn't write it down, it cannot be recovered — this is a guarantee: nobody (not even Sango) can read it.",
+      backupTitle: "Back up your wallet",
+      backupDescription:
+        "The only backup available is the encrypted keyfile. Keep it safe together with your password — without both, the wallet is unrecoverable.",
+      exportButton: "Export keyfile",
+      backButton: "Back to settings",
+      formatSango:
+        "Your wallet uses a 32-byte Ed25519 seed. The keyfile contains this seed, encrypted.",
+      formatBip39:
+        "Your wallet uses a 12-word BIP-39 phrase. The keyfile contains the derived seed, encrypted.",
+    },
   },
   fiat: {
     indicative: "≈",

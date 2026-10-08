@@ -16,6 +16,7 @@ const HistoryDetailRoute = lazy(() => import("@/routes/history-detail").then(m =
 const HistoryRoute = lazy(() => import("@/routes/history").then(m => ({ default: m.HistoryRoute })));
 const ApprovalsRoute = lazy(() => import("@/routes/approvals").then(m => ({ default: m.ApprovalsRoute })));
 const SettingsRoute = lazy(() => import("@/routes/settings").then(m => ({ default: m.SettingsRoute })));
+const SettingsRecoveryPhraseRoute = lazy(() => import("@/routes/settings-recovery-phrase").then(m => ({ default: m.SettingsRecoveryPhraseRoute })));
 import { ImportWallet } from "@/routes/import-wallet";
 const ImportEvmWalletRoute = lazy(() =>
   import("@/routes/import-evm").then((m) => ({ default: m.ImportEvmWallet })),
@@ -26,11 +27,13 @@ import { Unlock } from "@/routes/unlock";
 const ValidatorDetailRoute = lazy(() => import("@/routes/validator-detail").then(m => ({ default: m.ValidatorDetailRoute })));
 const ValidatorsRoute = lazy(() => import("@/routes/validators").then(m => ({ default: m.ValidatorsRoute })));
 import { Welcome } from "@/routes/welcome";
+import { usePreferencesStore } from "@/stores/preferences-store";
 import { useWalletStore } from "@/stores/wallet-store";
 
 function ProtectedLayout() {
   const { status, lock } = useWalletStore();
-  useAutoLock(status === "unlocked", lock);
+  const autoLockMs = usePreferencesStore((s) => s.autoLockMs);
+  useAutoLock(status === "unlocked", lock, autoLockMs);
 
   if (status === "no-wallet") return <Navigate to="/welcome" replace />;
   if (status === "locked") return <Navigate to="/unlock" replace />;
@@ -75,6 +78,7 @@ export default function App() {
             <Route path="/history-evm" element={<Navigate to="/history" replace />} />
             <Route path="/approvals" element={<ApprovalsRoute />} />
             <Route path="/settings" element={<SettingsRoute />} />
+            <Route path="/settings/recovery-phrase" element={<SettingsRecoveryPhraseRoute />} />
             <Route path="/history/:hash" element={<HistoryDetailRoute />} />
         </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
