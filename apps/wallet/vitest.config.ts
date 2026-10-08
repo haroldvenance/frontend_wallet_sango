@@ -17,5 +17,8 @@ export default defineConfig({
     // Phase 4.1-fix — reset global des stores Zustand avant chaque
     // test. Voir src/test-setup.ts pour la rationale.
     setupFiles: ["./src/test-setup.ts"],
+    // Phase 4.3 — jsdom partagé par worker (vs. 1 jsdom par fichier).
+    // Garde l'isolation per-file (setupFiles + beforeEach global).
+    pool: "vmThreads",
   },
 });
