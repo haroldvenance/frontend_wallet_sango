@@ -5,11 +5,16 @@ import { useTranslation } from "@/i18n/use-translation";
 import type { WalletSummary } from "@/hooks/use-wallets";
 
 import { AccountRow } from "./account-row";
+import { WalletActionsMenu } from "./wallet-actions-menu";
 
 interface Props {
   readonly wallet: WalletSummary;
   readonly isExpanded: boolean;
   readonly onSelect: () => void;
+  /** `false` si l'action Forget est interdite (dernier wallet, D22·A). */
+  readonly canForget: boolean;
+  /** Demande au parent d'ouvrir la modal Forget (D23·A). */
+  readonly onForgetRequest: () => void;
 }
 
 /**
@@ -28,7 +33,13 @@ interface Props {
  *
  * **D16·C** — pas de menu `⋯` en 3.3 (ajouté en 3.4).
  */
-export function WalletRow({ wallet, isExpanded, onSelect }: Props) {
+export function WalletRow({
+  wallet,
+  isExpanded,
+  onSelect,
+  canForget,
+  onForgetRequest,
+}: Props) {
   const t = useTranslation();
 
   // Toujours appelé (règle des hooks) — `enabled` coupe les queries
@@ -60,32 +71,44 @@ export function WalletRow({ wallet, isExpanded, onSelect }: Props) {
           : "border-transparent hover:bg-accent/40",
       ].join(" ")}
     >
-      <button
-        type="button"
-        data-testid={`wallet-row-${wallet.id}`}
-        onClick={onSelect}
-        className="flex w-full items-center gap-3 p-3 text-left"
-      >
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-          W{wallet.position}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="truncate text-sm font-semibold">{label}</p>
-            {wallet.isActive && (
-              <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-                {t.wallets.primary}
-              </span>
-            )}
+      <div className="flex items-center">
+        <button
+          type="button"
+          data-testid={`wallet-row-${wallet.id}`}
+          onClick={onSelect}
+          className="flex min-w-0 flex-1 items-center gap-3 p-3 text-left"
+        >
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+            W{wallet.position}
           </div>
-          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-            {subtitle} · {accountCountLabel}
-          </p>
-        </div>
-        {!isExpanded && (
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="truncate text-sm font-semibold">{label}</p>
+              {wallet.isActive && (
+                <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                  {t.wallets.primary}
+                </span>
+              )}
+            </div>
+            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+              {subtitle} · {accountCountLabel}
+            </p>
+          </div>
+          {!isExpanded && (
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+          )}
+        </button>
+
+        {/* D16·C (revu) — ⋯ uniquement sur la row active. */}
+        {wallet.isActive && (
+          <div className="pr-2">
+            <WalletActionsMenu
+              disabled={!canForget}
+              onForget={onForgetRequest}
+            />
+          </div>
         )}
-      </button>
+      </div>
 
       {isExpanded && (
         <div className="space-y-2 border-t px-3 pb-3 pt-3">

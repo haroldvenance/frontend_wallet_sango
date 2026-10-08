@@ -1,7 +1,17 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { MemoryRouter } from "react-router-dom";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("sonner", () => ({
+  toast: {
+    info: vi.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+  },
+}));
 
 import { Bip39Wallet } from "@sango/wallet-core";
 import type { WalletSession } from "@sango/wallet-session";
@@ -32,11 +42,13 @@ function Wrapper({ children }: { children: ReactNode }) {
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   return (
-    <QueryClientProvider client={qc}>
-      <WalletSessionContext.Provider value={makeSession()}>
-        {children}
-      </WalletSessionContext.Provider>
-    </QueryClientProvider>
+    <MemoryRouter>
+      <QueryClientProvider client={qc}>
+        <WalletSessionContext.Provider value={makeSession()}>
+          {children}
+        </WalletSessionContext.Provider>
+      </QueryClientProvider>
+    </MemoryRouter>
   );
 }
 

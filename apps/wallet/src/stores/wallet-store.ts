@@ -395,7 +395,16 @@ export const useWalletStore = create<WalletState>()(
             });
             return;
           }
-          const nextActiveId = remainingIds[0]!;
+          // D-Phase3-4 (D24·B) — le prochain wallet actif est le plus
+          // ancien restant par `createdAt` (cohérent avec le tri de
+          // `useWallets()`), pas `Object.keys()[0]` (ordre d'insertion).
+          const remaining = remainingIds
+            .map((rid) => ({
+              id: rid,
+              createdAt: nextWallets[rid]!.createdAt,
+            }))
+            .sort((a, b) => a.createdAt - b.createdAt);
+          const nextActiveId = remaining[0]!.id;
           const next = nextWallets[nextActiveId]!;
           const effectiveNetworkId = pickEffectiveNetworkId({
             format: next.format,

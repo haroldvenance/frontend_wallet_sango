@@ -680,3 +680,54 @@ describe("wallet-store — Phase 3.1 (multi-wallet)", () => {
     expect(s.wallets["0xlegacy"]!.label).toBe("Mon portefeuille");
   });
 });
+
+// ────────────────────────────────────────────────────────────
+//  Phase 3.4 — forgetWallet (D24·B : prochain = plus ancien)
+// ────────────────────────────────────────────────────────────
+
+describe("wallet-store — Phase 3.4 (forgetWallet next active)", () => {
+  function makeArg(id: string, createdAt: number) {
+    return {
+      id,
+      wallet: fakeBip39Wallet,
+      format: "bip39" as const,
+      networkId: "ethereum-sepolia",
+      label: id,
+      createdAt,
+    };
+  }
+
+  it("forget actif → plus ancien createdAt devient actif", () => {
+    useWalletStore.getState().unlock({
+      wallets: [
+        makeArg("0xa", 100), // plus ancien
+        makeArg("0xb", 200),
+        makeArg("0xc", 300), // plus récent
+      ],
+    });
+    useWalletStore.getState().switchWallet("0xa");
+    expect(useWalletStore.getState().activeId).toBe("0xa");
+
+    useWalletStore.getState().forgetWallet("0xa");
+
+    // 0xb (createdAt 200) devient actif — pas 0xc
+    expect(useWalletStore.getState().activeId).toBe("0xb");
+  });
+
+  it("forget actif → indépendant de l'ordre d'insertion Object.keys", () => {
+    // Insertion en désordre, activeId = le plus récent (0xc)
+    useWalletStore.setState({ activeId: "0xc" });
+    useWalletStore.getState().unlock({
+      wallets: [
+        makeArg("0xc", 300),
+        makeArg("0xa", 100), // plus ancien, inséré 2e
+        makeArg("0xb", 200),
+      ],
+    });
+
+    useWalletStore.getState().forgetWallet("0xc");
+
+    // 0xa (createdAt 100) — le plus ancien — devient actif
+    expect(useWalletStore.getState().activeId).toBe("0xa");
+  });
+});

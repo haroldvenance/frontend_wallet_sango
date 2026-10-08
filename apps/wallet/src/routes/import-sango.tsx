@@ -17,7 +17,7 @@ function hexToBytes(hex: string): Uint8Array {
   return bytes;
 }
 
-export function ImportWallet() {
+export function ImportSangoWallet() {
   const navigate = useNavigate();
   const { unlock } = useWalletStore();
   const { network } = useSdkStore();
@@ -48,12 +48,18 @@ export function ImportWallet() {
       });
       keyring.close();
 
+      // Phase 3.1 — nouvelle forme (session keyring).
       unlock({
-        wallet,
-        id,
-        format: "sango-legacy",
-        networkId: "sango-devnet",
-        network,
+        wallets: [
+          {
+            id,
+            wallet,
+            format: "sango-legacy",
+            networkId: "sango-devnet",
+            label: label.trim() || "Wallet importé",
+            createdAt: Date.now(),
+          },
+        ],
       });
       toast.success("Wallet importé");
       navigate("/");

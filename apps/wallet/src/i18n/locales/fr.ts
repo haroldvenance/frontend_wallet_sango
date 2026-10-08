@@ -213,6 +213,44 @@ export const fr: TranslationSchema = {
     currentAccount: "Compte {n}",
     formatBip39: "Phrase de 12 mots",
     formatSango: "Seed",
+    actions: {
+      menu: "Actions",
+      forget: "Oublier ce portefeuille",
+      forgetLastDisabled:
+        "Le dernier portefeuille ne peut pas être oublié",
+    },
+    footer: {
+      create: "Créer un portefeuille",
+      import: "Importer un portefeuille",
+    },
+    forget: {
+      title: "Oublier ce portefeuille ?",
+      warning:
+        "Cette action supprime définitivement ce portefeuille de ce portefeuille de clés. Sans ta phrase de récupération, tu ne pourras pas le restaurer.",
+      instruction: "Saisis {label} pour confirmer.",
+      confirm: "Oublier définitivement",
+      cancel: "Annuler",
+      success: "Portefeuille oublié",
+      error: "Impossible d'oublier le portefeuille",
+    },
+  },
+  importPicker: {
+    title: "Importer un portefeuille",
+    subtitle: "Choisis le type de portefeuille à importer.",
+    sango: {
+      title: "Portefeuille SANGO",
+      description: "Seed Ed25519 (32 bytes, 64 caractères hex).",
+    },
+    evm: {
+      title: "Portefeuille EVM",
+      description:
+        "Phrase de récupération BIP-39 (Ethereum, BSC, etc.).",
+    },
+    bitcoin: {
+      title: "Portefeuille Bitcoin",
+      description:
+        "Phrase de récupération BIP-39 (Bitcoin testnet ou mainnet).",
+    },
   },
   accounts: {
     primary: "Principal",

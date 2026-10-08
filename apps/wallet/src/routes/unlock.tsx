@@ -134,7 +134,7 @@ export function Unlock() {
 
         <div className="space-y-3 pt-4 text-center">
           <Link
-            to="/import-evm"
+            to="/import"
             className="block text-xs font-medium text-primary hover:underline"
           >
             {t.onboarding.unlock.forgotPassword}

@@ -17,9 +17,17 @@ const HistoryRoute = lazy(() => import("@/routes/history").then(m => ({ default:
 const ApprovalsRoute = lazy(() => import("@/routes/approvals").then(m => ({ default: m.ApprovalsRoute })));
 const SettingsRoute = lazy(() => import("@/routes/settings").then(m => ({ default: m.SettingsRoute })));
 const SettingsRecoveryPhraseRoute = lazy(() => import("@/routes/settings-recovery-phrase").then(m => ({ default: m.SettingsRecoveryPhraseRoute })));
-import { ImportWallet } from "@/routes/import-wallet";
+const ImportPickerRoute = lazy(() =>
+  import("@/routes/import").then((m) => ({ default: m.ImportPicker })),
+);
+const ImportSangoWalletRoute = lazy(() =>
+  import("@/routes/import-sango").then((m) => ({ default: m.ImportSangoWallet })),
+);
 const ImportEvmWalletRoute = lazy(() =>
   import("@/routes/import-evm").then((m) => ({ default: m.ImportEvmWallet })),
+);
+const ImportBitcoinWalletRoute = lazy(() =>
+  import("@/routes/import-bitcoin").then((m) => ({ default: m.ImportBitcoinWallet })),
 );
 const BecomeValidatorRoute = lazy(() => import("@/routes/become-validator").then(m => ({ default: m.BecomeValidatorRoute })));
 const SendRoute = lazy(() => import("@/routes/send").then(m => ({ default: m.SendRoute })));
@@ -63,9 +71,11 @@ export default function App() {
           <Route path="/welcome" element={<Welcome />} />
         <Route path="/create" element={<CreateUnifiedRoute />} />
         <Route path="/create-wallet" element={<CreateUnifiedRoute />} />
-        <Route path="/import" element={<ImportWallet />} />
-        <Route path="/create-evm" element={<CreateEvmWalletRoute />} />
+        <Route path="/import" element={<ImportPickerRoute />} />
+        <Route path="/import-sango" element={<ImportSangoWalletRoute />} />
         <Route path="/import-evm" element={<ImportEvmWalletRoute />} />
+        <Route path="/import-bitcoin" element={<ImportBitcoinWalletRoute />} />
+        <Route path="/create-evm" element={<CreateEvmWalletRoute />} />
         <Route path="/unlock" element={<Unlock />} />
         <Route element={<ProtectedLayout />}>
           <Route path="/" element={<UnifiedDashboard />} />

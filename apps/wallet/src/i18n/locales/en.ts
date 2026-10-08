@@ -209,6 +209,41 @@ export const en = {
     currentAccount: "Account {n}",
     formatBip39: "12-word phrase",
     formatSango: "Seed",
+    actions: {
+      menu: "Actions",
+      forget: "Forget this wallet",
+      forgetLastDisabled: "The last wallet cannot be forgotten",
+    },
+    footer: {
+      create: "Create a wallet",
+      import: "Import a wallet",
+    },
+    forget: {
+      title: "Forget this wallet?",
+      warning:
+        "This permanently removes the wallet from this keyring. Without your recovery phrase, you will not be able to restore it.",
+      instruction: "Type {label} to confirm.",
+      confirm: "Forget permanently",
+      cancel: "Cancel",
+      success: "Wallet forgotten",
+      error: "Could not forget the wallet",
+    },
+  },
+  importPicker: {
+    title: "Import a wallet",
+    subtitle: "Choose the type of wallet to import.",
+    sango: {
+      title: "SANGO wallet",
+      description: "Ed25519 seed (32 bytes, 64 hex chars).",
+    },
+    evm: {
+      title: "EVM wallet",
+      description: "BIP-39 recovery phrase (Ethereum, BSC, etc.).",
+    },
+    bitcoin: {
+      title: "Bitcoin wallet",
+      description: "BIP-39 recovery phrase (Bitcoin testnet or mainnet).",
+    },
   },
   accounts: {
     primary: "Primary",
