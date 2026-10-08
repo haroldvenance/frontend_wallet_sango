@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useTranslation } from "@/i18n/use-translation";
 import { useWalletStore } from "@/stores/wallet-store";
 import { AuthShell } from "@/components/branding/auth-shell";
+import { SangoIcon } from "@/components/branding/sango-icon";
 
 /**
  * Résout le label SANGO (Network) depuis un networkId wallet-chains.
@@ -116,9 +117,7 @@ export function Unlock() {
       <div className="mt-2 space-y-4">
         {/* Card wallet actif */}
         <div className="flex items-center gap-3 rounded-2xl border bg-card p-3 shadow-sm">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-base font-bold text-primary-foreground">
-            S
-          </div>
+          <SangoIcon size={40} />
           <div className="min-w-0 flex-1">
             <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
               {t.onboarding.unlock.activeWallet}

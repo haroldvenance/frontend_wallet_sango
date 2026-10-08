@@ -8,7 +8,7 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 
 import { LocaleToggle } from "@/components/settings/locale-toggle";
@@ -19,7 +19,6 @@ import { EvmNetworkBadge } from "@/features/evm/evm-network-badge";
 import { EvmNetworkSelector } from "@/features/evm/evm-network-selector";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { ErrorBoundary } from "@/components/error-boundary";
-import { SettingsModal } from "@/components/settings/settings-modal";
 import { useChainInfo } from "@/hooks/use-chain-info";
 import { useWalletStore } from "@/stores/wallet-store";
 import { useTranslation } from "@/i18n/use-translation";
@@ -75,7 +74,6 @@ function NetworkBadge() {
 
 export function AppShell({ children }: AppShellProps) {
   const t = useTranslation();
-  const [keyfileOpen, setKeyfileOpen] = useState(false);
   const { data, isError } = useChainInfo();
   const family = useWalletStore((s) => s.family);
   const isSango = family === "sango";
@@ -142,14 +140,20 @@ export function AppShell({ children }: AppShellProps) {
           </nav>
 
           <div className="border-t p-3">
-            <button
-              type="button"
-              onClick={() => setKeyfileOpen(true)}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            <NavLink
+              to="/settings"
+              className={({ isActive }) =>
+                [
+                  "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
+                  isActive
+                    ? "bg-primary/10 font-medium text-primary"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                ].join(" ")
+              }
             >
               <Settings className="size-4" />
               {t.nav.settings}
-            </button>
+            </NavLink>
             <a
               href={EXPLORER_URL}
               target="_blank"
@@ -223,14 +227,13 @@ export function AppShell({ children }: AppShellProps) {
               </div>
               <LocaleToggle />
               <ThemeToggle />
-              <button
-                type="button"
-                onClick={() => setKeyfileOpen(true)}
+              <NavLink
+                to="/settings"
                 aria-label="Paramètres"
                 className="inline-flex size-9 items-center justify-center rounded-xl border bg-card text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:hidden"
               >
                 <Settings className="size-4" />
-              </button>
+              </NavLink>
             </div>
           </header>
 
@@ -242,7 +245,6 @@ export function AppShell({ children }: AppShellProps) {
 
       <MobileBottomNav />
 
-      <SettingsModal open={keyfileOpen} onClose={() => setKeyfileOpen(false)} />
     </div>
   );
 }

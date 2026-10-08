@@ -74,6 +74,12 @@ export const en = {
     send: "Send",
     validators: "Validators",
     settings: "Settings",
+    mobile: {
+      home: "Home",
+      activity: "Activity",
+      staking: "Staking",
+      settings: "Settings",
+    },
   },
   network: {
     connecting: "Connecting…",
@@ -460,6 +466,40 @@ export const en = {
       clipboardValue: "30 seconds after copy",
       lockNow: "Lock now",
     },
+    wallet: {
+      active: "Primary",
+      manage: "Manage",
+      accountCount: "{n} account",
+      accountCountPlural: "{n} accounts",
+      fallbackLabel: "My wallet",
+    },
+    sections: {
+      security: "Security",
+      networks: "Networks",
+      preferences: "Preferences",
+      support: "Support",
+    },
+    items: {
+      recoveryPhrase: "Recovery phrase",
+      password: "Password",
+      autoLock: "Auto-lock",
+      autoLockShort: "15 min",
+      defaultNetwork: "Default network",
+      approvals: "Approvals",
+      language: "Language",
+      theme: "Theme",
+      about: "Help & about",
+    },
+    languageValues: {
+      fr: "Français",
+      en: "English",
+    },
+    themeValues: {
+      light: "Light",
+      dark: "Dark",
+    },
+    logout: "Log out",
+    version: "v0.3",
   },
   fiat: {
     indicative: "≈",

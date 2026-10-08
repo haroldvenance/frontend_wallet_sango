@@ -76,6 +76,12 @@ export const fr: TranslationSchema = {
     send: "Envoyer",
     validators: "Validateurs",
     settings: "Paramètres",
+    mobile: {
+      home: "Accueil",
+      activity: "Activité",
+      staking: "Staking",
+      settings: "Paramètres",
+    },
   },
   network: {
     connecting: "Connexion…",
@@ -466,6 +472,40 @@ export const fr: TranslationSchema = {
       clipboardValue: "30 secondes après copie",
       lockNow: "Verrouiller maintenant",
     },
+    wallet: {
+      active: "Principal",
+      manage: "Gérer",
+      accountCount: "{n} compte",
+      accountCountPlural: "{n} comptes",
+      fallbackLabel: "Mon portefeuille",
+    },
+    sections: {
+      security: "Sécurité",
+      networks: "Réseaux",
+      preferences: "Préférences",
+      support: "Support",
+    },
+    items: {
+      recoveryPhrase: "Phrase de récupération",
+      password: "Mot de passe",
+      autoLock: "Verrouillage auto",
+      autoLockShort: "15 min",
+      defaultNetwork: "Réseau par défaut",
+      approvals: "Approbations",
+      language: "Langue",
+      theme: "Thème",
+      about: "Aide & à propos",
+    },
+    languageValues: {
+      fr: "Français",
+      en: "English",
+    },
+    themeValues: {
+      light: "Clair",
+      dark: "Sombre",
+    },
+    logout: "Déconnexion",
+    version: "v0.3",
   },
   fiat: {
     indicative: "≈",

@@ -31,13 +31,25 @@ import { useSangoWallet } from "@/hooks/use-sango-wallet";
 interface Props {
   open: boolean;
   onClose: () => void;
+  /** Onglet initial à afficher à l'ouverture. Défaut : "security". */
+  initialTab?: Tab;
 }
 
 type Tab = "security" | "preferences" | "wallet";
 
-export function SettingsModal({ open, onClose }: Props) {
+export function SettingsModal({
+  open,
+  onClose,
+  initialTab = "security",
+}: Props) {
   const t = useTranslation();
-  const [tab, setTab] = useState<Tab>("security");
+  const [tab, setTab] = useState<Tab>(initialTab);
+
+  // Resynchronise l'onglet quand le modal s'ouvre avec un initialTab
+  // différent (ex : "wallet" depuis le bouton Gérer).
+  useEffect(() => {
+    if (open) setTab(initialTab);
+  }, [open, initialTab]);
 
   useEffect(() => {
     if (!open) return;
