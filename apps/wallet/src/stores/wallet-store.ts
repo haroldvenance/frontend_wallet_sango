@@ -8,57 +8,95 @@ import { isKnownNetworkId, resolveChainFamily } from "@/lib/chain-family";
 
 /**
  * Union des wallets supportés (legacy SANGO + BIP-39 EVM/Bitcoin).
- *
- * Dupliqué de `@sango/wallet-session` pour éviter une dépendance
- * circulaire (session → store, store → session).
  */
 export type AnyWallet = Wallet | Bip39Wallet;
 
 /**
- * État de session du wallet.
+ * État de session du wallet (Phase 3.1 — multi-wallet keyring).
  *
- * ⚠️ Ne contient JAMAIS de seed en clair : uniquement l'instance
- *    `Wallet`/`Bip39Wallet` (dont le secret est privé au runtime JS).
+ * **Modèle** :
+ *   - `wallets` : map runtime des wallets **déverrouillés** (en
+ *     mémoire, jamais persistés). Clé = `KeyringEntry.id`.
+ *   - `wallet` : raccourci vers `wallets[activeId].wallet`. **Jamais
+ *     une source indépendante** — toujours mis à jour atomiquement
+ *     avec `activeId`.
+ *   - `activeId` : identifiant de l'entrée keyring active. **Persisté**
+ *     pour restaurer le dernier wallet utilisé après un `lock()` +
+ *     `unlock()`.
+ *   - `walletAccounts` : état HD par wallet (Phase 2.3). **Persisté**.
+ *   - `walletNetworks` : réseau courant **par wallet** (Phase 3.1).
+ *     **Persisté**. Seeded depuis `UnlockedWalletEntry.networkId` à la
+ *     première rencontre, puis préférence utilisateur.
+ *   - `networkId`, `format`, `family`, `network`, `status` : **état
+ *     effectif du wallet actif**, toujours recalculé atomiquement par
+ *     `unlock()` / `switchWallet()` / `setNetworkId()` / `lock()`.
  *
- * **E2.1.b.6.1 (D-E2.1-18)** — `family` est dérivée de `networkId`
- * par `resolveChainFamily()`. Elle n'est **jamais** fournie par
- * l'UI ni persistée.
+ * **Sécurité** :
+ *   - `wallets`, `wallet`, seeds, mnemonics : **runtime-only**,
+ *     détruits par `lock()`.
+ *   - `activeId`, `walletAccounts`, `walletNetworks` : persistés en
+ *     localStorage. Aucun secret.
  *
- * **Phase 2.3 (D-Phase2-1 + D-Phase2-3.bis)** — multi-comptes HD :
- *
- *   `walletAccounts: Record<walletId, { highestIndex, activeIndex }>`
- *
- *   - `highestIndex` : plus haut index créé par l'utilisateur. Ne
- *     redescend **jamais** en Phase 2 (représente l'historique).
- *   - `activeIndex`  : index actuellement sélectionné (0..highestIndex).
- *
- *   Les comptes sont dérivés à la volée
- *   (`Bip39Wallet.getIdentity(i)`), jamais stockés. Pour SANGO
- *   legacy (mono-compte), aucune entrée n'est créée et l'index est
- *   toujours 0.
- *
- * Deux champs de réseau :
- *   - `networkId` : identifiant canonique wallet-chains (persisté).
- *   - `network`   : label SANGO (HRP bech32m, query keys SANGO).
+ * **Sémantique "session keyring" (D-Phase3-1)** : un `unlock(password)`
+ * déverrouille **toutes** les entrées qui matchent. `switchWallet(id)`
+ * est un simple changement de référence — aucun re-prompt, aucun
+ * déchiffrement.
  */
 export type WalletStatus = "no-wallet" | "locked" | "unlocked";
 
-export interface UnlockArgs {
+/**
+ * État runtime d'un wallet déverrouillé. **Jamais persisté.**
+ */
+export interface UnlockedWalletEntry {
   readonly wallet: AnyWallet;
-  readonly id: string;
   readonly format: WalletFormat;
   /**
-   * `networkId` **structurel** du wallet (issu du keyring au
-   * déverrouillage, ou du formulaire de création).
+   * `networkId` **structurel** du wallet (issu du keyring). Sert de
+   * seed initial pour `walletNetworks[id]` — une fois que l'utilisateur
+   * change de réseau, `walletNetworks[id]` fait foi.
    */
   readonly networkId: string;
-  /** Optionnel — défaut "testnet". Utile uniquement pour SANGO. */
-  readonly network?: Network;
+  readonly label: string;
+  readonly createdAt: number;
 }
 
 /**
- * État multi-comptes par wallet (Phase 2.3).
+ * Argument d'unlock pour un wallet déverrouillé (nouveau format).
+ * Équivaut à `UnlockedWalletEntry` + `id`.
  */
+export interface UnlockedWalletArg {
+  readonly id: string;
+  readonly wallet: AnyWallet;
+  readonly format: WalletFormat;
+  readonly networkId: string;
+  readonly label: string;
+  readonly createdAt: number;
+}
+
+/**
+ * Nouvelle forme d'unlock : plusieurs wallets déverrouillés en une
+ * passe (session keyring).
+ */
+export interface UnlockArgsMulti {
+  readonly wallets: readonly UnlockedWalletArg[];
+}
+
+/**
+ * Ancienne forme d'unlock (E1 → Phase 2.3).
+ *
+ * ⚠️ **Compatibilité de migration uniquement.** Aucun nouveau
+ * consommateur ne doit l'utiliser. Sera retirée en Phase 3.5.
+ */
+export interface UnlockArgsLegacy {
+  readonly wallet: AnyWallet;
+  readonly id: string;
+  readonly format: WalletFormat;
+  readonly networkId: string;
+  readonly network?: Network;
+}
+
+export type UnlockArgs = UnlockArgsMulti | UnlockArgsLegacy;
+
 export interface WalletAccountState {
   readonly highestIndex: number;
   readonly activeIndex: number;
@@ -70,62 +108,44 @@ const DEFAULT_ACCOUNT_STATE: WalletAccountState = Object.freeze({
 });
 
 interface WalletState {
-  /** Instance wallet active (null si verrouillé ou aucune). */
+  // ── Runtime (jamais persisté) ─────────────────────────────
+  /** Wallets déverrouillés, clé = `KeyringEntry.id`. */
+  wallets: Record<string, UnlockedWalletEntry>;
+  /**
+   * Raccourci vers `wallets[activeId].wallet`. Toujours cohérent avec
+   * `activeId` — ne jamais muter indépendamment.
+   */
   wallet: AnyWallet | null;
-  /** Format de construction ("sango-legacy" | "bip39"). */
-  format: WalletFormat | null;
-  /** Identifiant canonique wallet-chains. */
-  networkId: string;
-  /**
-   * Famille de chaîne, **dérivée** de `networkId` (D-E2.1-18).
-   * Non persistée — recalculée à chaque mutation de `networkId`.
-   */
-  family: ChainFamily;
-  /** Label SANGO (HRP bech32m) — pilote les query keys SANGO. */
-  network: Network;
-  /** Statut de session. */
-  status: WalletStatus;
-  /** ID de l'entrée dans le keyring (adresse hex lowercase). */
-  activeId: string | null;
-  /**
-   * État multi-comptes HD par wallet (D-Phase2-1).
-   *
-   * **Persisté**. Clé = `activeId`. Un wallet absent du record est
-   * traité comme `{ highestIndex: 0, activeIndex: 0 }`.
-   */
-  walletAccounts: Record<string, WalletAccountState>;
 
-  // Actions
+  // ── Préférences persistées ────────────────────────────────
+  /** Entrée keyring du wallet actif (persistée pour restore). */
+  activeId: string | null;
+  /** État HD par wallet (Phase 2.3). */
+  walletAccounts: Record<string, WalletAccountState>;
+  /** Réseau courant par wallet (Phase 3.1). */
+  walletNetworks: Record<string, string>;
+
+  // ── État effectif du wallet actif (dérivé, non persisté) ─
+  format: WalletFormat | null;
+  networkId: string;
+  family: ChainFamily;
+  network: Network;
+  status: WalletStatus;
+
+  // ── Actions ───────────────────────────────────────────────
   unlock: (args: UnlockArgs) => void;
   lock: () => void;
   noWallet: () => void;
+  switchWallet: (id: string) => void;
+  forgetWallet: (id: string) => void;
   setNetwork: (network: Network) => void;
-  /**
-   * Change le `networkId` actif (persisté depuis E2.3.a.1).
-   *
-   * **D-E2.1-23** — refusé si :
-   *   - format ≠ "bip39" (SANGO legacy) ;
-   *   - changement cross-family (EVM ↔ Bitcoin).
-   */
   setNetworkId: (networkId: string) => void;
-  /**
-   * Change le compte actif (Phase 2.3).
-   *
-   * **D-Phase2-4.bis** — validation `0 <= index <= highestIndex`.
-   * Refuse si SANGO legacy ou `activeId` null.
-   */
   setAccountIndex: (index: number) => void;
-  /**
-   * Ajoute un nouveau compte (Phase 2.3).
-   *
-   * **D-Phase2-4** — `highestIndex + 1`, activé immédiatement.
-   */
   addAccount: () => void;
 }
 
 /**
- * Sélecteur React-free : renvoie l'index de compte actif pour
- * l'`activeId` courant (ou `0` si non résolu).
+ * Sélecteur : index de compte actif du wallet courant (ou 0).
  */
 export function selectActiveAccountIndex(state: WalletState): number {
   if (!state.activeId) return 0;
@@ -134,8 +154,7 @@ export function selectActiveAccountIndex(state: WalletState): number {
 }
 
 /**
- * Sélecteur React-free : renvoie l'état multi-comptes du wallet
- * actif (ou le défaut si non résolu).
+ * Sélecteur : état HD du wallet courant (ou défaut).
  */
 export function selectActiveAccountState(
   state: WalletState,
@@ -144,61 +163,275 @@ export function selectActiveAccountState(
   return state.walletAccounts[state.activeId] ?? DEFAULT_ACCOUNT_STATE;
 }
 
+/**
+ * Dérive le label SANGO (`Network`) depuis un `networkId`.
+ *
+ * Utilisé pour peupler `WalletState.network` (HRP bech32m). Pour les
+ * réseaux non-SANGO, retourne `"testnet"` (valeur neutre — les hooks
+ * EVM/Bitcoin lisent `networkId`, pas `network`).
+ */
+function resolveSangoLabel(networkId: string): Network {
+  return networkId === "sango-mainnet" ? "mainnet" : "testnet";
+}
+
+/**
+ * Normalise les deux formes d'unlock en une liste unique.
+ */
+function normalizeUnlockArgs(args: UnlockArgs): UnlockedWalletArg[] {
+  if ("wallets" in args) {
+    return [...args.wallets];
+  }
+  // Legacy : forme mono-wallet. Label par défaut "Mon portefeuille".
+  return [
+    {
+      id: args.id,
+      wallet: args.wallet,
+      format: args.format,
+      networkId: args.networkId,
+      label: "Mon portefeuille",
+      createdAt: Date.now(),
+    },
+  ];
+}
+
+/**
+ * Choisit le `networkId` effectif pour un wallet donné.
+ *
+ * Préserve l'invariant **D-E2.3-1** : une préférence invalide ou
+ * cross-family est ignorée au profit du `networkId` structurel du
+ * keyring. Les wallets SANGO legacy ignorent toute préférence
+ * (pas de switch réseau supporté).
+ *
+ * La préférence vient de `walletNetworks[id]` (persisté). Le fallback
+ * est `UnlockedWalletEntry.networkId` (issu du keyring, non validé —
+ * c'est la source structurelle du wallet).
+ */
+function pickEffectiveNetworkId(args: {
+  readonly format: WalletFormat;
+  readonly keyringNetworkId: string;
+  readonly preferredNetworkId: string | undefined;
+}): string {
+  const { format, keyringNetworkId, preferredNetworkId } = args;
+  if (format !== "bip39") return keyringNetworkId;
+  if (!preferredNetworkId) return keyringNetworkId;
+  if (!isKnownNetworkId(preferredNetworkId)) return keyringNetworkId;
+  if (
+    resolveChainFamily(preferredNetworkId) !==
+    resolveChainFamily(keyringNetworkId)
+  ) {
+    return keyringNetworkId;
+  }
+  return preferredNetworkId;
+}
+
 const PERSIST_KEY = "sango.wallet-session.v1";
 const isClient = typeof window !== "undefined";
 
 export const useWalletStore = create<WalletState>()(
   persist(
     (set, get) => ({
+      // Runtime
+      wallets: {},
       wallet: null,
+
+      // Persisté
+      activeId: null,
+      walletAccounts: {},
+      walletNetworks: {},
+
+      // État effectif
       format: null,
       networkId: "sango-devnet",
       family: "sango",
       network: "testnet",
       status: "no-wallet",
-      activeId: null,
-      walletAccounts: {},
 
-      unlock: ({ wallet, id, format, networkId: keyringNetworkId, network }) => {
-        const networkId = resolveUnlockedNetworkId(
-          format,
-          keyringNetworkId,
-          get().networkId,
-        );
-        // D-Phase2-1 : garantit que chaque wallet a son entrée.
-        // Les wallets existants héritent du défaut.
-        set((state) => ({
-          wallet,
-          format,
-          networkId,
-          family: resolveChainFamily(networkId),
-          network: network ?? "testnet",
+      unlock: (args) => {
+        const list = normalizeUnlockArgs(args);
+        if (list.length === 0) return;
+
+        const {
+          activeId: persistedActiveId,
+          walletAccounts,
+          walletNetworks,
+        } = get();
+
+        const wallets: Record<string, UnlockedWalletEntry> = {};
+        for (const w of list) {
+          wallets[w.id] = {
+            wallet: w.wallet,
+            format: w.format,
+            networkId: w.networkId,
+            label: w.label,
+            createdAt: w.createdAt,
+          };
+        }
+
+        // Restaure le dernier wallet actif si toujours présent,
+        // sinon prend le premier déverrouillé.
+        const activeId =
+          persistedActiveId && wallets[persistedActiveId]
+            ? persistedActiveId
+            : list[0]!.id;
+
+        const active = wallets[activeId]!;
+        const effectiveNetworkId = pickEffectiveNetworkId({
+          format: active.format,
+          keyringNetworkId: active.networkId,
+          preferredNetworkId: walletNetworks[activeId],
+        });
+
+        set({
+          wallets,
+          wallet: active.wallet,
+          format: active.format,
+          activeId,
+          networkId: effectiveNetworkId,
+          family: resolveChainFamily(effectiveNetworkId),
+          network: resolveSangoLabel(effectiveNetworkId),
           status: "unlocked",
-          activeId: id,
-          walletAccounts: state.walletAccounts[id]
-            ? state.walletAccounts
-            : { ...state.walletAccounts, [id]: DEFAULT_ACCOUNT_STATE },
-        }));
+          walletAccounts: walletAccounts[activeId]
+            ? walletAccounts
+            : { ...walletAccounts, [activeId]: DEFAULT_ACCOUNT_STATE },
+          walletNetworks: {
+            ...walletNetworks,
+            [activeId]: effectiveNetworkId,
+          },
+        });
       },
 
       lock: () => {
-        const { wallet } = get();
-        if (wallet) wallet.destroy();
-        set({ wallet: null, format: null, status: "locked" });
+        // Détruit toutes les instances déverrouillées.
+        const { wallets } = get();
+        for (const entry of Object.values(wallets)) {
+          entry.wallet.destroy();
+        }
+        // Préférences préservées : activeId, walletAccounts, walletNetworks.
+        set({
+          wallets: {},
+          wallet: null,
+          format: null,
+          status: "locked",
+        });
       },
 
       noWallet: () =>
         set({
+          wallets: {},
           wallet: null,
           format: null,
           status: "no-wallet",
           activeId: null,
         }),
 
+      switchWallet: (id) => {
+        const { wallets, walletAccounts, walletNetworks } = get();
+        const target = wallets[id];
+        if (!target) {
+          console.warn(
+            `wallet-store.switchWallet: unknown id "${id}" (not unlocked)`,
+          );
+          return;
+        }
+        if (get().activeId === id) return;
+
+        const effectiveNetworkId = pickEffectiveNetworkId({
+          format: target.format,
+          keyringNetworkId: target.networkId,
+          preferredNetworkId: walletNetworks[id],
+        });
+
+        set({
+          wallet: target.wallet,
+          format: target.format,
+          activeId: id,
+          networkId: effectiveNetworkId,
+          family: resolveChainFamily(effectiveNetworkId),
+          network: resolveSangoLabel(effectiveNetworkId),
+          walletAccounts: walletAccounts[id]
+            ? walletAccounts
+            : { ...walletAccounts, [id]: DEFAULT_ACCOUNT_STATE },
+          walletNetworks: {
+            ...walletNetworks,
+            [id]: effectiveNetworkId,
+          },
+        });
+      },
+
+      forgetWallet: (id) => {
+        const { wallets, activeId, walletAccounts, walletNetworks } = get();
+
+        const nextWallets = { ...wallets };
+        const target = nextWallets[id];
+        if (!target) {
+          console.warn(
+            `wallet-store.forgetWallet: unknown id "${id}"`,
+          );
+          return;
+        }
+
+        // Détruit l'instance si elle existe.
+        target.wallet.destroy();
+        delete nextWallets[id];
+
+        const nextAccounts = { ...walletAccounts };
+        delete nextAccounts[id];
+        const nextNetworks = { ...walletNetworks };
+        delete nextNetworks[id];
+
+        if (activeId === id) {
+          const remainingIds = Object.keys(nextWallets);
+          if (remainingIds.length === 0) {
+            // Plus aucun wallet : on repasse en locked (mais garde
+            // les préférences des autres wallets, nettoyées).
+            set({
+              wallets: {},
+              wallet: null,
+              format: null,
+              activeId: null,
+              status: "locked",
+              walletAccounts: nextAccounts,
+              walletNetworks: nextNetworks,
+            });
+            return;
+          }
+          const nextActiveId = remainingIds[0]!;
+          const next = nextWallets[nextActiveId]!;
+          const effectiveNetworkId = pickEffectiveNetworkId({
+            format: next.format,
+            keyringNetworkId: next.networkId,
+            preferredNetworkId: nextNetworks[nextActiveId],
+          });
+          set({
+            wallets: nextWallets,
+            wallet: next.wallet,
+            format: next.format,
+            activeId: nextActiveId,
+            networkId: effectiveNetworkId,
+            family: resolveChainFamily(effectiveNetworkId),
+            network: resolveSangoLabel(effectiveNetworkId),
+            walletAccounts: nextAccounts,
+            walletNetworks: nextNetworks,
+          });
+        } else {
+          set({
+            wallets: nextWallets,
+            walletAccounts: nextAccounts,
+            walletNetworks: nextNetworks,
+          });
+        }
+      },
+
       setNetwork: (network) => set({ network }),
 
       setNetworkId: (networkId) => {
-        const { format, family: currentFamily } = get();
+        const {
+          format,
+          family: currentFamily,
+          activeId,
+          walletNetworks,
+        } = get();
+
         if (format !== "bip39") {
           console.warn(
             `wallet-store.setNetworkId: ignored (format="${format}", expected "bip39")`,
@@ -215,7 +448,14 @@ export const useWalletStore = create<WalletState>()(
           return;
         }
 
-        set({ networkId, family: nextFamily });
+        set({
+          networkId,
+          family: nextFamily,
+          network: resolveSangoLabel(networkId),
+          walletNetworks: activeId
+            ? { ...walletNetworks, [activeId]: networkId }
+            : walletNetworks,
+        });
       },
 
       setAccountIndex: (index) => {
@@ -227,7 +467,6 @@ export const useWalletStore = create<WalletState>()(
           );
           return;
         }
-
         if (!activeId) {
           console.warn("wallet-store.setAccountIndex: ignored (no activeId)");
           return;
@@ -240,8 +479,7 @@ export const useWalletStore = create<WalletState>()(
           index > entry.highestIndex
         ) {
           console.warn(
-            `wallet-store.setAccountIndex: ignored (index=${index}, ` +
-              `valid range 0..${entry.highestIndex})`,
+            `wallet-store.setAccountIndex: ignored (index=${index}, valid range 0..${entry.highestIndex})`,
           );
           return;
         }
@@ -263,7 +501,6 @@ export const useWalletStore = create<WalletState>()(
           );
           return;
         }
-
         if (!activeId) {
           console.warn("wallet-store.addAccount: ignored (no activeId)");
           return;
@@ -288,37 +525,42 @@ export const useWalletStore = create<WalletState>()(
         ? createJSONStorage(() => localStorage)
         : undefined,
       /**
-       * **D-E2.3-1 + D-Phase2-1** — seules les préférences de session
-       * (`networkId`, `walletAccounts`) sont persistées. `family` est
-       * dérivée à la rehydratation.
+       * **D-Phase3-1** — seules les préférences **non-sensibles** sont
+       * persistées :
+       *   - `activeId` (restore du dernier wallet utilisé) ;
+       *   - `walletAccounts` (Phase 2.3) ;
+       *   - `walletNetworks` (Phase 3.1).
+       *
+       * ⚠️ Jamais persisté : `wallets`, `wallet`, seeds, mnemonics,
+       * passwords. Cf. `UnlockedWalletEntry`.
        */
       partialize: (state) => ({
-        networkId: state.networkId,
+        activeId: state.activeId,
         walletAccounts: state.walletAccounts,
+        walletNetworks: state.walletNetworks,
       }),
       /**
-       * Rehydrate : valide `networkId` (registre) et sanitize
-       * `walletAccounts` (structure `{highestIndex, activeIndex}`
-         * avec entiers ≥ 0). Compat : l'ancien format de la Phase 2.1
-         * (Record<string, number>) est **ignoré** — les wallets repartent sur
-       * est **ignoré** — les wallets repartent sur
-       * `{ highestIndex: 0, activeIndex: 0 }`.
+       * Rehydrate : sanitize `activeId`, `walletAccounts`,
+       * `walletNetworks`. Compat E2.3.a.1 : l'ancien `networkId`
+       * persisté est migré vers `walletNetworks[activeId]` s'il existe.
        */
       merge: (persisted, current) => {
         const p = persisted as
           | {
-              networkId?: unknown;
+              activeId?: unknown;
               walletAccounts?: unknown;
+              walletNetworks?: unknown;
+              networkId?: unknown; // legacy E2.3.a.1
             }
           | undefined;
 
-        const candidate =
-          typeof p?.networkId === "string" ? p.networkId : null;
-        const valid =
-          candidate && isKnownNetworkId(candidate)
-            ? candidate
-            : current.networkId;
+        // activeId : string non vide ou null.
+        const activeId =
+          typeof p?.activeId === "string" && p.activeId.length > 0
+            ? p.activeId
+            : null;
 
+        // walletAccounts : Record<string, {highestIndex, activeIndex}>.
         const rawAccounts = p?.walletAccounts;
         const walletAccounts: Record<string, WalletAccountState> = {};
         if (rawAccounts && typeof rawAccounts === "object") {
@@ -335,56 +577,54 @@ export const useWalletStore = create<WalletState>()(
             ) {
               const entry = v as WalletAccountState;
               const highest = Math.max(0, Math.floor(entry.highestIndex));
-              const activeRaw = Math.max(0, Math.floor(entry.activeIndex));
-              const active = Math.min(activeRaw, highest);
-              walletAccounts[k] = { highestIndex: highest, activeIndex: active };
+              const active = Math.min(
+                Math.max(0, Math.floor(entry.activeIndex)),
+                highest,
+              );
+              walletAccounts[k] = {
+                highestIndex: highest,
+                activeIndex: active,
+              };
             }
           }
         }
 
+        // walletNetworks : Record<string, networkId connu>.
+        const rawNetworks = p?.walletNetworks;
+        const walletNetworks: Record<string, string> = {};
+        if (rawNetworks && typeof rawNetworks === "object") {
+          for (const [k, v] of Object.entries(rawNetworks)) {
+            if (
+              typeof k === "string" &&
+              k.length > 0 &&
+              typeof v === "string" &&
+              isKnownNetworkId(v)
+            ) {
+              walletNetworks[k] = v;
+            }
+          }
+        }
+
+        // Migration E2.3.a.1 : si l'ancien `networkId` persisté est
+        // connu et qu'on a un `activeId`, on seed `walletNetworks`.
+        if (
+          activeId &&
+          !walletNetworks[activeId] &&
+          typeof p?.networkId === "string" &&
+          isKnownNetworkId(p.networkId)
+        ) {
+          walletNetworks[activeId] = p.networkId;
+        }
+
         return {
           ...current,
-          networkId: valid,
-          family: resolveChainFamily(valid),
+          activeId,
           walletAccounts,
+          walletNetworks,
+          // Note : `networkId`, `family`, `network` restent à leurs
+          // valeurs initiales tant que `unlock()` n'a pas été appelé.
         };
       },
     },
   ),
 );
-
-/**
- * Arbitre entre la préférence de session (persistée) et le
- * `networkId` structurel du keyring au moment de l'unlock.
- *
- * **D-E2.3-1 + D-E2.1-18** — la préférence est acceptée si :
- *   1. elle pointe vers un réseau connu (`isKnownNetworkId`), ET
- *   2. elle appartient à la **même famille** que le keyring.
- */
-function resolveUnlockedNetworkId(
-  format: WalletFormat,
-  keyringNetworkId: string,
-  sessionPreference: string,
-): string {
-  if (format !== "bip39") {
-    return keyringNetworkId;
-  }
-
-  const keyringFamily = resolveChainFamily(keyringNetworkId);
-
-  if (
-    sessionPreference &&
-    isKnownNetworkId(sessionPreference) &&
-    resolveChainFamily(sessionPreference) === keyringFamily
-  ) {
-    return sessionPreference;
-  }
-
-  if (!isKnownNetworkId(keyringNetworkId)) {
-    console.error(
-      `[wallet-store] keyring networkId "${keyringNetworkId}" is not a known network. ` +
-        `Unlocking with the invalid value — downstream reads will fail explicitly.`,
-    );
-  }
-  return keyringNetworkId;
-}

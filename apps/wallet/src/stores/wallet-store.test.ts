@@ -17,6 +17,7 @@ const fakeSangoWallet = {
 beforeEach(() => {
   localStorage.clear();
   useWalletStore.setState({
+    wallets: {},
     wallet: null,
     format: null,
     networkId: "sango-devnet",
@@ -25,6 +26,7 @@ beforeEach(() => {
     status: "no-wallet",
     activeId: null,
     walletAccounts: {},
+    walletNetworks: {},
   });
 });
 
@@ -33,14 +35,16 @@ beforeEach(() => {
 // ────────────────────────────────────────────────────────────
 
 describe("wallet-store — persistance", () => {
-  it("persiste networkId après setNetworkId sur BIP-39", () => {
-    // On part d'un EVM (family:"evm") pour que le switch intra-famille
-    // vers "bsc" soit autorisé par le garde-fou D-E2.1-23.
+  it("persiste walletNetworks après setNetworkId sur BIP-39", () => {
+    // On part d'un EVM (family:"evm") avec un activeId pour que
+    // setNetworkId persiste dans walletNetworks[activeId].
     useWalletStore.setState({
       format: "bip39",
       status: "unlocked",
+      activeId: "0xabc",
       networkId: "ethereum-sepolia",
       family: "evm",
+      walletNetworks: { "0xabc": "ethereum-sepolia" },
     });
     useWalletStore.getState().setNetworkId("bsc");
 
@@ -49,25 +53,39 @@ describe("wallet-store — persistance", () => {
     const parsed = JSON.parse(raw!) as {
       state: Record<string, unknown>;
     };
-    expect(parsed.state.networkId).toBe("bsc");
+    const walletNetworks = parsed.state.walletNetworks as Record<
+      string,
+      string
+    >;
+    expect(walletNetworks["0xabc"]).toBe("bsc");
   });
 
-  it("ne persiste QUE networkId (wallet/format/status/activeId absents)", () => {
+  it("ne persiste QUE les préférences (secrets runtime absents)", () => {
     useWalletStore.setState({
       format: "bip39",
       status: "unlocked",
       activeId: "0xabc",
       network: "testnet",
+      networkId: "ethereum-sepolia",
+      family: "evm",
+      walletNetworks: { "0xabc": "ethereum-sepolia" },
     });
     useWalletStore.getState().setNetworkId("bsc");
 
     const raw = localStorage.getItem(PERSIST_KEY);
     const parsed = JSON.parse(raw!) as { state: Record<string, unknown> };
+    // Runtime — jamais persisté
+    expect(parsed.state.wallets).toBeUndefined();
     expect(parsed.state.wallet).toBeUndefined();
     expect(parsed.state.format).toBeUndefined();
     expect(parsed.state.status).toBeUndefined();
-    expect(parsed.state.activeId).toBeUndefined();
     expect(parsed.state.network).toBeUndefined();
+    expect(parsed.state.family).toBeUndefined();
+    expect(parsed.state.networkId).toBeUndefined();
+    // Préférences — persistées (D-Phase3-1)
+    expect(parsed.state.activeId).toBe("0xabc");
+    expect(parsed.state.walletAccounts).toEqual({});
+    expect(parsed.state.walletNetworks).toEqual({ "0xabc": "bsc" });
   });
 
   it("setNetworkId refuse un wallet non BIP-39", () => {
@@ -85,8 +103,8 @@ describe("wallet-store — persistance", () => {
 // ────────────────────────────────────────────────────────────
 
 describe("wallet-store — resolveUnlockedNetworkId", () => {
-  it("BIP-39 : préférence session valide gagne sur le keyring", () => {
-    useWalletStore.setState({ networkId: "bsc" });
+  it("BIP-39 : préférence valide gagne sur le keyring", () => {
+    useWalletStore.setState({ walletNetworks: { "0xabc": "bsc" } });
     useWalletStore.getState().unlock({
       wallet: fakeBip39Wallet,
       id: "0xabc",
@@ -96,8 +114,10 @@ describe("wallet-store — resolveUnlockedNetworkId", () => {
     expect(useWalletStore.getState().networkId).toBe("bsc");
   });
 
-  it("BIP-39 : préférence invalide (SANGO) → keyring", () => {
-    useWalletStore.setState({ networkId: "sango-devnet" });
+  it("BIP-39 : préférence cross-family (SANGO) → keyring", () => {
+    useWalletStore.setState({
+      walletNetworks: { "0xabc": "sango-devnet" },
+    });
     useWalletStore.getState().unlock({
       wallet: fakeBip39Wallet,
       id: "0xabc",
@@ -107,8 +127,10 @@ describe("wallet-store — resolveUnlockedNetworkId", () => {
     expect(useWalletStore.getState().networkId).toBe("ethereum-sepolia");
   });
 
-  it("BIP-39 : préférence invalide (inconnu) → keyring", () => {
-    useWalletStore.setState({ networkId: "unknown-evm-net" });
+  it("BIP-39 : préférence inconnue → keyring", () => {
+    useWalletStore.setState({
+      walletNetworks: { "0xabc": "unknown-evm-net" },
+    });
     useWalletStore.getState().unlock({
       wallet: fakeBip39Wallet,
       id: "0xabc",
@@ -119,7 +141,9 @@ describe("wallet-store — resolveUnlockedNetworkId", () => {
   });
 
   it("SANGO : préférence ignorée → keyring", () => {
-    useWalletStore.setState({ networkId: "bsc" });
+    useWalletStore.setState({
+      walletNetworks: { "0xabc": "bsc" },
+    });
     useWalletStore.getState().unlock({
       wallet: fakeSangoWallet,
       id: "0xabc",
@@ -130,8 +154,11 @@ describe("wallet-store — resolveUnlockedNetworkId", () => {
   });
 
   it("INVARIANT : ethereum-sepolia n'est PAS un fallback (D-E2.3-1)", () => {
-    const err = vi.spyOn(console, "error").mockImplementation(() => {});
-    useWalletStore.setState({ networkId: "unknown-evm-1" });
+    // Préférence inconnue + keyring inconnu : le keyring reste tel quel,
+    // aucun fallback silencieux vers sepolia.
+    useWalletStore.setState({
+      walletNetworks: { "0xabc": "unknown-evm-1" },
+    });
     useWalletStore.getState().unlock({
       wallet: fakeBip39Wallet,
       id: "0xabc",
@@ -139,16 +166,15 @@ describe("wallet-store — resolveUnlockedNetworkId", () => {
       networkId: "unknown-evm-2",
     });
     const resolved = useWalletStore.getState().networkId;
-    // On garde le keyring invalide tel quel (erreur explicite loggée)
-    // plutôt que de substituer silencieusement sepolia.
     expect(resolved).toBe("unknown-evm-2");
+    expect(resolved).not.toBe("unknown-evm-1");
     expect(resolved).not.toBe("ethereum-sepolia");
-    expect(err).toHaveBeenCalled();
-    err.mockRestore();
   });
 
   it("BIP-39 : bascule entre 3 mainnets préservée par session", () => {
-    useWalletStore.setState({ networkId: "arbitrum-one" });
+    useWalletStore.setState({
+      walletNetworks: { "0xabc": "arbitrum-one" },
+    });
     useWalletStore.getState().unlock({
       wallet: fakeBip39Wallet,
       id: "0xabc",
@@ -157,7 +183,9 @@ describe("wallet-store — resolveUnlockedNetworkId", () => {
     });
     expect(useWalletStore.getState().networkId).toBe("arbitrum-one");
 
-    useWalletStore.setState({ networkId: "base" });
+    useWalletStore.setState({
+      walletNetworks: { "0xabc": "base" },
+    });
     useWalletStore.getState().unlock({
       wallet: fakeBip39Wallet,
       id: "0xabc",
@@ -228,11 +256,10 @@ describe("wallet-store — family", () => {
   });
 
   it("préférence EVM ignorée pour un keyring Bitcoin", () => {
-    // Store préférence = EVM, keyring = Bitcoin. Familles différentes
+    // Préférence = EVM, keyring = Bitcoin. Familles différentes
     // → préférence rejetée, family=bitcoin cohérent avec keyring.
     useWalletStore.setState({
-      networkId: "ethereum-sepolia",
-      family: "evm",
+      walletNetworks: { "0xabc": "ethereum-sepolia" },
     });
     useWalletStore.getState().unlock({
       wallet: fakeBip39Wallet,
@@ -246,8 +273,7 @@ describe("wallet-store — family", () => {
 
   it("préférence Bitcoin ignorée pour un keyring EVM", () => {
     useWalletStore.setState({
-      networkId: "bitcoin-testnet",
-      family: "bitcoin",
+      walletNetworks: { "0xabc": "bitcoin-testnet" },
     });
     useWalletStore.getState().unlock({
       wallet: fakeBip39Wallet,
@@ -260,7 +286,9 @@ describe("wallet-store — family", () => {
   });
 
   it("préférence mainnet EVM conservée pour un keyring EVM (D-E2.3-1)", () => {
-    useWalletStore.setState({ networkId: "bsc", family: "evm" });
+    useWalletStore.setState({
+      walletNetworks: { "0xabc": "bsc" },
+    });
     useWalletStore.getState().unlock({
       wallet: fakeBip39Wallet,
       id: "0xabc",
@@ -473,5 +501,182 @@ describe("wallet-store — walletAccounts", () => {
     const s = useWalletStore.getState().walletAccounts["0xw"]!;
     expect(s.highestIndex).toBe(3);
     expect(s.activeIndex).toBe(1);
+  });
+});
+
+// ────────────────────────────────────────────────────────────
+//  Phase 3.1 — multi-wallet keyring
+// ────────────────────────────────────────────────────────────
+
+describe("wallet-store — Phase 3.1 (multi-wallet)", () => {
+  function makeArg(id: string, networkId: string, label: string) {
+    return {
+      id,
+      wallet: fakeBip39Wallet,
+      format: "bip39" as const,
+      networkId,
+      label,
+      createdAt: Date.now(),
+    };
+  }
+
+  it("unlock({ wallets }) déverrouille plusieurs wallets", () => {
+    useWalletStore.getState().unlock({
+      wallets: [
+        makeArg("0xa", "ethereum-sepolia", "Wallet A"),
+        makeArg("0xb", "bsc", "Wallet B"),
+      ],
+    });
+    const s = useWalletStore.getState();
+    expect(s.status).toBe("unlocked");
+    expect(Object.keys(s.wallets).sort()).toEqual(["0xa", "0xb"]);
+    // Premier wallet (0xa) actif par défaut (pas d'activeId persisté)
+    expect(s.activeId).toBe("0xa");
+    expect(s.networkId).toBe("ethereum-sepolia");
+    expect(s.family).toBe("evm");
+    // wallet raccourci
+    expect(s.wallet).toBe(fakeBip39Wallet);
+  });
+
+  it("switchWallet change la référence sans destroy", () => {
+    useWalletStore.getState().unlock({
+      wallets: [
+        makeArg("0xa", "ethereum-sepolia", "Wallet A"),
+        makeArg("0xb", "bsc", "Wallet B"),
+      ],
+    });
+    useWalletStore.getState().switchWallet("0xb");
+    const s = useWalletStore.getState();
+    expect(s.activeId).toBe("0xb");
+    expect(s.networkId).toBe("bsc");
+    expect(s.family).toBe("evm");
+    // Aucun destroy appelé
+    expect((fakeBip39Wallet.destroy as ReturnType<typeof vi.fn>).mock.calls)
+      .toHaveLength(0);
+  });
+
+  it("switchWallet persiste le réseau par wallet (walletNetworks)", () => {
+    useWalletStore.getState().unlock({
+      wallets: [
+        makeArg("0xa", "ethereum-sepolia", "Wallet A"),
+        makeArg("0xb", "bsc", "Wallet B"),
+      ],
+    });
+    // Modifie le réseau du wallet A
+    useWalletStore.getState().setNetworkId("arbitrum-one");
+    expect(
+      useWalletStore.getState().walletNetworks["0xa"],
+    ).toBe("arbitrum-one");
+
+    // Switch vers B : son réseau reste "bsc" (pas contaminé par A)
+    useWalletStore.getState().switchWallet("0xb");
+    expect(useWalletStore.getState().networkId).toBe("bsc");
+
+    // Retour vers A : retrouve "arbitrum-one"
+    useWalletStore.getState().switchWallet("0xa");
+    expect(useWalletStore.getState().networkId).toBe("arbitrum-one");
+  });
+
+  it("unlock restaure le dernier activeId persisté", () => {
+    useWalletStore.setState({ activeId: "0xb" });
+    useWalletStore.getState().unlock({
+      wallets: [
+        makeArg("0xa", "ethereum-sepolia", "Wallet A"),
+        makeArg("0xb", "bsc", "Wallet B"),
+      ],
+    });
+    expect(useWalletStore.getState().activeId).toBe("0xb");
+    expect(useWalletStore.getState().networkId).toBe("bsc");
+  });
+
+  it("unlock : activeId périmé → premier wallet déverrouillé", () => {
+    useWalletStore.setState({ activeId: "0xmissing" });
+    useWalletStore.getState().unlock({
+      wallets: [makeArg("0xa", "ethereum-sepolia", "Wallet A")],
+    });
+    expect(useWalletStore.getState().activeId).toBe("0xa");
+  });
+
+  it("lock détruit tous les wallets et préserve les préférences", () => {
+    const destroy = fakeBip39Wallet.destroy as ReturnType<typeof vi.fn>;
+    destroy.mockClear();
+
+    useWalletStore.getState().unlock({
+      wallets: [makeArg("0xa", "ethereum-sepolia", "Wallet A")],
+    });
+    useWalletStore.getState().setNetworkId("bsc");
+
+    useWalletStore.getState().lock();
+
+    const s = useWalletStore.getState();
+    expect(s.status).toBe("locked");
+    expect(s.wallets).toEqual({});
+    expect(s.wallet).toBeNull();
+    expect(s.format).toBeNull();
+    // Préférences préservées
+    expect(s.activeId).toBe("0xa");
+    expect(s.walletNetworks["0xa"]).toBe("bsc");
+    // destroy appelé sur l'instance
+    expect(destroy).toHaveBeenCalled();
+  });
+
+  it("forgetWallet supprime entrée + préférences, garde le store indépendant", () => {
+    useWalletStore.getState().unlock({
+      wallets: [
+        makeArg("0xa", "ethereum-sepolia", "Wallet A"),
+        makeArg("0xb", "bsc", "Wallet B"),
+      ],
+    });
+
+    useWalletStore.getState().forgetWallet("0xb");
+
+    const s = useWalletStore.getState();
+    expect(s.wallets["0xb"]).toBeUndefined();
+    expect(s.wallets["0xa"]).toBeDefined();
+    expect(s.walletNetworks["0xb"]).toBeUndefined();
+    expect(s.walletAccounts["0xb"]).toBeUndefined();
+  });
+
+  it("forgetWallet sur activeId bascule vers un autre", () => {
+    useWalletStore.getState().unlock({
+      wallets: [
+        makeArg("0xa", "ethereum-sepolia", "Wallet A"),
+        makeArg("0xb", "bsc", "Wallet B"),
+      ],
+    });
+    expect(useWalletStore.getState().activeId).toBe("0xa");
+
+    useWalletStore.getState().forgetWallet("0xa");
+
+    const s = useWalletStore.getState();
+    expect(s.activeId).toBe("0xb");
+    expect(s.status).toBe("unlocked");
+  });
+
+  it("forgetWallet du dernier wallet → status locked", () => {
+    useWalletStore.getState().unlock({
+      wallets: [makeArg("0xa", "ethereum-sepolia", "Wallet A")],
+    });
+    useWalletStore.getState().forgetWallet("0xa");
+
+    const s = useWalletStore.getState();
+    expect(s.wallets).toEqual({});
+    expect(s.wallet).toBeNull();
+    expect(s.status).toBe("locked");
+    expect(s.activeId).toBeNull();
+  });
+
+  it("ancienne forme unlock() reste supportée (compat)", () => {
+    useWalletStore.getState().unlock({
+      wallet: fakeBip39Wallet,
+      id: "0xlegacy",
+      format: "bip39",
+      networkId: "ethereum-sepolia",
+    });
+    const s = useWalletStore.getState();
+    expect(s.status).toBe("unlocked");
+    expect(s.activeId).toBe("0xlegacy");
+    expect(s.wallets["0xlegacy"]).toBeDefined();
+    expect(s.wallets["0xlegacy"]!.label).toBe("Mon portefeuille");
   });
 });
