@@ -16,6 +16,8 @@ export function mockBitcoinRpc(overrides: Partial<BitcoinRpc> = {}): BitcoinRpc 
       }),
     ),
     broadcastTx: vi.fn(async () => "a".repeat(64)),
+    // Patch A.2 — requis pour l'interface BitcoinRpc (historique).
+    getTxs: vi.fn(async () => []),
     ...overrides,
   };
 }

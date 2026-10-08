@@ -57,8 +57,7 @@ function makeChangeProvider(): BitcoinChangeAddressProvider {
 
 function makeBuilder(utxoValues: bigint[]) {
   const rpc = mockBitcoinRpc({
-    getUtxos: vi.fn(async () =>,
-    getTxs: async () => [],
+    getUtxos: vi.fn(async () =>
       utxoValues.map((v, i) =>
         utxo({
           txid: String(i).repeat(64).slice(0, 64),

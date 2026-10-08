@@ -18,8 +18,7 @@ const ADDR = asAddress(TESTNET_ADDRESS);
 describe("BitcoinBalanceProvider", () => {
   it("somme les UTXOs (sats)", async () => {
     const rpc = mockBitcoinRpc({
-      getUtxos: vi.fn(async () => [,
-      getTxs: async () => [],
+      getUtxos: vi.fn(async () => [
         utxo({ txid: "a".repeat(64), value: 100_000n }),
         utxo({ txid: "b".repeat(64), vout: 1, value: 250_000n }),
       ]),
@@ -48,8 +47,7 @@ describe("BitcoinBalanceProvider", () => {
 
   it("ignore les UTXOs avec value = 0 (dust)", async () => {
     const rpc = mockBitcoinRpc({
-      getUtxos: vi.fn(async () => [,
-      getTxs: async () => [],
+      getUtxos: vi.fn(async () => [
         utxo({ txid: "a".repeat(64), value: 100_000n }),
         utxo({ txid: "b".repeat(64), value: 0n }), // dust
       ]),
@@ -64,8 +62,7 @@ describe("BitcoinBalanceProvider", () => {
 
   it("ignore les UTXOs avec txid invalide", async () => {
     const rpc = mockBitcoinRpc({
-      getUtxos: vi.fn(async () => [,
-      getTxs: async () => [],
+      getUtxos: vi.fn(async () => [
         utxo({ txid: "a".repeat(64), value: 100_000n }),
         utxo({ txid: "not-hex", value: 1_000_000n }),
         utxo({ txid: "abc", value: 1_000_000n }),

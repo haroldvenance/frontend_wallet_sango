@@ -20,6 +20,7 @@ function makeDeps(wallet: Bip39Wallet, btcNetwork: "testnet" | "mainnet") {
       getUtxos: async () => [],
       getFeeRates: async () => ({ fast: 1n, normal: 1n, slow: 1n }),
       broadcastTx: async () => "",
+      getTxs: async () => [],
     },
     changeProvider: {
       getChangeAddress: async () => ({

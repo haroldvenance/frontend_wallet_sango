@@ -89,10 +89,44 @@ describe("BitcoinHistoryProvider — Patch A.2", () => {
 
     expect(items[0]!.from).toBe(ADDRESS);
     expect(items[0]!.to).toBe(OTHER);
-    expect(items[0]!.amount).toBe(80_000n);
+    // delta = 19_000 - 100_000 = -81_000 (target 80_000 + fees 1_000).
+    // Le montant affiché est abs(delta), fees incluses.
+    expect(items[0]!.amount).toBe(81_000n);
   });
 
-  it("interne : delta = 0 → from=to=address (D7·A)", async () => {
+  it("delta = 0 strict → from=to=address, amount=0 (D7·A)", async () => {
+    // Cas théorique : input et output compensent exactement, aucun
+    // frais. Impossible on-chain (fees > 0) mais utile pour figer la
+    // règle "delta = 0 strict → Interne".
+    const tx = makeTx({
+      vin: [
+        {
+          txid: "bb".repeat(32),
+          vout: 0,
+          prevout: {
+            scriptpubkey: "",
+            scriptpubkey_address: ADDRESS,
+            value: 50_000,
+          },
+          is_coinbase: false,
+        },
+      ],
+      vout: [
+        { scriptpubkey: "", scriptpubkey_address: ADDRESS, value: 50_000 },
+      ],
+    });
+
+    const provider = new BitcoinHistoryProvider(makeRpc([tx]), "bitcoin-testnet");
+    const { items } = await provider.getHistory({ address: ADDRESS, limit: 20 });
+
+    expect(items[0]!.from).toBe(ADDRESS);
+    expect(items[0]!.to).toBe(ADDRESS);
+    expect(items[0]!.amount).toBe(0n);
+  });
+
+  it("self-transfer avec fees → Envoyée (delta ≠ 0)", async () => {
+    // Cas réaliste : auto-send 49 000 sur 50 000, frais 1 000.
+    // delta = -1 000 → classé Envoyée, amount = 1 000 (les frais).
     const tx = makeTx({
       vin: [
         {
@@ -115,8 +149,10 @@ describe("BitcoinHistoryProvider — Patch A.2", () => {
     const { items } = await provider.getHistory({ address: ADDRESS, limit: 20 });
 
     expect(items[0]!.from).toBe(ADDRESS);
-    expect(items[0]!.to).toBe(ADDRESS);
-    expect(items[0]!.amount).toBe(0n);
+    // Pas de contrepartie identifiable (tous les vout/vin sont nous).
+    // L'UI classera Envoyée car `to !== myAddress`.
+    expect(items[0]!.to).toBe("");
+    expect(items[0]!.amount).toBe(1_000n);
   });
 
   it("pending : timestamp et blockHeight absents (D9·A)", async () => {
