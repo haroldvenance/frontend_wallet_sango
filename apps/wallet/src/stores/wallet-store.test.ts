@@ -120,7 +120,9 @@ describe("wallet-store — resolveUnlockedNetworkId", () => {
     expect(useWalletStore.getState().networkId).toBe("bsc");
   });
 
-  it("BIP-39 : préférence cross-family (SANGO) → keyring", () => {
+  it("BIP-39 : préférence cross-family (SANGO) honorée (D-Phase5-2)", () => {
+    // V2 n'a pas de famille intrinsèque — une préférence valide est
+    // honorée même si elle traverse les familles.
     useWalletStore.setState({
       walletNetworks: { "0xabc": "sango-devnet" },
     });
@@ -136,7 +138,7 @@ describe("wallet-store — resolveUnlockedNetworkId", () => {
         },
       ],
     });
-    expect(useWalletStore.getState().networkId).toBe("ethereum-sepolia");
+    expect(useWalletStore.getState().networkId).toBe("sango-devnet");
   });
 
   it("BIP-39 : préférence inconnue → keyring", () => {
@@ -315,9 +317,9 @@ describe("wallet-store — family", () => {
     expect(useWalletStore.getState().family).toBe("bitcoin");
   });
 
-  it("préférence EVM ignorée pour un keyring Bitcoin", () => {
-    // Préférence = EVM, keyring = Bitcoin. Familles différentes
-    // → préférence rejetée, family=bitcoin cohérent avec keyring.
+  it("préférence EVM honorée pour un keyring Bitcoin (D-Phase5-2)", () => {
+    // V2 : préférence valide honorée cross-family. `family` suit
+    // le networkId actif.
     useWalletStore.setState({
       walletNetworks: { "0xabc": "ethereum-sepolia" },
     });
@@ -333,11 +335,11 @@ describe("wallet-store — family", () => {
         },
       ],
     });
-    expect(useWalletStore.getState().networkId).toBe("bitcoin-testnet");
-    expect(useWalletStore.getState().family).toBe("bitcoin");
+    expect(useWalletStore.getState().networkId).toBe("ethereum-sepolia");
+    expect(useWalletStore.getState().family).toBe("evm");
   });
 
-  it("préférence Bitcoin ignorée pour un keyring EVM", () => {
+  it("préférence Bitcoin honorée pour un keyring EVM (D-Phase5-2)", () => {
     useWalletStore.setState({
       walletNetworks: { "0xabc": "bitcoin-testnet" },
     });
@@ -353,8 +355,8 @@ describe("wallet-store — family", () => {
         },
       ],
     });
-    expect(useWalletStore.getState().networkId).toBe("ethereum-sepolia");
-    expect(useWalletStore.getState().family).toBe("evm");
+    expect(useWalletStore.getState().networkId).toBe("bitcoin-testnet");
+    expect(useWalletStore.getState().family).toBe("bitcoin");
   });
 
   it("préférence mainnet EVM conservée pour un keyring EVM (D-E2.3-1)", () => {
@@ -382,8 +384,12 @@ describe("wallet-store — family", () => {
 //  E2.1.b.7.b — garde-fou cross-family sur setNetworkId (D-E2.1-23)
 // ────────────────────────────────────────────────────────────
 
-describe("wallet-store — setNetworkId cross-family", () => {
-  it("accepte un changement intra-famille Bitcoin (testnet → mainnet)", () => {
+describe("wallet-store — setNetworkId (D-Phase5-2)", () => {
+  // V2 (Bip39Wallet) : famille universelle. Toute transition vers un
+  // réseau **connu** est acceptée, y compris cross-family.
+  // V1 (sango-legacy) : SANGO-only, tout switch est refusé.
+
+  it("V2 accepte intra-famille Bitcoin (testnet → mainnet)", () => {
     useWalletStore.setState({
       format: "bip39",
       status: "unlocked",
@@ -395,7 +401,7 @@ describe("wallet-store — setNetworkId cross-family", () => {
     expect(useWalletStore.getState().family).toBe("bitcoin");
   });
 
-  it("accepte un changement intra-famille EVM (sepolia → bsc)", () => {
+  it("V2 accepte intra-famille EVM (sepolia → bsc)", () => {
     useWalletStore.setState({
       format: "bip39",
       status: "unlocked",
@@ -407,8 +413,7 @@ describe("wallet-store — setNetworkId cross-family", () => {
     expect(useWalletStore.getState().family).toBe("evm");
   });
 
-  it("refuse Bitcoin → EVM", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("V2 accepte Bitcoin → EVM (cross-family)", () => {
     useWalletStore.setState({
       format: "bip39",
       status: "unlocked",
@@ -416,16 +421,11 @@ describe("wallet-store — setNetworkId cross-family", () => {
       family: "bitcoin",
     });
     useWalletStore.getState().setNetworkId("ethereum-sepolia");
-    expect(useWalletStore.getState().networkId).toBe("bitcoin-testnet");
-    expect(useWalletStore.getState().family).toBe("bitcoin");
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("cross-family"),
-    );
-    warn.mockRestore();
+    expect(useWalletStore.getState().networkId).toBe("ethereum-sepolia");
+    expect(useWalletStore.getState().family).toBe("evm");
   });
 
-  it("refuse EVM → Bitcoin", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("V2 accepte EVM → Bitcoin (cross-family)", () => {
     useWalletStore.setState({
       format: "bip39",
       status: "unlocked",
@@ -433,12 +433,80 @@ describe("wallet-store — setNetworkId cross-family", () => {
       family: "evm",
     });
     useWalletStore.getState().setNetworkId("bitcoin-mainnet");
-    expect(useWalletStore.getState().networkId).toBe("ethereum-mainnet");
-    expect(useWalletStore.getState().family).toBe("evm");
+    expect(useWalletStore.getState().networkId).toBe("bitcoin-mainnet");
+    expect(useWalletStore.getState().family).toBe("bitcoin");
+  });
+
+  it("V2 accepte EVM → SANGO (cross-family)", () => {
+    useWalletStore.setState({
+      format: "bip39",
+      status: "unlocked",
+      networkId: "ethereum-sepolia",
+      family: "evm",
+    });
+    useWalletStore.getState().setNetworkId("sango-devnet");
+    expect(useWalletStore.getState().networkId).toBe("sango-devnet");
+    expect(useWalletStore.getState().family).toBe("sango");
+  });
+
+  it("V2 accepte SANGO → Bitcoin (cross-family)", () => {
+    useWalletStore.setState({
+      format: "bip39",
+      status: "unlocked",
+      networkId: "sango-devnet",
+      family: "sango",
+    });
+    useWalletStore.getState().setNetworkId("bitcoin-testnet");
+    expect(useWalletStore.getState().networkId).toBe("bitcoin-testnet");
+    expect(useWalletStore.getState().family).toBe("bitcoin");
+  });
+
+  it("V2 refuse un networkId inconnu", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    useWalletStore.setState({
+      format: "bip39",
+      status: "unlocked",
+      networkId: "ethereum-sepolia",
+      family: "evm",
+    });
+    useWalletStore.getState().setNetworkId("totally-unknown-network");
+    expect(useWalletStore.getState().networkId).toBe("ethereum-sepolia");
     expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("cross-family"),
+      expect.stringContaining("unknown networkId"),
     );
     warn.mockRestore();
+  });
+
+  it("V1 (sango-legacy) refuse tout setNetworkId", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    useWalletStore.setState({
+      format: "sango-legacy",
+      status: "unlocked",
+      networkId: "sango-devnet",
+      family: "sango",
+    });
+    useWalletStore.getState().setNetworkId("ethereum-mainnet");
+    expect(useWalletStore.getState().networkId).toBe("sango-devnet");
+    expect(useWalletStore.getState().family).toBe("sango");
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('expected "bip39"'),
+    );
+    warn.mockRestore();
+  });
+
+  it("V2 persiste le réseau actif par wallet (walletNetworks[id])", () => {
+    useWalletStore.setState({
+      format: "bip39",
+      status: "unlocked",
+      activeId: "0xabc",
+      networkId: "ethereum-sepolia",
+      family: "evm",
+      walletNetworks: { "0xabc": "ethereum-sepolia" },
+    });
+    useWalletStore.getState().setNetworkId("bitcoin-testnet");
+    expect(useWalletStore.getState().walletNetworks["0xabc"]).toBe(
+      "bitcoin-testnet",
+    );
   });
 });
 

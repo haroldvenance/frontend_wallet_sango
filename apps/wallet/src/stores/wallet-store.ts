@@ -195,15 +195,18 @@ function pickEffectiveNetworkId(args: {
   readonly preferredNetworkId: string | undefined;
 }): string {
   const { format, keyringNetworkId, preferredNetworkId } = args;
+
+  // **D-Phase5-2** — V1 (sango-legacy) : SANGO-only. Le networkId
+  // structurel du keyring fait foi ; aucune préférence n'est
+  // applicable (Ed25519 non-HD, pas de dérivation multi-famille).
   if (format !== "bip39") return keyringNetworkId;
+
+  // V2 (Bip39Wallet) : famille universelle. Le wallet peut dériver
+  // SANGO, EVM et Bitcoin depuis la même mnemonic — il n'a **pas**
+  // de famille intrinsèque. Une préférence valide est honorée
+  // cross-family (SANGO ↔ EVM ↔ Bitcoin).
   if (!preferredNetworkId) return keyringNetworkId;
   if (!isKnownNetworkId(preferredNetworkId)) return keyringNetworkId;
-  if (
-    resolveChainFamily(preferredNetworkId) !==
-    resolveChainFamily(keyringNetworkId)
-  ) {
-    return keyringNetworkId;
-  }
   return preferredNetworkId;
 }
 
@@ -462,13 +465,10 @@ export const useWalletStore = create<WalletState>()(
       setNetwork: (network) => set({ network }),
 
       setNetworkId: (networkId) => {
-        const {
-          format,
-          family: currentFamily,
-          activeId,
-          walletNetworks,
-        } = get();
+        const { format, activeId, walletNetworks } = get();
 
+        // **D-Phase5-2** — V1 (sango-legacy) : SANGO-only. Aucun
+        // switch réseau possible (pas de dérivation multi-famille).
         if (format !== "bip39") {
           console.warn(
             `wallet-store.setNetworkId: ignored (format="${format}", expected "bip39")`,
@@ -476,18 +476,21 @@ export const useWalletStore = create<WalletState>()(
           return;
         }
 
-        const nextFamily = resolveChainFamily(networkId);
-        if (nextFamily !== currentFamily) {
+        // V2 (Bip39Wallet) : famille universelle. `setNetworkId`
+        // accepte n'importe quel réseau **connu**, y compris
+        // cross-family (SANGO ↔ EVM ↔ Bitcoin). `family` et
+        // `network` sont simplement recalculés à partir du
+        // `networkId` — ils ne contraignent pas le switch.
+        if (!isKnownNetworkId(networkId)) {
           console.warn(
-            `wallet-store.setNetworkId: ignored cross-family switch ` +
-              `(current="${currentFamily}", next="${nextFamily}", networkId="${networkId}")`,
+            `wallet-store.setNetworkId: ignored (unknown networkId "${networkId}")`,
           );
           return;
         }
 
         set({
           networkId,
-          family: nextFamily,
+          family: resolveChainFamily(networkId),
           network: resolveSangoLabel(networkId),
           walletNetworks: activeId
             ? { ...walletNetworks, [activeId]: networkId }

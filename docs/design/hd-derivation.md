@@ -225,6 +225,37 @@ peut créer un v2 à côté, avec ses propres fonds.
 Une suppression n'est possible que par Forget explicite (Phase 3.4),
 jamais par migration automatique.
 
+### 5.1 Modèle de session (D-Phase5-2)
+
+Le store de session (`apps/wallet/src/stores/wallet-store.ts`) expose
+`family` comme un état **dérivé** du `networkId` actif :
+
+    wallet (V2)
+      ├── identité HD universelle
+      │
+      ├── walletNetworks[id]      ← dernier réseau actif (persisté)
+      │
+      ▼
+    networkId                     ← réseau actif du store
+      ▼
+    family                        ← dérivé via resolveChainFamily()
+
+**Un wallet V2 n'a pas de famille intrinsèque.** Les familles
+disponibles sont déterminées par les capacités de dérivation du
+format BIP-39 (via `getIdentity` / `getBitcoinIdentity` /
+`getSangoIdentity`) et le registre des réseaux. `walletNetworks[id]`
+ne mémorise **que le dernier réseau actif** — il ne représente pas
+un ensemble de réseaux activés.
+
+**Conséquence pratique** : `setNetworkId` accepte toute transition
+vers un réseau **connu**, y compris cross-family (SANGO ↔ EVM ↔
+Bitcoin). Seul V1 (`sango-legacy`) reste contraint à SANGO — il ne
+peut dériver qu'une identité Ed25519 et n'a pas d'accès multi-famille.
+
+**Ne pas confondre `format === "bip39"` avec une famille.** Le
+discriminant V1/V2 est `format !== "sango-legacy"` : c'est la
+capacité à dériver plusieurs familles, pas une famille en soi.
+
 ---
 
 ## 6. Ce que cette spec ne couvre PAS
