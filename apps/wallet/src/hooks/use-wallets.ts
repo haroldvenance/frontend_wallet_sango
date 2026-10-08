@@ -26,6 +26,7 @@ import { useWalletStore } from "@/stores/wallet-store";
  */
 export interface WalletSummary {
   readonly id: string;
+  /** Label **keyring** (informatif, ex. a11y). Pas affiché en Phase 3. */
   readonly label: string;
   /** Discriminant de construction (`bip39` vs `sango-legacy`). */
   readonly format: WalletFormat;
@@ -39,6 +40,22 @@ export interface WalletSummary {
   readonly isActive: boolean;
   /** Timestamp keyring (ms). Sert au tri stable "Wallet 1 / Wallet 2". */
   readonly createdAt: number;
+  /**
+   * Position 1-based dans l'ordre `createdAt` croissant.
+   *
+   * **D-Phase3-3 (D11)** — le label **UI** est `Portefeuille {position}`,
+   * jamais `entry.label` (évite les « Mon portefeuille » dupliqués).
+   * Phase 4 introduira le rename.
+   */
+  readonly position: number;
+  /**
+   * Nombre de comptes HD **connus** = `walletAccounts[id].highestIndex + 1`.
+   * Fallback `1` si aucune entrée (wallet non encore initialisé).
+   *
+   * **D-Phase3-3 (D12)** — suit la règle Phase 2 : `highestIndex` = plus
+   * haut index créé, pas nombre de comptes ayant un solde.
+   */
+  readonly accountCount: number;
 }
 
 export interface UseWalletsResult {
@@ -63,26 +80,33 @@ export function useWallets(): UseWalletsResult {
   const wallets = useWalletStore((s) => s.wallets);
   const activeId = useWalletStore((s) => s.activeId);
   const walletNetworks = useWalletStore((s) => s.walletNetworks);
+  const walletAccounts = useWalletStore((s) => s.walletAccounts);
 
   return useMemo<UseWalletsResult>(() => {
-    const list: WalletSummary[] = Object.entries(wallets).map(
-      ([id, entry]) => {
-        const effectiveNetworkId = walletNetworks[id] ?? entry.networkId;
-        return {
-          id,
-          label: entry.label,
-          format: entry.format,
-          family: resolveChainFamily(effectiveNetworkId),
-          networkId: effectiveNetworkId,
-          isActive: id === activeId,
-          createdAt: entry.createdAt,
-        };
-      },
-    );
+    const partial = Object.entries(wallets).map(([id, entry]) => {
+      const effectiveNetworkId = walletNetworks[id] ?? entry.networkId;
+      const accountState = walletAccounts[id];
+      return {
+        id,
+        label: entry.label,
+        format: entry.format,
+        family: resolveChainFamily(effectiveNetworkId),
+        networkId: effectiveNetworkId,
+        isActive: id === activeId,
+        createdAt: entry.createdAt,
+        accountCount: accountState ? accountState.highestIndex + 1 : 1,
+      };
+    });
 
-    // Tri stable : permet à l'UI d'afficher "Wallet 1 / Wallet 2…"
-    // indépendamment de l'ordre d'itération des clés de l'objet.
-    list.sort((a, b) => a.createdAt - b.createdAt);
+    // Tri stable par createdAt — l'ordre d'itération d'Object.entries
+    // dépend de l'ordre d'insertion (keyring.list() → par id), donc
+    // inutilisable tel quel pour "Wallet 1 / Wallet 2".
+    partial.sort((a, b) => a.createdAt - b.createdAt);
+
+    const list: WalletSummary[] = partial.map((w, i) => ({
+      ...w,
+      position: i + 1,
+    }));
 
     const activeWallet = activeId
       ? (list.find((w) => w.id === activeId) ?? null)
@@ -93,5 +117,5 @@ export function useWallets(): UseWalletsResult {
       activeWalletId: activeId,
       activeWallet,
     };
-  }, [wallets, activeId, walletNetworks]);
+  }, [wallets, activeId, walletNetworks, walletAccounts]);
 }

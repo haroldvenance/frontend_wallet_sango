@@ -202,6 +202,18 @@ export const fr: TranslationSchema = {
     bech32Copied: "Adresse Bech32m copiée",
     qrComingSoon: "QR code à venir (composant séparé)",
   },
+  wallets: {
+    title: "Portefeuilles",
+    primary: "Principal",
+    close: "Fermer",
+    labelPattern: "Portefeuille {n}",
+    accountCount: "{n} compte",
+    accountCountPlural: "{n} comptes",
+    addAccount: "Ajouter un compte",
+    currentAccount: "Compte {n}",
+    formatBip39: "Phrase de 12 mots",
+    formatSango: "Seed",
+  },
   accounts: {
     primary: "Principal",
     walletFallbackLabel: "Mon portefeuille",

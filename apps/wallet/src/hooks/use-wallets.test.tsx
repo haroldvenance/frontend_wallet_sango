@@ -91,6 +91,8 @@ describe("useWallets — Phase 3.2", () => {
       "B",
       "C",
     ]);
+    // D11 — position 1-based dérivée du tri createdAt.
+    expect(result.current.wallets.map((w) => w.position)).toEqual([1, 2, 3]);
   });
 
   it("isActive reflète activeId (un seul actif)", () => {
@@ -210,5 +212,51 @@ describe("useWallets — Phase 3.2", () => {
     expect(result.current.wallets).toHaveLength(1);
     expect(result.current.wallets[0]!.id).toBe("0xa");
     expect(result.current.activeWallet?.id).toBe("0xa");
+  });
+});
+
+describe("useWallets — Phase 3.3 (accountCount + position)", () => {
+  it("accountCount = 1 par défaut (pas d'entrée walletAccounts)", () => {
+    useWalletStore.getState().unlock({
+      wallets: [arg("0xa", "ethereum-sepolia", "A", 100)],
+    });
+    // unlock() seed walletAccounts[activeId] = {0, 0} par défaut
+    const { result } = renderHook(() => useWallets());
+    expect(result.current.wallets[0]!.accountCount).toBe(1);
+  });
+
+  it("accountCount = highestIndex + 1", () => {
+    useWalletStore.getState().unlock({
+      wallets: [arg("0xa", "ethereum-sepolia", "A", 100)],
+    });
+    useWalletStore.setState({
+      walletAccounts: { "0xa": { highestIndex: 4, activeIndex: 2 } },
+    });
+    const { result } = renderHook(() => useWallets());
+    expect(result.current.wallets[0]!.accountCount).toBe(5);
+  });
+
+  it("position est stable après switchWallet", () => {
+    useWalletStore.setState({ activeId: "0xa" });
+    useWalletStore.getState().unlock({
+      wallets: [
+        arg("0xa", "ethereum-sepolia", "A", 100),
+        arg("0xb", "bsc", "B", 200),
+      ],
+    });
+    const { result, rerender } = renderHook(() => useWallets());
+    const positions0 = result.current.wallets.map((w) => ({
+      id: w.id,
+      position: w.position,
+    }));
+
+    useWalletStore.getState().switchWallet("0xb");
+    rerender();
+
+    const positions1 = result.current.wallets.map((w) => ({
+      id: w.id,
+      position: w.position,
+    }));
+    expect(positions1).toEqual(positions0);
   });
 });

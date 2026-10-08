@@ -198,6 +198,18 @@ export const en = {
     bech32Copied: "Bech32m address copied",
     qrComingSoon: "QR code coming soon (separate component)",
   },
+  wallets: {
+    title: "Wallets",
+    primary: "Primary",
+    close: "Close",
+    labelPattern: "Wallet {n}",
+    accountCount: "{n} account",
+    accountCountPlural: "{n} accounts",
+    addAccount: "Add an account",
+    currentAccount: "Account {n}",
+    formatBip39: "12-word phrase",
+    formatSango: "Seed",
+  },
   accounts: {
     primary: "Primary",
     walletFallbackLabel: "My wallet",
