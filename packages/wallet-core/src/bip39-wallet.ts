@@ -5,6 +5,10 @@ import {
   type BitcoinIdentity,
   type BitcoinNetwork,
 } from "./derivation/bitcoin";
+import {
+  deriveSangoIdentity,
+  type SangoIdentity,
+} from "./derivation/sango";
 import { deriveEthereumAddress } from "./secp256k1";
 import {
   secp256k1KeypairFromPrivateKey,
@@ -206,6 +210,24 @@ export class Bip39Wallet {
   ): BitcoinIdentity {
     this.#assertAlive();
     return deriveBitcoinIdentity(this.#seed, { network, change, index });
+  }
+
+  /**
+   * Dérive l'identité SANGO (Ed25519) via SLIP-0010.
+   *
+   * **Phase 5.1** — voir `docs/design/hd-derivation.md` §2.1.
+   *
+   * La clé privée produite est **différente** de celles d'EVM/Bitcoin
+   * (courbe Ed25519 vs secp256k1), mais dérivée de la **même**
+   * mnemonic — c'est l'objectif du modèle HD unifié.
+   *
+   * Sync comme `getIdentity` / `getBitcoinIdentity` : la dérivation
+   * HMAC-SHA512 l'est aussi, et `getPublicKey` est appelé en mode
+   * sync (configuré dans `derivation/sango.ts`).
+   */
+  getSangoIdentity(accountIndex = 0): SangoIdentity {
+    this.#assertAlive();
+    return deriveSangoIdentity(this.#seed, { account: accountIndex });
   }
 
   /**

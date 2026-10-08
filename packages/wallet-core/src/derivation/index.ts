@@ -17,3 +17,15 @@ export {
   deriveBitcoinIdentity,
 } from "./bitcoin";
 export type { BitcoinNetwork, BitcoinIdentity } from "./bitcoin";
+
+// ── Phase 5.1 — SLIP-0010 + SANGO HD ─────────────────────────
+
+export {
+  slip10Master,
+  slip10DeriveChildHardened,
+  slip10DerivePath,
+} from "./slip10";
+export type { Slip10Node } from "./slip10";
+
+export { formatSangoPath, deriveSangoIdentity } from "./sango";
+export type { SangoIdentity } from "./sango";
