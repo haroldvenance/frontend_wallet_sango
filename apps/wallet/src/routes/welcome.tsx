@@ -47,7 +47,7 @@ export function Welcome() {
         </Link>
 
         <Link
-          to="/import-evm"
+          to="/import"
           className="flex h-12 w-full items-center justify-center rounded-xl border-2 border-primary/30 bg-background text-sm font-semibold text-primary transition-colors hover:border-primary/60 hover:bg-primary/5"
         >
           {t.onboarding.welcome.import}

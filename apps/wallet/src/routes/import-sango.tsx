@@ -57,7 +57,7 @@ export function ImportSangoWallet() {
         label: label.trim() || "Wallet importé",
         createdAt: Date.now(),
       });
-      toast.success("Wallet importé");
+      toast.success("Portefeuille SANGO legacy restauré");
       navigate("/");
     } catch (err) {
       toast.error("Erreur d'import", { description: (err as Error).message });
@@ -68,9 +68,9 @@ export function ImportSangoWallet() {
 
   return (
     <AuthShell
-      title="Importer un wallet"
-      subtitle="Colle ton seed Ed25519 (32 bytes, 64 hex chars, avec ou sans 0x)."
-      backTo="/welcome"
+      title="Restaurer un portefeuille SANGO (legacy)"
+      subtitle="Ancien format : seed Ed25519 (32 bytes, 64 caractères hex, avec ou sans 0x)."
+      backTo="/import"
       logoSize={56}
     >
 

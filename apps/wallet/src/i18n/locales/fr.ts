@@ -31,8 +31,8 @@ export const fr: TranslationSchema = {
     },
     create: {
       title: "Créer un portefeuille",
-      subtitle: "Choisissez un réseau et protégez-le avec un mot de passe.",
-      network: "Réseau",
+      subtitle:
+        "Protège ton portefeuille multi-chaînes avec un mot de passe. Une phrase, toutes les chaînes.",
       password: "Mot de passe",
       passwordPlaceholder: "Mot de passe",
       confirm: "Confirmer le mot de passe",
@@ -40,14 +40,11 @@ export const fr: TranslationSchema = {
         "Je comprends que Sango ne peut pas récupérer mon mot de passe.",
       submit: "Créer mon portefeuille",
       step: "Étape {current} sur {total}",
+      fallbackLabel: "Mon portefeuille",
       revealTitle: "Sauvegarde ta phrase de récupération",
       revealSubtitle:
         "12 mots, dans l'ordre. Elle ne sera plus jamais affichée. Note-la dans un endroit sûr — ne la partage avec personne.",
-      seedRevealTitle: "Sauvegarde ton seed",
-      seedRevealSubtitle:
-        "Ce seed de 32 bytes est le seul moyen de restaurer ton wallet. Note-le dans un endroit sûr. Il ne sera plus jamais affiché.",
       copyMnemonic: "Copier la phrase",
-      copySeed: "Copier le seed",
       labelPlaceholder: "Nom du portefeuille (optionnel)",
       revealWarning:
         "Ne la partage jamais et ne la photographie pas. Quiconque la possède contrôle vos fonds.",
@@ -58,16 +55,36 @@ export const fr: TranslationSchema = {
       createError: "Erreur de création",
       saveError: "Impossible de sauvegarder",
       successTitle: "Portefeuille créé",
-      successSubtitle: "Votre portefeuille {family} est prêt. Voici votre adresse de réception.",
-      successAddressLabel: "Adresse",
-      successCopy: "Copier l'adresse",
+      successSubtitle:
+        "Ton portefeuille multi-chaînes est prêt. Voici tes adresses de réception.",
+      successAddressLabel: "Adresses",
+      successCopy: "Copier",
       successEnter: "Accéder au portefeuille",
+      chainLabels: {
+        ethereum: "Ethereum",
+        bitcoin: "Bitcoin",
+        sango: "Sango",
+      },
     },
-    networks: {
-      sango: "SANGO",
-      ethereum: "Ethereum",
-      bitcoin: "Bitcoin",
-      bsc: "BSC",
+    import: {
+      title: "Importer un portefeuille",
+      subtitle:
+        "Colle ta phrase de récupération BIP-39 (12 ou 24 mots, séparés par des espaces).",
+      mnemonicPlaceholder: "word1 word2 word3 …",
+      labelPlaceholder: "Nom du portefeuille (optionnel)",
+      passwordPlaceholder: "Mot de passe (min 8 caractères)",
+      button: "Importer",
+      importing: "Import…",
+      imported: "Portefeuille importé",
+      error: "Erreur d'import",
+      invalidMnemonic: "Phrase invalide",
+      invalidMnemonicDesc:
+        "Vérifie les mots et l'ordre — 12 ou 24 mots du wordlist BIP-39 anglais.",
+      passwordTooShort: "Mot de passe : 8 caractères minimum",
+      emptyMnemonic: "Phrase de récupération vide",
+      legacyNotice:
+        "Pour restaurer un ancien portefeuille SANGO (seed Ed25519), utilise la",
+      legacyLink: "page legacy",
     },
   },
   nav: {
@@ -237,24 +254,6 @@ export const fr: TranslationSchema = {
       cancel: "Annuler",
       success: "Portefeuille oublié",
       error: "Impossible d'oublier le portefeuille",
-    },
-  },
-  importPicker: {
-    title: "Importer un portefeuille",
-    subtitle: "Choisis le type de portefeuille à importer.",
-    sango: {
-      title: "Portefeuille SANGO",
-      description: "Seed Ed25519 (32 bytes, 64 caractères hex).",
-    },
-    evm: {
-      title: "Portefeuille EVM",
-      description:
-        "Phrase de récupération BIP-39 (Ethereum, BSC, etc.).",
-    },
-    bitcoin: {
-      title: "Portefeuille Bitcoin",
-      description:
-        "Phrase de récupération BIP-39 (Bitcoin testnet ou mainnet).",
     },
   },
   accounts: {

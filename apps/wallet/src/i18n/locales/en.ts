@@ -29,8 +29,8 @@ export const en = {
     },
     create: {
       title: "Create a wallet",
-      subtitle: "Choose a network and protect it with a password.",
-      network: "Network",
+      subtitle:
+        "Protect your multi-chain wallet with a password. One phrase, all chains.",
       password: "Password",
       passwordPlaceholder: "Password",
       confirm: "Confirm password",
@@ -38,14 +38,11 @@ export const en = {
         "I understand Sango cannot recover my password.",
       submit: "Create my wallet",
       step: "Step {current} of {total}",
+      fallbackLabel: "My wallet",
       revealTitle: "Save your recovery phrase",
       revealSubtitle:
         "12 words, in order. It will never be shown again. Note it somewhere safe — never share it.",
-      seedRevealTitle: "Save your seed",
-      seedRevealSubtitle:
-        "This 32-byte seed is the only way to restore your wallet. Note it somewhere safe. It will never be shown again.",
       copyMnemonic: "Copy phrase",
-      copySeed: "Copy seed",
       labelPlaceholder: "Wallet name (optional)",
       revealWarning:
         "Never share it or photograph it. Anyone who has it controls your funds.",
@@ -56,16 +53,36 @@ export const en = {
       createError: "Creation error",
       saveError: "Unable to save",
       successTitle: "Wallet created",
-      successSubtitle: "Your {family} wallet is ready. Here is your receiving address.",
-      successAddressLabel: "Address",
-      successCopy: "Copy address",
+      successSubtitle:
+        "Your multi-chain wallet is ready. Here are your receiving addresses.",
+      successAddressLabel: "Addresses",
+      successCopy: "Copy",
       successEnter: "Enter wallet",
+      chainLabels: {
+        ethereum: "Ethereum",
+        bitcoin: "Bitcoin",
+        sango: "Sango",
+      },
     },
-    networks: {
-      sango: "SANGO",
-      ethereum: "Ethereum",
-      bitcoin: "Bitcoin",
-      bsc: "BSC",
+    import: {
+      title: "Import a wallet",
+      subtitle:
+        "Paste your BIP-39 recovery phrase (12 or 24 words, separated by spaces).",
+      mnemonicPlaceholder: "word1 word2 word3 …",
+      labelPlaceholder: "Wallet name (optional)",
+      passwordPlaceholder: "Password (min 8 characters)",
+      button: "Import",
+      importing: "Importing…",
+      imported: "Wallet imported",
+      error: "Import error",
+      invalidMnemonic: "Invalid phrase",
+      invalidMnemonicDesc:
+        "Check the words and order — 12 or 24 words from the English BIP-39 wordlist.",
+      passwordTooShort: "Password: 8 characters minimum",
+      emptyMnemonic: "Recovery phrase is empty",
+      legacyNotice:
+        "To restore an old SANGO wallet (Ed25519 seed), use the",
+      legacyLink: "legacy page",
     },
   },
   nav: {
@@ -232,22 +249,6 @@ export const en = {
       cancel: "Cancel",
       success: "Wallet forgotten",
       error: "Could not forget the wallet",
-    },
-  },
-  importPicker: {
-    title: "Import a wallet",
-    subtitle: "Choose the type of wallet to import.",
-    sango: {
-      title: "SANGO wallet",
-      description: "Ed25519 seed (32 bytes, 64 hex chars).",
-    },
-    evm: {
-      title: "EVM wallet",
-      description: "BIP-39 recovery phrase (Ethereum, BSC, etc.).",
-    },
-    bitcoin: {
-      title: "Bitcoin wallet",
-      description: "BIP-39 recovery phrase (Bitcoin testnet or mainnet).",
     },
   },
   accounts: {
