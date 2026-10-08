@@ -164,3 +164,27 @@ describe("OtherAssetsList — Phase 4", () => {
     expect(screen.getByTestId("wallets-and-accounts-modal")).toBeTruthy();
   });
 });
+
+// ────────────────────────────────────────────────────────────
+//  Phase 4.2 — fallback visuel (D1·A)
+// ────────────────────────────────────────────────────────────
+
+describe("OtherAssetsList — Phase 4.2 (fallback)", () => {
+  it("affiche 0 (pas —) quand la balance échoue", async () => {
+    seedTwo();
+    mockSessions.set(wallet2, {
+      getBalance: async () => {
+        throw new Error("RPC down");
+      },
+      listTokens: async () => [],
+      getTokenBalance: async () => 0n,
+    } as unknown as WalletSession);
+
+    render(<OtherAssetsList />, { wrapper: Wrapper });
+
+    // La row ETH doit afficher "0" comme fallback, pas "—".
+    const row = await screen.findByTestId(/^asset-row-w2:/);
+    expect(row.textContent).toContain("0");
+    expect(row.textContent).not.toContain("—");
+  });
+});

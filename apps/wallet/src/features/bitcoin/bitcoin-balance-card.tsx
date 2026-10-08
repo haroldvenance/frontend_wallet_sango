@@ -6,6 +6,7 @@ import { useBitcoinAddress } from "@/hooks/use-bitcoin-address";
 import { useBitcoinBalance } from "@/hooks/use-bitcoin-balance";
 import { useClipboard } from "@/hooks/use-clipboard";
 import { formatBitcoin } from "@/lib/bitcoin";
+import { truncateMiddle } from "@/lib/format";
 import { useWalletStore } from "@/stores/wallet-store";
 
 /**
@@ -43,11 +44,8 @@ export function BitcoinBalanceCard() {
       symbol="BTC"
       addressPill={
         <AddressPill
-          display={
-            address.length > 14
-              ? `${address.slice(0, 8)}…${address.slice(-6)}`
-              : address
-          }
+          // Phase 4.2 (D2·A) — convention 10…4 uniforme.
+          display={truncateMiddle(address, 10, 4)}
           copyValue={address}
           onCopy={copy}
           copiedMessage="Adresse copiée"

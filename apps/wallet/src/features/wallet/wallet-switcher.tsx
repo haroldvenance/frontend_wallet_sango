@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useSangoWallet } from "@/hooks/use-sango-wallet";
 import { useTranslation } from "@/i18n/use-translation";
+import { truncateMiddle } from "@/lib/format";
 import { useWallets } from "@/hooks/use-wallets";
 
 import { WalletsAndAccountsModal } from "./wallets-and-accounts-modal";
@@ -44,9 +45,8 @@ export function WalletSwitcher() {
     activeAccount?.address ??
     sangoWallet?.identity.addressBech32 ??
     "";
-  const addressShort = rawAddress
-    ? `${rawAddress.slice(0, 10)}…${rawAddress.slice(-4)}`
-    : "—";
+  // Phase 4.2 (D2·A) — convention 10…4 via helper partagé.
+  const addressShort = rawAddress ? truncateMiddle(rawAddress, 10, 4) : "—";
 
   const accountCount = activeWallet.accountCount;
   const countLabel =

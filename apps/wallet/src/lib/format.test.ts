@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatSango, parseSango, shortenAddress, shortenHash } from "./format";
+import { formatSango, parseSango, shortenAddress, shortenHash, truncateMiddle } from "./format";
 
 describe("formatSango", () => {
   it("trims trailing zeros for whole SANGO", () => {
@@ -85,5 +85,40 @@ describe("shortenHash", () => {
     const short = shortenHash(h);
     expect(short.length).toBeLessThan(h.length);
     expect(short.startsWith("0x")).toBe(true);
+  });
+});
+
+// ────────────────────────────────────────────────────────────
+//  Phase 4.2 — truncateMiddle (D2·A)
+// ────────────────────────────────────────────────────────────
+
+describe("truncateMiddle", () => {
+  it("tronque 10…4 pour une adresse bech32m SANGO", () => {
+    expect(
+      truncateMiddle("tsango1dxkabcdef123456789wfj9k5r3f", 10, 4),
+    ).toBe("tsango1dxk…5r3f");
+  });
+
+  it("tronque 10…4 pour une adresse Bitcoin", () => {
+    expect(
+      truncateMiddle("tb1qxvctajabcdef123456789wda4ma", 10, 4),
+    ).toBe("tb1qxvctaj…a4ma");
+  });
+
+  it("tronque 10…4 pour une adresse EVM", () => {
+    expect(
+      truncateMiddle("0x1234567890abcdef1234567890abcdef12345678", 10, 4),
+    ).toBe("0x12345678…5678");
+  });
+
+  it("retourne la chaîne telle quelle si ≤ prefix + suffix + 1", () => {
+    expect(truncateMiddle("abc", 10, 4)).toBe("abc");
+    expect(truncateMiddle("abcdefghijklmn", 10, 4)).toBe("abcdefghijklmn");
+  });
+
+  it("tronque exactement au seuil (prefix + suffix + 2)", () => {
+    // 16 = 10 + 4 + 2 → tronqué
+    const v = "abcdefghijklmnop"; // 16 chars
+    expect(truncateMiddle(v, 10, 4)).toBe("abcdefghij…mnop");
   });
 });

@@ -76,6 +76,25 @@ export function shortenAddress(address: string, chars = 4): string {
   return `${address.startsWith("0x") ? "0x" : ""}${prefix}…${suffix}`;
 }
 
+/**
+ * Tronque une chaîne en `prefix…suffix` (Phase 4.2, D2·A).
+ *
+ * Utilisé pour l'affichage **uniforme** des adresses wallet
+ * (`tsango1…`, `tb1q…`, `0x…`) — actuellement `10…4` partout.
+ *
+ * Si la chaîne est plus courte que `prefix + suffix + 1`, elle est
+ * retournée telle quelle (pas de troncature inutile).
+ */
+export function truncateMiddle(
+  value: string,
+  prefix: number,
+  suffix: number,
+): string {
+  if (value.length <= prefix + suffix + 1) return value;
+  return `${value.slice(0, prefix)}…${value.slice(-suffix)}`;
+}
+
+/** Raccourcit un hash de tx (même logique). */
 /** Raccourcit un hash de tx (même logique). */
 export function shortenHash(hash: string, chars = 6): string {
   if (hash.length <= chars * 2 + 2) return hash;

@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { NativeAssetIcon } from "@/components/branding/native-asset-icon";
+import { SangoCoinIcon } from "@/components/branding/sango-coin-icon";
 import {
   AssetSection,
   type AssetItem,
@@ -85,8 +86,13 @@ export function OtherAssetsList() {
 }
 
 function assetIcon(a: UnifiedAsset) {
-  if (a.kind === "native") {
-    return <NativeAssetIcon assetId={a.symbol.toLowerCase()} size="sm" />;
+  if (a.assetRef.kind === "native") {
+    // Phase 4.2 — SANGO a son propre branding (SangoCoinIcon rond).
+    // `NativeAssetIcon` afficherait "SAN" (fallback 3-char).
+    if (a.assetRef.assetId === "sango") {
+      return <SangoCoinIcon size={40} />;
+    }
+    return <NativeAssetIcon assetId={a.assetRef.assetId} size="sm" />;
   }
   return (
     <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-500/10 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
@@ -96,7 +102,10 @@ function assetIcon(a: UnifiedAsset) {
 }
 
 function formatAssetBalance(a: UnifiedAsset): string {
-  if (a.balance === null) return "—";
+  // Phase 4.2 (D1·A) — fallback UI `0`. L'erreur RPC reste
+  // conservée côté query (`isError` non exposé en 4.2). Le timeout
+  // RPC court sera traité en 4.3.
+  if (a.balance === null) return "0";
   if (a.kind === "token") return formatTokenAmount(a.balance, a.decimals);
   if (a.family === "sango") return formatSango(a.balance);
   if (a.family === "bitcoin") return formatBitcoin(a.balance);
