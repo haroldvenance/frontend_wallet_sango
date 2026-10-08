@@ -1,78 +1,22 @@
 import { useMemo, type ReactNode } from "react";
 
-import { SangoRpcClient } from "@sango/rpc";
-import {
-  ALL_BITCOIN_NETWORKS,
-  ALL_EVM_NETWORKS,
-  SANGO_DEVNET,
-  bitcoinAdapterFactory,
-  createChainRegistry,
-  evmAdapterFactory,
-  sangoAdapterFactory,
-  type SangoNetwork,
-} from "@sango/wallet-chains";
-import {
-  InMemoryAccountList,
-  InMemoryAssetList,
-  SANGO_NATIVE_ASSET,
-  ETH_NATIVE_ASSET,
-  BNB_NATIVE_ASSET,
-  BTC_NATIVE_ASSET,
-  createWalletSession,
-  signerFromAnyWallet,
-  type WalletSession,
-} from "@sango/wallet-session";
-import { Bip39Wallet } from "@sango/wallet-core";
-import type { BitcoinNetwork } from "@sango/wallet-core";
-import {
-  BitcoinChangeAddressProviderImpl,
-} from "@sango/wallet-chains";
-import {
-  EtherscanIndexer,
-  MempoolSpaceRpc,
-  createRpcPool,
-  EvmRpcUsingPool,
-} from "@sango/wallet-providers";
+import type { WalletSession } from "@sango/wallet-session";
 
-import { ETHERSCAN_API_KEY } from "@/lib/config";
+import { buildWalletSession } from "@/lib/build-wallet-session";
 import { useSdkStore } from "@/stores/sdk-store";
 import { useWalletStore } from "@/stores/wallet-store";
 import { WalletSessionContext } from "./wallet-session-context";
 
 /**
- * Construit la `WalletSession` dès que le wallet passe à `unlocked`.
+ * Construit la `WalletSession` du wallet **actif** dès qu'il passe à
+ * `unlocked`.
  *
- * **E2.1.b.5 (D-NET-1 étendu)** — trois familles enregistrées :
- *   - SANGO_DEVNET       : legacy SANGO Ed25519 (SangoRpcClient).
- *   - 6 réseaux EVM      : Sepolia, Mainnet, Base, Arbitrum One,
- *                          BSC, BSC Testnet
- *                          (RpcPool + EvmRpcUsingPool).
- *   - Bitcoin            : testnet3 + mainnet (mempool.space via
- *                          MempoolSpaceRpc + BitcoinChangeAddressProvider,
- *                          un par réseau). Uniquement enregistrés si le
- *                          wallet est BIP-39.
- *
- * Le `signer` est multi-courbe (D-SIGNER-1) : `signerFromAnyWallet`
- * route selon le type concret du wallet.
- *
- * **D-RPC-3 (status quo)** : chaque réseau EVM a son propre `RpcPool`
- * déterministe et séquentiel. Pas de load balancing, pas de circuit
- * breaker. Le pool est un mécanisme de fallback, pas un scheduler.
- *
- * **D-UI-3** : le réseau actif d'un wallet BIP-39 est figé à sa
- * création (`wallet-store.networkId`). Les 4 réseaux sont enregistrés
- * dans le registry pour que la session puisse router n'importe quel
- * `AccountRef.networkId` — mais l'UI n'expose que celui du wallet.
- *
- * D-SESS-5 : la session n'est pas reconstruite au changement de réseau
- * sélectionné (le réseau cible vit dans `AccountRef.networkId`).
+ * **Phase 4** — la logique de construction a été extraite dans
+ * `lib/build-wallet-session.ts` (réutilisée par `useUnifiedAssets()`
+ * pour les sessions secondaires). Zéro changement fonctionnel.
  */
 interface WalletSessionProviderProps {
   children: ReactNode;
-}
-
-function hexChainIdToNumber(hex: string): number {
-  return Number.parseInt(hex, 16);
 }
 
 export function WalletSessionProvider({ children }: WalletSessionProviderProps) {
@@ -82,94 +26,7 @@ export function WalletSessionProvider({ children }: WalletSessionProviderProps) 
 
   const session = useMemo<WalletSession | null>(() => {
     if (status !== "unlocked" || !wallet) return null;
-
-    const signer = signerFromAnyWallet(wallet);
-    const chainRegistry = createChainRegistry();
-
-    // ── SANGO (legacy Ed25519) ───────────────────────────────
-    const sangoRpc = new SangoRpcClient(endpoint);
-    chainRegistry.register(SANGO_DEVNET, (network) =>
-      sangoAdapterFactory(network as SangoNetwork, {
-        rpc: sangoRpc,
-        signer,
-      }),
-    );
-
-    // ── EVM (4 réseaux) ──────────────────────────────────────
-    // Un RpcPool par réseau : chaque pool est isolé, avec sa propre
-    // liste d'endpoints priorisés (D-RPC-3).
-    for (const network of ALL_EVM_NETWORKS) {
-      const pool = createRpcPool();
-      pool.register(
-        network.id,
-        network.defaultRpcEndpoints.map((url, i) => ({
-          url,
-          priority: i,
-        })),
-      );
-      const evmRpc = new EvmRpcUsingPool(pool, network.id);
-      const chainId = hexChainIdToNumber(network.chainId);
-
-      // D-INDEXER-1/2 : indexer Etherscan V2 par réseau. Si aucune
-      // clé n'est configurée, l'adapter utilise son stub (page vide).
-      const indexer = ETHERSCAN_API_KEY
-        ? new EtherscanIndexer({
-            apiKey: ETHERSCAN_API_KEY,
-            chainId,
-          })
-        : undefined;
-
-      chainRegistry.register(network, () =>
-        evmAdapterFactory(network, {
-          rpc: evmRpc,
-          signer,
-          chainId,
-          indexer,
-        }),
-      );
-    }
-
-    // ── Bitcoin (E2.1.b.5, étendu E2.1.b.7) ──────────────────
-    // Uniquement si le wallet est BIP-39 — sinon pas de dérivation
-    // Bitcoin possible. Chaque réseau (testnet, mainnet) a son propre
-    // MempoolSpaceRpc + BitcoinChangeAddressProvider (les index de
-    // change sont par-réseau).
-    if (wallet instanceof Bip39Wallet) {
-      for (const btcNetwork of ALL_BITCOIN_NETWORKS) {
-        const btcFamily: BitcoinNetwork = btcNetwork.isTestnet
-          ? "testnet"
-          : "mainnet";
-        const mempoolRpc = new MempoolSpaceRpc({
-          baseUrl: btcNetwork.defaultRpcEndpoints[0]!,
-        });
-        const changeProvider = new BitcoinChangeAddressProviderImpl(
-          wallet,
-          btcFamily,
-          btcNetwork.id,
-        );
-        chainRegistry.register(btcNetwork, (network) =>
-          bitcoinAdapterFactory(network, {
-            rpc: mempoolRpc,
-            changeProvider,
-            btcNetwork: btcFamily,
-          }),
-        );
-      }
-    }
-
-    // ── Assets ───────────────────────────────────────────────
-    const assets = new InMemoryAssetList();
-    assets.register(SANGO_NATIVE_ASSET);
-    assets.register(ETH_NATIVE_ASSET);
-    assets.register(BNB_NATIVE_ASSET);
-    assets.register(BTC_NATIVE_ASSET);
-
-    return createWalletSession({
-      chainRegistry,
-      signer,
-      accounts: new InMemoryAccountList(),
-      assets,
-    });
+    return buildWalletSession(wallet, endpoint);
   }, [wallet, status, endpoint]);
 
   return (

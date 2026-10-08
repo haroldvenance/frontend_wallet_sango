@@ -16,6 +16,8 @@ export interface AssetItem {
   readonly balance: string;
   readonly fiat?: string;
   readonly badges?: ReactNode[];
+  /** Si présent, la ligne devient un bouton cliquable (Phase 4). */
+  readonly onClick?: () => void;
 }
 
 export interface AssetSectionProps {
@@ -64,44 +66,68 @@ export function AssetSection({
           </div>
         )}
 
-        {items.map((item, index) => (
-          <div
-            key={item.id}
-            className={[
-              "flex items-center justify-between gap-4 p-4 sm:p-5",
-              index !== items.length - 1 ? "border-b" : "",
-            ].join(" ")}
-          >
-            <div className="flex min-w-0 items-center gap-3">
-              {item.icon}
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium">{item.symbol}</p>
-                  {item.badges?.map((b, i) => (
-                    <span key={i}>{b}</span>
-                  ))}
-                </div>
-                <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                  {item.name}
-                </p>
-              </div>
-            </div>
+        {items.map((item, index) => {
+          const isLast = index === items.length - 1;
+          const rowClass = [
+            "flex w-full items-center justify-between gap-4 p-4 sm:p-5 text-left",
+            isLast ? "" : "border-b",
+          ].join(" ");
 
-            <div className="shrink-0 text-right">
-              <p className="font-mono text-sm font-medium">
-                {item.balance}{" "}
-                <span className="text-[11px] font-normal text-muted-foreground">
-                  {item.symbol}
-                </span>
-              </p>
-              {item.fiat && (
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  {item.fiat}
+          const content = (
+            <>
+              <div className="flex min-w-0 items-center gap-3">
+                {item.icon}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium">{item.symbol}</p>
+                    {item.badges?.map((b, i) => (
+                      <span key={i}>{b}</span>
+                    ))}
+                  </div>
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                    {item.name}
+                  </p>
+                </div>
+              </div>
+
+              <div className="shrink-0 text-right">
+                <p className="font-mono text-sm font-medium">
+                  {item.balance}{" "}
+                  <span className="text-[11px] font-normal text-muted-foreground">
+                    {item.symbol}
+                  </span>
                 </p>
-              )}
+                {item.fiat && (
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    {item.fiat}
+                  </p>
+                )}
+              </div>
+            </>
+          );
+
+          if (item.onClick) {
+            return (
+              <button
+                key={item.id}
+                type="button"
+                data-testid={`asset-row-${item.id}`}
+                onClick={item.onClick}
+                className={[
+                  rowClass,
+                  "transition-colors hover:bg-accent/40",
+                ].join(" ")}
+              >
+                {content}
+              </button>
+            );
+          }
+          return (
+            <div key={item.id} className={rowClass}>
+              {content}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {footer && (

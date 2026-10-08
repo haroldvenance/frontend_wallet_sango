@@ -154,6 +154,11 @@ export const en = {
   dashboard: {
     overview: "Overview",
     title: "Dashboard",
+    otherAssets: {
+      title: "Other assets",
+      manage: "Manage",
+      empty: "No other assets",
+    },
     stakingTitle: "My staking",
     stakingSubtitle: "Delegations and unbondings",
     delegatedTo: "Delegated to",

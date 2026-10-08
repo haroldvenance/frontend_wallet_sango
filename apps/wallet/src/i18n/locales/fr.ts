@@ -158,6 +158,11 @@ export const fr: TranslationSchema = {
   dashboard: {
     overview: "Vue d'ensemble",
     title: "Tableau de bord",
+    otherAssets: {
+      title: "Autres cryptos",
+      manage: "Gérer",
+      empty: "Aucun autre actif",
+    },
     stakingTitle: "Mon staking",
     stakingSubtitle: "Délégations et unbondings en cours",
     delegatedTo: "Délégué à",

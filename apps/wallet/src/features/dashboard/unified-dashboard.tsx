@@ -9,6 +9,7 @@ import { QuickActions } from "@/components/wallet/quick-actions";
 import { RecentActivity } from "@/components/wallet/recent-activity";
 import { BitcoinAssetList } from "@/features/bitcoin/bitcoin-asset-list";
 import { WalletSwitcher } from "@/features/wallet/wallet-switcher";
+import { OtherAssetsList } from "./other-assets-list";
 import { QuickActionsBitcoin } from "@/features/bitcoin/quick-actions-bitcoin";
 import { BitcoinBalanceCard } from "@/features/bitcoin/bitcoin-balance-card";
 import { AssetListEvm } from "@/features/evm/asset-list-evm";
@@ -75,6 +76,10 @@ export function UnifiedDashboard() {
             compte actif en une ligne. `useWallets().activeWallet` est
             null après lock() → cachée. */}
         <WalletSwitcher />
+
+        {/* Autres cryptos (Phase 4, D1·A) — agrégation cross-wallet.
+            Retourne null si < 2 wallets déverrouillés. */}
+        <OtherAssetsList />
 
         {/* Assets */}
         {isSango && <AssetList />}
