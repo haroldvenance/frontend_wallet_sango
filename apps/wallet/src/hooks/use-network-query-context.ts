@@ -7,7 +7,10 @@ import {
 import type { AccountRef, ChainFamily } from "@sango/wallet-chains";
 
 import { useSdkStore } from "@/stores/sdk-store";
-import { useWalletStore } from "@/stores/wallet-store";
+import {
+  selectActiveAccountIndex,
+  useWalletStore,
+} from "@/stores/wallet-store";
 
 /**
  * Contexte de réseau pour les queries React Query.
@@ -28,8 +31,8 @@ import { useWalletStore } from "@/stores/wallet-store";
  *   - family === "evm"   → premier endpoint du Network EVM courant
  *                          (via `defaultRpcEndpoints[0]`)
  *
- * `account.accountIndex` est lu depuis
- * `wallet-store.walletAccountIndexes[activeId]` (D-E2.6-1).
+ * `account.accountIndex` est lu via `selectActiveAccountIndex`
+ * (D-Phase2-1) — `walletAccounts[activeId].activeIndex`, fallback 0.
  * Fallback 0 si l'entrée n'existe pas encore. Les hooks qui dérivent
  * une adresse (`useBitcoinAddress`, `session.getAccount`, etc.)
  * utilisent donc **naturellement** l'index HD actif — pas besoin de
@@ -65,21 +68,13 @@ export function useNetworkQueryContext(): NetworkQueryContext {
   const sangoEndpoint = useSdkStore((s) => s.endpoint);
   const family = useWalletStore((s) => s.family);
   const networkId = useWalletStore((s) => s.networkId);
-  const activeId = useWalletStore((s) => s.activeId);
-  const walletAccountIndexes = useWalletStore((s) => s.walletAccountIndexes);
+  // Phase 2.3 (D-Phase2-1) — index de compte actif, lu via sélecteur.
+  // Fallback 0 : SANGO legacy, wallet sans entrée, activeId null.
+  const accountIndex = useWalletStore(selectActiveAccountIndex);
 
   return useMemo(() => {
     const nativeAsset = resolveNativeAsset(family, networkId);
     const endpoint = resolveEndpoint(family, sangoEndpoint, networkId);
-
-    // Index HD du wallet actif (D-E2.6-1). Fallback 0 :
-    //   - wallet SANGO legacy (jamais dans le record) ;
-    //   - wallet BIP-39 fraîchement déverrouillé (pas encore dans
-    //     le record).
-    const accountIndex = activeId
-      ? (walletAccountIndexes[activeId] ?? 0)
-      : 0;
-
     return {
       endpoint,
       networkId,
@@ -91,7 +86,7 @@ export function useNetworkQueryContext(): NetworkQueryContext {
         networkId,
       },
     };
-  }, [sangoEndpoint, family, networkId, activeId, walletAccountIndexes]);
+  }, [sangoEndpoint, family, networkId, accountIndex]);
 }
 
 /**

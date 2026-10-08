@@ -9,7 +9,7 @@ import { useNetworkQueryContext } from "./use-network-query-context";
  * 🔒 useNetworkQueryContext — Phase 2.1 (D-E2.6-1)
  *
  * Vérifie que `account.accountIndex` est lu depuis
- * `walletAccountIndexes[activeId]` et non hardcodé à 0.
+ * `walletAccounts[activeId].activeIndex` et non hardcodé à 0.
  */
 
 beforeEach(() => {
@@ -20,7 +20,7 @@ beforeEach(() => {
     activeId: null,
     networkId: "sango-devnet",
     family: "sango",
-    walletAccountIndexes: {},
+    walletAccounts: {},
   });
 });
 
@@ -37,7 +37,7 @@ describe("useNetworkQueryContext — accountIndex", () => {
       activeId: "0xabc",
       networkId: "ethereum-sepolia",
       family: "evm",
-      walletAccountIndexes: {},
+      walletAccounts: {},
     });
     const { result } = renderHook(() => useNetworkQueryContext());
     expect(result.current.account.accountIndex).toBe(0);
@@ -50,7 +50,7 @@ describe("useNetworkQueryContext — accountIndex", () => {
       activeId: "0xabc",
       networkId: "ethereum-sepolia",
       family: "evm",
-      walletAccountIndexes: { "0xabc": 3 },
+      walletAccounts: { "0xabc": { highestIndex: 3, activeIndex: 3 } },
     });
     const { result } = renderHook(() => useNetworkQueryContext());
     expect(result.current.account.accountIndex).toBe(3);
@@ -63,7 +63,10 @@ describe("useNetworkQueryContext — accountIndex", () => {
       activeId: "0xabc",
       networkId: "ethereum-sepolia",
       family: "evm",
-      walletAccountIndexes: { "0xabc": 1, "0xdef": 5 },
+      walletAccounts: {
+        "0xabc": { highestIndex: 1, activeIndex: 1 },
+        "0xdef": { highestIndex: 5, activeIndex: 5 },
+      },
     });
     const { result, rerender } = renderHook(() =>
       useNetworkQueryContext(),
@@ -82,7 +85,7 @@ describe("useNetworkQueryContext — accountIndex", () => {
       activeId: "sango-addr",
       networkId: "sango-devnet",
       family: "sango",
-      walletAccountIndexes: { "sango-addr": 7 },
+      walletAccounts: { "sango-addr": { highestIndex: 7, activeIndex: 7 } },
     });
     const { result } = renderHook(() => useNetworkQueryContext());
     // Note : le hook fait confiance au record ; c'est `setAccountIndex`
@@ -99,7 +102,7 @@ describe("useNetworkQueryContext — accountIndex", () => {
 // ────────────────────────────────────────────────────────────
 
 describe("useNetworkQueryContext — accountIndex", () => {
-  it("reflète walletAccountIndexes[activeId]", async () => {
+  it("reflète walletAccounts[activeId].activeIndex", async () => {
     useSdkStore.setState({ endpoint: "http://test", customEndpoint: null });
     useWalletStore.setState({
       format: "bip39",
@@ -107,7 +110,7 @@ describe("useNetworkQueryContext — accountIndex", () => {
       networkId: "ethereum-sepolia",
       family: "evm",
       activeId: "0xabc",
-      walletAccountIndexes: { "0xabc": 2 },
+      walletAccounts: { "0xabc": { highestIndex: 5, activeIndex: 2 } },
     });
 
     const { result } = renderHook(() => useNetworkQueryContext());
@@ -122,7 +125,7 @@ describe("useNetworkQueryContext — accountIndex", () => {
       networkId: "ethereum-sepolia",
       family: "evm",
       activeId: "0xnew",
-      walletAccountIndexes: { "0xother": 3 },
+      walletAccounts: { "0xother": { highestIndex: 3, activeIndex: 3 } },
     });
 
     const { result } = renderHook(() => useNetworkQueryContext());
@@ -137,7 +140,7 @@ describe("useNetworkQueryContext — accountIndex", () => {
       networkId: "ethereum-sepolia",
       family: "evm",
       activeId: null,
-      walletAccountIndexes: {},
+      walletAccounts: {},
     });
 
     const { result } = renderHook(() => useNetworkQueryContext());

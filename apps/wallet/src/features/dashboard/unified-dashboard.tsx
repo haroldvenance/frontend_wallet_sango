@@ -8,6 +8,7 @@ import { NetworkOverviewCard } from "@/components/wallet/network-overview-card";
 import { QuickActions } from "@/components/wallet/quick-actions";
 import { RecentActivity } from "@/components/wallet/recent-activity";
 import { BitcoinAssetList } from "@/features/bitcoin/bitcoin-asset-list";
+import { AccountSwitcher } from "@/features/wallet/account-switcher";
 import { QuickActionsBitcoin } from "@/features/bitcoin/quick-actions-bitcoin";
 import { BitcoinBalanceCard } from "@/features/bitcoin/bitcoin-balance-card";
 import { AssetListEvm } from "@/features/evm/asset-list-evm";
@@ -69,6 +70,10 @@ export function UnifiedDashboard() {
         {isSango && <BalanceCard />}
         {family === "evm" && <BalanceCardEvm />}
         {isBitcoin && <BitcoinBalanceCard />}
+
+        {/* Multi-comptes HD (Phase 2.3) — BIP-39 uniquement.
+            `useAccounts()` retourne null pour SANGO legacy. */}
+        {!isSango && <AccountSwitcher />}
 
         {/* Assets */}
         {isSango && <AssetList />}

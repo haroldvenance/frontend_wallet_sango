@@ -20,26 +20,26 @@ export type AnyWallet = Wallet | Bip39Wallet;
  * ⚠️ Ne contient JAMAIS de seed en clair : uniquement l'instance
  *    `Wallet`/`Bip39Wallet` (dont le secret est privé au runtime JS).
  *
- * **Phase 2.1 (D-E2.6-1)** — `walletAccountIndexes` est la **seule**
- * source persistée de l'index HD actif. Clé = `activeId` (ID du
- * keyring, lowercase address). Un `accountIndex` global séparé serait
- * une seconde source de vérité qui pourrait diverger — on l'évite en
- * dérivant l'index actif du record : `walletAccountIndexes[activeId] ?? 0`.
-
  * **E2.1.b.6.1 (D-E2.1-18)** — `family` est dérivée de `networkId`
  * par `resolveChainFamily()`. Elle n'est **jamais** fournie par
- * l'UI ni persistée. Toute mutation de `networkId` recalcule
- * `family` dans le même `set()` pour éviter la divergence.
+ * l'UI ni persistée.
+ *
+ * **Phase 2.3 (D-Phase2-1 + D-Phase2-3.bis)** — multi-comptes HD :
+ *
+ *   `walletAccounts: Record<walletId, { highestIndex, activeIndex }>`
+ *
+ *   - `highestIndex` : plus haut index créé par l'utilisateur. Ne
+ *     redescend **jamais** en Phase 2 (représente l'historique).
+ *   - `activeIndex`  : index actuellement sélectionné (0..highestIndex).
+ *
+ *   Les comptes sont dérivés à la volée
+ *   (`Bip39Wallet.getIdentity(i)`), jamais stockés. Pour SANGO
+ *   legacy (mono-compte), aucune entrée n'est créée et l'index est
+ *   toujours 0.
  *
  * Deux champs de réseau :
- *   - `networkId` : identifiant canonique wallet-chains
- *                   (`"sango-devnet"`, `"ethereum-sepolia"`,
- *                   `"bitcoin-testnet"`, …). **Persisté**.
- *   - `network`   : label SANGO `"mainnet" | "testnet"` (HRP
- *                   bech32m, pilote les query keys existantes).
- *                   Dérivé pour SANGO ; `"testnet"` par défaut pour
- *                   BIP-39 (aucun sens fonctionnel, les hooks
- *                   EVM/Bitcoin lisent `networkId`).
+ *   - `networkId` : identifiant canonique wallet-chains (persisté).
+ *   - `network`   : label SANGO (HRP bech32m, query keys SANGO).
  */
 export type WalletStatus = "no-wallet" | "locked" | "unlocked";
 
@@ -50,14 +50,24 @@ export interface UnlockArgs {
   /**
    * `networkId` **structurel** du wallet (issu du keyring au
    * déverrouillage, ou du formulaire de création).
-   *
-   * ⚠️ La `family` N'EST PAS dans cet objet — elle est dérivée du
-   *    `networkId` par le store (D-E2.1-18).
    */
   readonly networkId: string;
   /** Optionnel — défaut "testnet". Utile uniquement pour SANGO. */
   readonly network?: Network;
 }
+
+/**
+ * État multi-comptes par wallet (Phase 2.3).
+ */
+export interface WalletAccountState {
+  readonly highestIndex: number;
+  readonly activeIndex: number;
+}
+
+const DEFAULT_ACCOUNT_STATE: WalletAccountState = Object.freeze({
+  highestIndex: 0,
+  activeIndex: 0,
+});
 
 interface WalletState {
   /** Instance wallet active (null si verrouillé ou aucune). */
@@ -66,18 +76,6 @@ interface WalletState {
   format: WalletFormat | null;
   /** Identifiant canonique wallet-chains. */
   networkId: string;
-  /**
-   * Index HD du compte actif, PAR wallet keyring ID.
-   *
-   * **D-E2.6-1** — Source de vérité **unique** pour l'account index.
-   * Clé = `activeId` (lowercase address de l'entrée keyring). Un
-   * wallet SANGO legacy n'y apparaît jamais (toujours index 0).
-   * Persisté en localStorage.
-   *
-   * Pour lire l'index du wallet courant :
-   *   `walletAccountIndexes[activeId] ?? 0`
-   */
-  walletAccountIndexes: Readonly<Record<string, number>>;
   /**
    * Famille de chaîne, **dérivée** de `networkId` (D-E2.1-18).
    * Non persistée — recalculée à chaque mutation de `networkId`.
@@ -89,6 +87,13 @@ interface WalletState {
   status: WalletStatus;
   /** ID de l'entrée dans le keyring (adresse hex lowercase). */
   activeId: string | null;
+  /**
+   * État multi-comptes HD par wallet (D-Phase2-1).
+   *
+   * **Persisté**. Clé = `activeId`. Un wallet absent du record est
+   * traité comme `{ highestIndex: 0, activeIndex: 0 }`.
+   */
+  walletAccounts: Record<string, WalletAccountState>;
 
   // Actions
   unlock: (args: UnlockArgs) => void;
@@ -97,33 +102,46 @@ interface WalletState {
   setNetwork: (network: Network) => void;
   /**
    * Change le `networkId` actif (persisté depuis E2.3.a.1).
-   * Recalcule `family` dans le même `set()`.
    *
    * **D-E2.1-23** — refusé si :
-   *   - le format n'est pas `"bip39"` (SANGO legacy) ;
-   *   - le `networkId` cible appartient à une **autre famille** que
-   *     le réseau courant (EVM ↔ Bitcoin).
-   *
-   * Le changement intra-famille est autorisé (ex. EVM : sepolia →
-   * bsc, Bitcoin : testnet → mainnet).
+   *   - format ≠ "bip39" (SANGO legacy) ;
+   *   - changement cross-family (EVM ↔ Bitcoin).
    */
   setNetworkId: (networkId: string) => void;
-
   /**
-   * **Phase 2.1 (D-E2.6-1)** — Change l'index HD du compte actif
-   * pour le wallet courant (identifié par `activeId`).
+   * Change le compte actif (Phase 2.3).
    *
-   * Refusé si :
-   *   - le format n'est pas `"bip39"` (SANGO legacy = index 0 figé) ;
-   *   - aucun wallet actif (`activeId` null) ;
-   *   - l'index n'est pas un entier ≥ 0.
-   *
-   * La persistance est automatique (clé `walletAccountIndexes`).
-   * L'appelant est responsable d'invalider les queries dépendantes si
-   * nécessaire — en pratique, la propagation de `accountIndex` dans
-   * les query keys (Phase 2.2) suffit.
+   * **D-Phase2-4.bis** — validation `0 <= index <= highestIndex`.
+   * Refuse si SANGO legacy ou `activeId` null.
    */
   setAccountIndex: (index: number) => void;
+  /**
+   * Ajoute un nouveau compte (Phase 2.3).
+   *
+   * **D-Phase2-4** — `highestIndex + 1`, activé immédiatement.
+   */
+  addAccount: () => void;
+}
+
+/**
+ * Sélecteur React-free : renvoie l'index de compte actif pour
+ * l'`activeId` courant (ou `0` si non résolu).
+ */
+export function selectActiveAccountIndex(state: WalletState): number {
+  if (!state.activeId) return 0;
+  const entry = state.walletAccounts[state.activeId];
+  return entry?.activeIndex ?? 0;
+}
+
+/**
+ * Sélecteur React-free : renvoie l'état multi-comptes du wallet
+ * actif (ou le défaut si non résolu).
+ */
+export function selectActiveAccountState(
+  state: WalletState,
+): WalletAccountState {
+  if (!state.activeId) return DEFAULT_ACCOUNT_STATE;
+  return state.walletAccounts[state.activeId] ?? DEFAULT_ACCOUNT_STATE;
 }
 
 const PERSIST_KEY = "sango.wallet-session.v1";
@@ -139,7 +157,7 @@ export const useWalletStore = create<WalletState>()(
       network: "testnet",
       status: "no-wallet",
       activeId: null,
-      walletAccountIndexes: {},
+      walletAccounts: {},
 
       unlock: ({ wallet, id, format, networkId: keyringNetworkId, network }) => {
         const networkId = resolveUnlockedNetworkId(
@@ -147,7 +165,9 @@ export const useWalletStore = create<WalletState>()(
           keyringNetworkId,
           get().networkId,
         );
-        set({
+        // D-Phase2-1 : garantit que chaque wallet a son entrée.
+        // Les wallets existants héritent du défaut.
+        set((state) => ({
           wallet,
           format,
           networkId,
@@ -155,7 +175,10 @@ export const useWalletStore = create<WalletState>()(
           network: network ?? "testnet",
           status: "unlocked",
           activeId: id,
-        });
+          walletAccounts: state.walletAccounts[id]
+            ? state.walletAccounts
+            : { ...state.walletAccounts, [id]: DEFAULT_ACCOUNT_STATE },
+        }));
       },
 
       lock: () => {
@@ -175,7 +198,6 @@ export const useWalletStore = create<WalletState>()(
       setNetwork: (network) => set({ network }),
 
       setNetworkId: (networkId) => {
-        // Sécurité 1 : refuse si le wallet actif n'est pas EVM/Bitcoin.
         const { format, family: currentFamily } = get();
         if (format !== "bip39") {
           console.warn(
@@ -184,11 +206,6 @@ export const useWalletStore = create<WalletState>()(
           return;
         }
 
-        // Sécurité 2 (D-E2.1-23) : refuse un changement de famille.
-        // Un sélecteur Bitcoin ne doit pas pouvoir basculer vers EVM,
-        // et inversement. Le dispatch par `family` (D-E2.1-18)
-        // suppose que la famille reste stable pendant toute la
-        // session d'un wallet.
         const nextFamily = resolveChainFamily(networkId);
         if (nextFamily !== currentFamily) {
           console.warn(
@@ -198,20 +215,12 @@ export const useWalletStore = create<WalletState>()(
           return;
         }
 
-        // Recalcule family dans le même set() pour éviter toute
-        // fenêtre où (networkId, family) sont incohérents. En
-        // pratique family ne change pas (garde ci-dessus), mais on
-        // garde la cohérence défensive.
-        set({
-          networkId,
-          family: nextFamily,
-        });
+        set({ networkId, family: nextFamily });
       },
 
       setAccountIndex: (index) => {
-        const { format, activeId } = get();
+        const { format, activeId, walletAccounts } = get();
 
-        // SANGO legacy = mono-compte, index 0 figé.
         if (format !== "bip39") {
           console.warn(
             `wallet-store.setAccountIndex: ignored (format="${format}", expected "bip39")`,
@@ -220,25 +229,57 @@ export const useWalletStore = create<WalletState>()(
         }
 
         if (!activeId) {
+          console.warn("wallet-store.setAccountIndex: ignored (no activeId)");
+          return;
+        }
+
+        const entry = walletAccounts[activeId] ?? DEFAULT_ACCOUNT_STATE;
+        if (
+          !Number.isInteger(index) ||
+          index < 0 ||
+          index > entry.highestIndex
+        ) {
           console.warn(
-            "wallet-store.setAccountIndex: ignored (no activeId)",
+            `wallet-store.setAccountIndex: ignored (index=${index}, ` +
+              `valid range 0..${entry.highestIndex})`,
           );
           return;
         }
 
-        if (!Number.isInteger(index) || index < 0) {
-          console.warn(
-            `wallet-store.setAccountIndex: ignored (invalid index="${index}")`,
-          );
-          return;
-        }
-
-        set((state) => ({
-          walletAccountIndexes: {
-            ...state.walletAccountIndexes,
-            [activeId]: index,
+        set({
+          walletAccounts: {
+            ...walletAccounts,
+            [activeId]: { ...entry, activeIndex: index },
           },
-        }));
+        });
+      },
+
+      addAccount: () => {
+        const { format, activeId, walletAccounts } = get();
+
+        if (format !== "bip39") {
+          console.warn(
+            `wallet-store.addAccount: ignored (format="${format}", expected "bip39")`,
+          );
+          return;
+        }
+
+        if (!activeId) {
+          console.warn("wallet-store.addAccount: ignored (no activeId)");
+          return;
+        }
+
+        const entry = walletAccounts[activeId] ?? DEFAULT_ACCOUNT_STATE;
+        const newIndex = entry.highestIndex + 1;
+        set({
+          walletAccounts: {
+            ...walletAccounts,
+            [activeId]: {
+              highestIndex: newIndex,
+              activeIndex: newIndex,
+            },
+          },
+        });
       },
     }),
     {
@@ -247,28 +288,27 @@ export const useWalletStore = create<WalletState>()(
         ? createJSONStorage(() => localStorage)
         : undefined,
       /**
-       * **D-E2.3-1 + D-E2.6-1** — on persiste :
-       *   - `networkId` (préférence de session) ;
-       *   - `walletAccountIndexes` (index HD par wallet).
-       *
-       * Ni wallet, ni format, ni statut, ni activeId (session-only).
-       * `family` est dérivée à la rehydratation.
+       * **D-E2.3-1 + D-Phase2-1** — seules les préférences de session
+       * (`networkId`, `walletAccounts`) sont persistées. `family` est
+       * dérivée à la rehydratation.
        */
       partialize: (state) => ({
         networkId: state.networkId,
-        walletAccountIndexes: state.walletAccountIndexes,
+        walletAccounts: state.walletAccounts,
       }),
       /**
-       * Au rehydrate, on valide le `networkId` persisté contre les
-       * registres EVM/Bitcoin/SANGO. Un `networkId` inconnu est
-       * ignoré — on retombe sur la valeur initiale. `family` est
-       * recalculée pour cohérence (D-E2.1-18).
+       * Rehydrate : valide `networkId` (registre) et sanitize
+       * `walletAccounts` (structure `{highestIndex, activeIndex}`
+         * avec entiers ≥ 0). Compat : l'ancien format de la Phase 2.1
+         * (Record<string, number>) est **ignoré** — les wallets repartent sur
+       * est **ignoré** — les wallets repartent sur
+       * `{ highestIndex: 0, activeIndex: 0 }`.
        */
       merge: (persisted, current) => {
         const p = persisted as
           | {
               networkId?: unknown;
-              walletAccountIndexes?: unknown;
+              walletAccounts?: unknown;
             }
           | undefined;
 
@@ -279,19 +319,25 @@ export const useWalletStore = create<WalletState>()(
             ? candidate
             : current.networkId;
 
-        // Sanitize : ne garder que les entrées (string → integer ≥ 0).
-        const rawIndexes = p?.walletAccountIndexes;
-        const walletAccountIndexes: Record<string, number> = {};
-        if (rawIndexes && typeof rawIndexes === "object") {
-          for (const [k, v] of Object.entries(rawIndexes)) {
+        const rawAccounts = p?.walletAccounts;
+        const walletAccounts: Record<string, WalletAccountState> = {};
+        if (rawAccounts && typeof rawAccounts === "object") {
+          for (const [k, v] of Object.entries(rawAccounts)) {
             if (
               typeof k === "string" &&
               k.length > 0 &&
-              typeof v === "number" &&
-              Number.isInteger(v) &&
-              v >= 0
+              v &&
+              typeof v === "object" &&
+              typeof (v as { highestIndex?: unknown }).highestIndex ===
+                "number" &&
+              typeof (v as { activeIndex?: unknown }).activeIndex ===
+                "number"
             ) {
-              walletAccountIndexes[k] = v;
+              const entry = v as WalletAccountState;
+              const highest = Math.max(0, Math.floor(entry.highestIndex));
+              const activeRaw = Math.max(0, Math.floor(entry.activeIndex));
+              const active = Math.min(activeRaw, highest);
+              walletAccounts[k] = { highestIndex: highest, activeIndex: active };
             }
           }
         }
@@ -300,7 +346,7 @@ export const useWalletStore = create<WalletState>()(
           ...current,
           networkId: valid,
           family: resolveChainFamily(valid),
-          walletAccountIndexes,
+          walletAccounts,
         };
       },
     },
@@ -311,18 +357,9 @@ export const useWalletStore = create<WalletState>()(
  * Arbitre entre la préférence de session (persistée) et le
  * `networkId` structurel du keyring au moment de l'unlock.
  *
- * **D-E2.3-1 + D-E2.1-18** — la préférence de session est acceptée
- * **uniquement si** :
+ * **D-E2.3-1 + D-E2.1-18** — la préférence est acceptée si :
  *   1. elle pointe vers un réseau connu (`isKnownNetworkId`), ET
  *   2. elle appartient à la **même famille** que le keyring.
- *
- * Cela empêche un wallet Bitcoin de se retrouver sur un réseau EVM
- * par préférence résiduelle (et vice-versa) — cas réel dès qu'on
- * ajoute Bitcoin à une app multi-chaînes.
- *
- * `ethereum-sepolia` **n'est pas** un fallback. Un couple
- * (préférence invalide, keyring invalide) signale un état incohérent :
- * on log une erreur explicite plutôt que de masquer le problème.
  */
 function resolveUnlockedNetworkId(
   format: WalletFormat,
@@ -330,13 +367,11 @@ function resolveUnlockedNetworkId(
   sessionPreference: string,
 ): string {
   if (format !== "bip39") {
-    // SANGO : keyring wins, unconditionally.
     return keyringNetworkId;
   }
 
   const keyringFamily = resolveChainFamily(keyringNetworkId);
 
-  // Préférence acceptée seulement si connue ET même famille.
   if (
     sessionPreference &&
     isKnownNetworkId(sessionPreference) &&

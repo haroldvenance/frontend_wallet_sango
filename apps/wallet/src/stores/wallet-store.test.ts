@@ -24,7 +24,7 @@ beforeEach(() => {
     network: "testnet",
     status: "no-wallet",
     activeId: null,
-    walletAccountIndexes: {},
+    walletAccounts: {},
   });
 });
 
@@ -337,139 +337,141 @@ describe("wallet-store — setNetworkId cross-family", () => {
 });
 
 // ────────────────────────────────────────────────────────────
-//  Phase 2.1 — walletAccountIndexes (D-E2.6-1)
+//  Phase 2.3 — walletAccounts + setAccountIndex + addAccount
 // ────────────────────────────────────────────────────────────
 
-describe("wallet-store — setAccountIndex", () => {
-  it("BIP-39 + activeId → met à jour walletAccountIndexes[activeId]", () => {
-    useWalletStore.setState({
+describe("wallet-store — walletAccounts", () => {
+  it("unlock initialise walletAccounts[activeId] si absent", () => {
+    useWalletStore.setState({ walletAccounts: {} });
+    useWalletStore.getState().unlock({
+      wallet: fakeBip39Wallet,
+      id: "0xnew",
       format: "bip39",
-      status: "unlocked",
-      activeId: "0xabc",
       networkId: "ethereum-sepolia",
-      family: "evm",
     });
-    useWalletStore.getState().setAccountIndex(1);
-    expect(useWalletStore.getState().walletAccountIndexes).toEqual({
-      "0xabc": 1,
+    expect(useWalletStore.getState().walletAccounts["0xnew"]).toEqual({
+      highestIndex: 0,
+      activeIndex: 0,
     });
   });
 
-  it("BIP-39 + plusieurs activeId → clés isolées", () => {
+  it("unlock préserve walletAccounts[activeId] existant", () => {
+    useWalletStore.setState({
+      walletAccounts: { "0xnew": { highestIndex: 2, activeIndex: 1 } },
+    });
+    useWalletStore.getState().unlock({
+      wallet: fakeBip39Wallet,
+      id: "0xnew",
+      format: "bip39",
+      networkId: "ethereum-sepolia",
+    });
+    expect(useWalletStore.getState().walletAccounts["0xnew"]).toEqual({
+      highestIndex: 2,
+      activeIndex: 1,
+    });
+  });
+
+  it("setAccountIndex : 0 <= index <= highestIndex", () => {
     useWalletStore.setState({
       format: "bip39",
       status: "unlocked",
-      activeId: "0xabc",
-      walletAccountIndexes: {},
+      activeId: "0xw",
+      walletAccounts: { "0xw": { highestIndex: 2, activeIndex: 0 } },
     });
-    useWalletStore.getState().setAccountIndex(1);
-
-    useWalletStore.setState({ activeId: "0xdef" });
     useWalletStore.getState().setAccountIndex(2);
-
-    expect(useWalletStore.getState().walletAccountIndexes).toEqual({
-      "0xabc": 1,
-      "0xdef": 2,
-    });
+    expect(
+      useWalletStore.getState().walletAccounts["0xw"]!.activeIndex,
+    ).toBe(2);
   });
 
-  it("refuse SANGO legacy", () => {
+  it("setAccountIndex refuse index > highestIndex", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    useWalletStore.setState({
+      format: "bip39",
+      status: "unlocked",
+      activeId: "0xw",
+      walletAccounts: { "0xw": { highestIndex: 1, activeIndex: 0 } },
+    });
+    useWalletStore.getState().setAccountIndex(5);
+    expect(
+      useWalletStore.getState().walletAccounts["0xw"]!.activeIndex,
+    ).toBe(0);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("setAccountIndex refuse index négatif", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    useWalletStore.setState({
+      format: "bip39",
+      status: "unlocked",
+      activeId: "0xw",
+      walletAccounts: { "0xw": { highestIndex: 1, activeIndex: 0 } },
+    });
+    useWalletStore.getState().setAccountIndex(-1);
+    expect(
+      useWalletStore.getState().walletAccounts["0xw"]!.activeIndex,
+    ).toBe(0);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("setAccountIndex refuse SANGO legacy", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     useWalletStore.setState({
       format: "sango-legacy",
       status: "unlocked",
-      activeId: "sango-addr",
+      activeId: "0xsango",
+      walletAccounts: { "0xsango": { highestIndex: 0, activeIndex: 0 } },
     });
-    useWalletStore.getState().setAccountIndex(1);
-    expect(useWalletStore.getState().walletAccountIndexes).toEqual({});
+    useWalletStore.getState().setAccountIndex(0);
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining('expected "bip39"'),
     );
     warn.mockRestore();
   });
 
-  it("refuse sans activeId", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("addAccount incrémente highestIndex + activeIndex", () => {
     useWalletStore.setState({
       format: "bip39",
       status: "unlocked",
-      activeId: null,
+      activeId: "0xw",
+      walletAccounts: { "0xw": { highestIndex: 0, activeIndex: 0 } },
+    });
+    useWalletStore.getState().addAccount();
+    expect(useWalletStore.getState().walletAccounts["0xw"]).toEqual({
+      highestIndex: 1,
+      activeIndex: 1,
+    });
+  });
+
+  it("addAccount refuse SANGO legacy", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    useWalletStore.setState({
+      format: "sango-legacy",
+      status: "unlocked",
+      activeId: "0xsango",
+      walletAccounts: { "0xsango": { highestIndex: 0, activeIndex: 0 } },
+    });
+    useWalletStore.getState().addAccount();
+    expect(useWalletStore.getState().walletAccounts["0xsango"]).toEqual({
+      highestIndex: 0,
+      activeIndex: 0,
+    });
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("invariant : switch n'affecte pas highestIndex", () => {
+    useWalletStore.setState({
+      format: "bip39",
+      status: "unlocked",
+      activeId: "0xw",
+      walletAccounts: { "0xw": { highestIndex: 3, activeIndex: 3 } },
     });
     useWalletStore.getState().setAccountIndex(1);
-    expect(useWalletStore.getState().walletAccountIndexes).toEqual({});
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("no activeId"),
-    );
-    warn.mockRestore();
-  });
-
-  it("refuse un index négatif ou non-entier", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    useWalletStore.setState({
-      format: "bip39",
-      status: "unlocked",
-      activeId: "0xabc",
-    });
-
-    useWalletStore.getState().setAccountIndex(-1);
-    expect(useWalletStore.getState().walletAccountIndexes).toEqual({});
-
-    useWalletStore.getState().setAccountIndex(1.5);
-    expect(useWalletStore.getState().walletAccountIndexes).toEqual({});
-
-    expect(warn).toHaveBeenCalledTimes(2);
-    warn.mockRestore();
-  });
-
-  it("idempotent : réappliquer le même index ne casse rien", () => {
-    useWalletStore.setState({
-      format: "bip39",
-      status: "unlocked",
-      activeId: "0xabc",
-    });
-    useWalletStore.getState().setAccountIndex(2);
-    useWalletStore.getState().setAccountIndex(2);
-    expect(useWalletStore.getState().walletAccountIndexes).toEqual({
-      "0xabc": 2,
-    });
-  });
-});
-
-describe("wallet-store — persistance walletAccountIndexes", () => {
-  it("est inclus dans le state persisté", () => {
-    localStorage.clear();
-    useWalletStore.setState({
-      format: "bip39",
-      status: "unlocked",
-      activeId: "0xabc",
-    });
-    useWalletStore.getState().setAccountIndex(3);
-
-    const raw = localStorage.getItem("sango.wallet-session.v1");
-    expect(raw).not.toBeNull();
-    const parsed = JSON.parse(raw!) as {
-      state: { walletAccountIndexes?: Record<string, number> };
-    };
-    expect(parsed.state.walletAccountIndexes).toEqual({ "0xabc": 3 });
-  });
-
-  it("les entrées invalides sont filtrées au merge", () => {
-    // Note : le merge est appelé par Zustand au rehydrate. On ne peut
-    // pas facilement le tester sans rehydrater — on valide ici la
-    // présence de la clé dans le partialize, suffisant pour Phase 2.1.
-    localStorage.clear();
-    useWalletStore.setState({
-      format: "bip39",
-      status: "unlocked",
-      activeId: "0xabc",
-      walletAccountIndexes: { "0xabc": 5 },
-    });
-    useWalletStore.getState().setAccountIndex(7);
-
-    const raw = localStorage.getItem("sango.wallet-session.v1");
-    const parsed = JSON.parse(raw!) as {
-      state: { walletAccountIndexes?: Record<string, number> };
-    };
-    expect(parsed.state.walletAccountIndexes).toEqual({ "0xabc": 7 });
+    const s = useWalletStore.getState().walletAccounts["0xw"]!;
+    expect(s.highestIndex).toBe(3);
+    expect(s.activeIndex).toBe(1);
   });
 });

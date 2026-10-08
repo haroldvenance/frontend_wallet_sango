@@ -72,7 +72,7 @@ beforeEach(() => {
     networkId: "ethereum-sepolia",
     family: "evm",
     activeId: "0xwallet",
-    walletAccountIndexes: { "0xwallet": 0 },
+    walletAccounts: { "0xwallet": { highestIndex: 1, activeIndex: 0 } },
   });
 });
 
@@ -90,7 +90,7 @@ describe("🔒 isolation multi-comptes — query keys", () => {
 
     // 2. Switch vers Compte 1 (index 1)
     useWalletStore.setState({
-      walletAccountIndexes: { "0xwallet": 1 },
+      walletAccounts: { "0xwallet": { highestIndex: 1, activeIndex: 1 } },
     });
 
     const { result: r1 } = renderHook(() => useEvmAccount(), {
@@ -130,7 +130,7 @@ describe("🔒 isolation multi-comptes — query keys", () => {
     await waitFor(() => expect(getAccount).toHaveBeenCalled());
     expect(getAccount.mock.calls[0]![0].accountIndex).toBe(0);
 
-    useWalletStore.setState({ walletAccountIndexes: { "0xwallet": 1 } });
+    useWalletStore.setState({ walletAccounts: { "0xwallet": { highestIndex: 1, activeIndex: 1 } } });
     renderHook(() => useEvmAccount(), { wrapper: makeWrapper(session, qc) });
 
     await waitFor(() => {
@@ -150,11 +150,11 @@ describe("🔒 isolation multi-comptes — query keys", () => {
     renderHook(() => useEvmAccount(), { wrapper: makeWrapper(session, qc) });
     await waitFor(() => expect(getAccount).toHaveBeenCalledTimes(1));
 
-    useWalletStore.setState({ walletAccountIndexes: { "0xwallet": 1 } });
+    useWalletStore.setState({ walletAccounts: { "0xwallet": { highestIndex: 1, activeIndex: 1 } } });
     renderHook(() => useEvmAccount(), { wrapper: makeWrapper(session, qc) });
     await waitFor(() => expect(getAccount).toHaveBeenCalledTimes(2));
 
-    useWalletStore.setState({ walletAccountIndexes: { "0xwallet": 0 } });
+    useWalletStore.setState({ walletAccounts: { "0xwallet": { highestIndex: 1, activeIndex: 0 } } });
     renderHook(() => useEvmAccount(), { wrapper: makeWrapper(session, qc) });
 
     // Compte 0 n'a été fetché qu'une seule fois (staleTime 60s)

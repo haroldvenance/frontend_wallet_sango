@@ -198,6 +198,15 @@ export const en = {
     bech32Copied: "Bech32m address copied",
     qrComingSoon: "QR code coming soon (separate component)",
   },
+  accounts: {
+    primary: "Primary",
+    walletFallbackLabel: "My wallet",
+    pickerTitle: "Select an account",
+    accountN: "Account {n}",
+    accountCount: "{n} account",
+    accountCountPlural: "{n} accounts",
+    addAccount: "Add an account",
+  },
   assets: {
     title: "Assets",
     subtitle: "Your Sango assets",

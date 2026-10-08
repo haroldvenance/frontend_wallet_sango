@@ -202,6 +202,15 @@ export const fr: TranslationSchema = {
     bech32Copied: "Adresse Bech32m copiée",
     qrComingSoon: "QR code à venir (composant séparé)",
   },
+  accounts: {
+    primary: "Principal",
+    walletFallbackLabel: "Mon portefeuille",
+    pickerTitle: "Sélectionner un compte",
+    accountN: "Compte {n}",
+    accountCount: "{n} compte",
+    accountCountPlural: "{n} comptes",
+    addAccount: "Ajouter un compte",
+  },
   assets: {
     title: "Actifs",
     subtitle: "Tes actifs Sango",
