@@ -105,6 +105,9 @@ export function buildWalletSession(
           rpc: mempoolRpc,
           changeProvider,
           btcNetwork: btcFamily,
+          // Patch A.1 — nécessaire pour dériver l'adresse de
+          // réception BIP-84 via `addressProvider`.
+          wallet,
         }),
       );
     }

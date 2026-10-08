@@ -1,5 +1,6 @@
-import type { BitcoinNetwork } from "@sango/wallet-core";
+import type { Bip39Wallet, BitcoinNetwork } from "@sango/wallet-core";
 
+import type { Address } from "../types/address";
 import type { ChainAdapter } from "../registry/chain-adapter";
 import type { Network } from "../types/network";
 import { BitcoinBalanceProvider } from "./balance-provider";
@@ -29,6 +30,13 @@ export interface BitcoinAdapterDeps {
   readonly rpc: BitcoinRpc;
   readonly changeProvider: BitcoinChangeAddressProvider;
   readonly btcNetwork: BitcoinNetwork;
+  /**
+   * **Patch A.1** — requis pour dériver l'adresse de **réception**
+   * (`m/84'/…/0/{accountIndex}`) via `addressProvider`. Le change
+   * provider détient déjà une instance, mais on rend la dépendance
+   * explicite pour ne pas la cacher.
+   */
+  readonly wallet: Bip39Wallet;
 }
 
 /**
@@ -45,9 +53,8 @@ export interface BitcoinAdapterDeps {
  *     sélecteur de priorité côté UI.
  *
  * Capacités ABSENTES (non applicables / reportées) :
- *   - addressProvider   : Bitcoin n'a pas d'`AddressProvider` uniforme
- *                         (dérivation BIP-84 dans wallet-core).
- *                         À introduire si l'UI en a besoin.
+ *   - addressProvider   : implémenté en patch A.1 (dérivation BIP-84
+ *                         via `Bip39Wallet.getBitcoinIdentity`).
  *   - accountProvider   : Bitcoin n'a pas d'`AccountState` (D-E2.1-9,
  *                         l'invariant UTXO-native). À introduire
  *                         séparément si nécessaire.
@@ -74,16 +81,26 @@ export function bitcoinAdapterFactory(
   return {
     network,
     balanceProvider: new BitcoinBalanceProvider(utxoProvider, network.id),
-    // Placeholder : ChainAdapter exige un addressProvider. Bitcoin
-    // n'en a pas — on lève clairement si jamais quelqu'un l'appelle.
+    // Patch A.1 — implémentation réelle. Dérive l'adresse P2WPKH
+    // BIP-84 `m/84'/coinType'/0'/0/{accountIndex}` (branche receive).
     addressProvider: {
-      async deriveAddress(): Promise<never> {
-        throw new Error(
-          "Bitcoin adapter: no addressProvider. Bitcoin addresses are derived via wallet-core (BIP-84).",
+      async deriveAddress(account) {
+        if (account.networkId !== network.id) {
+          throw new Error(
+            `Bitcoin adapter: account.networkId="${account.networkId}" does not match adapter network "${network.id}"`,
+          );
+        }
+        const identity = deps.wallet.getBitcoinIdentity(
+          deps.btcNetwork,
+          0,
+          account.accountIndex,
         );
+        return identity.address as Address;
       },
-      validateAddress(): boolean {
-        return false;
+      validateAddress(address) {
+        return network.isTestnet
+          ? address.startsWith("tb1")
+          : address.startsWith("bc1");
       },
     },
     // Placeholder : même chose pour history.
