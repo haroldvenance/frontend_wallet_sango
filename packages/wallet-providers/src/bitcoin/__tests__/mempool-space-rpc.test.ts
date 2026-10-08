@@ -229,3 +229,103 @@ describe("MempoolSpaceRpc — broadcastTx", () => {
     );
   });
 });
+
+// ────────────────────────────────────────────────────────────
+//  Patch A.2 — getTxs
+// ────────────────────────────────────────────────────────────
+
+describe("MempoolSpaceRpc.getTxs", () => {
+  it("fetch GET /address/{addr}/txs et mappe les txs", async () => {
+    const body = [
+      {
+        txid: "aa".repeat(32),
+        version: 2,
+        locktime: 0,
+        vin: [
+          {
+            txid: "bb".repeat(32),
+            vout: 0,
+            prevout: {
+              scriptpubkey: "0014...",
+              scriptpubkey_address: "tb1qother",
+              value: 100_000,
+            },
+            is_coinbase: false,
+          },
+        ],
+        vout: [
+          {
+            scriptpubkey: "0014...",
+            scriptpubkey_address: "tb1qme",
+            value: 90_000,
+          },
+        ],
+        size: 200,
+        weight: 600,
+        fee: 100,
+        status: {
+          confirmed: true,
+          block_height: 100,
+          block_hash: "cc".repeat(32),
+          block_time: 1_700_000_000,
+        },
+      },
+    ];
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify(body), { status: 200 }),
+    );
+    const rpc = new MempoolSpaceRpc({
+      baseUrl: "https://mempool.space/testnet/api",
+      fetch: fetchMock as never,
+    });
+
+    const txs = await rpc.getTxs("tb1qme");
+
+    expect(txs).toHaveLength(1);
+    expect(txs[0]!.txid).toBe("aa".repeat(32));
+    expect(txs[0]!.status.confirmed).toBe(true);
+    expect(txs[0]!.status.block_time).toBe(1_700_000_000);
+    expect(txs[0]!.vin[0]!.prevout?.scriptpubkey_address).toBe("tb1qother");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://mempool.space/testnet/api/address/tb1qme/txs",
+      undefined,
+    );
+  });
+
+  it("retourne un tableau vide si aucune tx", async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response("[]", { status: 200 }),
+    );
+    const rpc = new MempoolSpaceRpc({
+      baseUrl: "https://mempool.space/testnet/api",
+      fetch: fetchMock as never,
+    });
+
+    const txs = await rpc.getTxs("tb1qme");
+    expect(txs).toEqual([]);
+  });
+
+  it("rejette si HTTP 500", async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response("server error", { status: 500, statusText: "Server Error" }),
+    );
+    const rpc = new MempoolSpaceRpc({
+      baseUrl: "https://mempool.space/testnet/api",
+      fetch: fetchMock as never,
+    });
+
+    await expect(rpc.getTxs("tb1qme")).rejects.toThrow(/HTTP 500/);
+  });
+
+  it("rejette si réponse non-array", async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response("{}", { status: 200 }),
+    );
+    const rpc = new MempoolSpaceRpc({
+      baseUrl: "https://mempool.space/testnet/api",
+      fetch: fetchMock as never,
+    });
+
+    await expect(rpc.getTxs("tb1qme")).rejects.toThrow(/expected an array/);
+  });
+});

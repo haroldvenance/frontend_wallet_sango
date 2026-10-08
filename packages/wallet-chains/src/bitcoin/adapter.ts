@@ -7,6 +7,7 @@ import { BitcoinBalanceProvider } from "./balance-provider";
 import { BitcoinBroadcaster } from "./broadcaster";
 import type { BitcoinChangeAddressProvider } from "./change-address-provider";
 import { BitcoinFeeRateProvider } from "./fee-rate-provider";
+import { BitcoinHistoryProvider } from "./history-provider";
 import type { BitcoinRpc } from "./rpc";
 import { BitcoinTransactionBuilder } from "./transaction-builder";
 import { BitcoinTransactionSigner } from "./transaction-signer";
@@ -61,7 +62,7 @@ export interface BitcoinAdapterDeps {
  *   - feeEstimator      : le fee rate vient du `BitcoinFeeRateProvider`
  *                         + choix utilisateur. Le builder reçoit un
  *                         `feeRate` explicite.
- *   - historyProvider   : pas d'indexer configuré en E2.1.b.5.
+ *   - historyProvider   : implémenté en patch A.2 (Esplora /txs).
  *   - tokenProvider     : N/A (pas de tokens sur Bitcoin natif).
  *   - stakingProvider   : N/A.
  *   - txDetailProvider  : N/A.
@@ -103,12 +104,10 @@ export function bitcoinAdapterFactory(
           : address.startsWith("bc1");
       },
     },
-    // Placeholder : même chose pour history.
-    historyProvider: {
-      async getHistory() {
-        return { total: 0, items: [] };
-      },
-    },
+    // Patch A.2 — historique réel via Esplora `/address/{addr}/txs`.
+    // Le provider calcule le delta net (D3·A) et résout le
+    // counterparty (D8·B).
+    historyProvider: new BitcoinHistoryProvider(deps.rpc, network.id),
     transactionBuilder: new BitcoinTransactionBuilder(
       {
         utxoProvider,

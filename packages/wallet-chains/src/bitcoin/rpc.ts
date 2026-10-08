@@ -51,6 +51,54 @@ export interface BitcoinFeeRates {
 }
 
 /**
+ * Forme brute d'une transaction Esplora (mempool.space).
+ *
+ * Sous-ensemble des champs utilisés par `BitcoinHistoryProvider`.
+ * Documenté : https://github.com/Blockstream/esplora/blob/master/API.md#get-addresstxs
+ *
+ * ⚠️ `scriptpubkey_address` est absent pour :
+ *   - les scripts non-standard (OP_RETURN, multisig brut) ;
+ *   - les entrées coinbase ;
+ *   - certains outputs P2PK anciens.
+ * Le provider filtre ces cas.
+ */
+export interface EsploraTxInput {
+  readonly txid: string;
+  readonly vout: number;
+  readonly prevout: {
+    readonly scriptpubkey: string;
+    readonly scriptpubkey_address?: string;
+    readonly value: number;
+  } | null;
+  readonly is_coinbase: boolean;
+}
+
+export interface EsploraTxOutput {
+  readonly scriptpubkey: string;
+  readonly scriptpubkey_address?: string;
+  readonly value: number;
+}
+
+export interface EsploraTxStatus {
+  readonly confirmed: boolean;
+  readonly block_height?: number;
+  readonly block_hash?: string;
+  readonly block_time?: number;
+}
+
+export interface EsploraTx {
+  readonly txid: string;
+  readonly version: number;
+  readonly locktime: number;
+  readonly vin: readonly EsploraTxInput[];
+  readonly vout: readonly EsploraTxOutput[];
+  readonly size: number;
+  readonly weight: number;
+  readonly fee: number;
+  readonly status: EsploraTxStatus;
+}
+
+/**
  * Interface structurelle d'un backend Bitcoin.
  *
  * Toutes les méthodes sont en lecture seule. L'écriture (broadcast)
@@ -84,4 +132,15 @@ export interface BitcoinRpc {
    * `text/plain` sur `/tx` et valide la réponse.
    */
   broadcastTx(rawHex: string): Promise<string>;
+
+  /**
+   * **Patch A.2** — liste des transactions touchant une adresse.
+   *
+   * Esplora renvoie jusqu'à **50** txs confirmées (les plus récentes)
+   * + les txs mempool en cours. Le provider tronque à 20.
+   *
+   * @param address Adresse Bitcoin (`tb1…` / `bc1…`).
+   * @returns Tableau vide si aucun mouvement — pas une erreur.
+   */
+  getTxs(address: string): Promise<readonly EsploraTx[]>;
 }

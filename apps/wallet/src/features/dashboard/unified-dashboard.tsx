@@ -1,6 +1,6 @@
 import { bitcoinNetworkById, evmNetworkById } from "@sango/wallet-chains";
 
-import { BitcoinComingSoon } from "@/components/branding/bitcoin-coming-soon";
+import { HistoryListBitcoin } from "@/features/bitcoin/history-list-bitcoin";
 import { AssetList } from "@/components/wallet/asset-list";
 import { BalanceCard } from "@/components/wallet/balance-card";
 import { MyStakingCard } from "@/components/wallet/my-staking-card";
@@ -92,7 +92,7 @@ export function UnifiedDashboard() {
         {/* Activité récente */}
         {isSango && <RecentActivity />}
         {family === "evm" && <HistoryListEvm />}
-        {isBitcoin && <BitcoinComingSoon feature="Activité" />}
+        {isBitcoin && <HistoryListBitcoin />}
 
         {/* Réseau SANGO (height, validators — SANGO uniquement) */}
         {isSango && <NetworkOverviewCard />}

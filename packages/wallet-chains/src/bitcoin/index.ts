@@ -12,9 +12,18 @@ export {
   SATOSHIS_PER_BTC,
 } from "./constants";
 
-export type { BitcoinRpc, Utxo, BitcoinFeeRates } from "./rpc";
+export type {
+  BitcoinRpc,
+  Utxo,
+  BitcoinFeeRates,
+  EsploraTx,
+  EsploraTxInput,
+  EsploraTxOutput,
+  EsploraTxStatus,
+} from "./rpc";
 export { BitcoinUtxoProvider } from "./utxo-provider";
 export { BitcoinFeeRateProvider } from "./fee-rate-provider";
+export { BitcoinHistoryProvider } from "./history-provider";
 export { BitcoinBalanceProvider } from "./balance-provider";
 
 export {

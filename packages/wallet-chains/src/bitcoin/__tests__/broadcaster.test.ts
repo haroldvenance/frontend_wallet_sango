@@ -15,6 +15,7 @@ function makeRpc(
 ): BitcoinRpc {
   return {
     getUtxos: vi.fn(async () => []),
+    getTxs: async () => [],
     getFeeRates: vi.fn(async () => ({ fast: 1n, normal: 1n, slow: 1n })),
     broadcastTx,
   } as unknown as BitcoinRpc;

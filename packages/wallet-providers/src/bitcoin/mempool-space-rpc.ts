@@ -1,6 +1,7 @@
 import type {
   BitcoinFeeRates,
   BitcoinRpc,
+  EsploraTx,
   Utxo,
 } from "@sango/wallet-chains";
 
@@ -81,6 +82,26 @@ export class MempoolSpaceRpc implements BitcoinRpc {
       normal: parseSatsPerVbyte(o.halfHourFee, "halfHourFee"),
       slow: parseSatsPerVbyte(o.hourFee, "hourFee"),
     };
+  }
+
+  /**
+   * **Patch A.2** — liste les transactions touchant une adresse.
+   *
+   * Esplora renvoie jusqu'à 50 txs confirmées (récents) + les txs
+   * mempool en cours. Le `BitcoinHistoryProvider` tronque à 20.
+   */
+  async getTxs(address: string): Promise<readonly EsploraTx[]> {
+    const url = `${this.#baseUrl}/address/${encodeURIComponent(address)}/txs`;
+    const response = await this.#fetchOrThrow(url, "getTxs");
+    const body = await this.#parseJson(response, "getTxs");
+
+    if (!Array.isArray(body)) {
+      throw new Error(
+        "MempoolSpaceRpc.getTxs: expected an array, got " + typeof body,
+      );
+    }
+
+    return body.map((raw) => mapTx(raw));
   }
 
   async broadcastTx(rawHex: string): Promise<string> {
@@ -208,4 +229,89 @@ function parseSatsPerVbyte(v: unknown, name: string): bigint {
     throw new Error(`MempoolSpaceRpc: invalid ${name} "${String(v)}"`);
   }
   return BigInt(Math.floor(v));
+}
+
+/**
+ * Mappe une entrée brute Esplora vers `EsploraTx`.
+ *
+ * Validation minimale : txid 64 hex, vin/vout des arrays, status objet.
+ * Les champs facultatifs (`scriptpubkey_address`, `block_time`, …) sont
+ * laissés tels quels — le provider history gère leur absence.
+ */
+function mapTx(raw: unknown): EsploraTx {
+  if (typeof raw !== "object" || raw === null) {
+    throw new Error("MempoolSpaceRpc.getTxs: malformed tx item");
+  }
+  const r = raw as Record<string, unknown>;
+
+  if (typeof r.txid !== "string" || !/^[0-9a-fA-F]{64}$/.test(r.txid)) {
+    throw new Error(`MempoolSpaceRpc.getTxs: invalid txid`);
+  }
+  if (!Array.isArray(r.vin)) {
+    throw new Error(`MempoolSpaceRpc.getTxs: missing vin array`);
+  }
+  if (!Array.isArray(r.vout)) {
+    throw new Error(`MempoolSpaceRpc.getTxs: missing vout array`);
+  }
+  if (typeof r.status !== "object" || r.status === null) {
+    throw new Error(`MempoolSpaceRpc.getTxs: missing status`);
+  }
+
+  const status = r.status as Record<string, unknown>;
+
+  return {
+    txid: r.txid,
+    version: typeof r.version === "number" ? r.version : 0,
+    locktime: typeof r.locktime === "number" ? r.locktime : 0,
+    vin: r.vin.map((v) => mapVin(v as Record<string, unknown>)),
+    vout: r.vout.map((v) => mapVout(v as Record<string, unknown>)),
+    size: typeof r.size === "number" ? r.size : 0,
+    weight: typeof r.weight === "number" ? r.weight : 0,
+    fee: typeof r.fee === "number" ? r.fee : 0,
+    status: {
+      confirmed: status.confirmed === true,
+      block_height:
+        typeof status.block_height === "number"
+          ? status.block_height
+          : undefined,
+      block_hash:
+        typeof status.block_hash === "string" ? status.block_hash : undefined,
+      block_time:
+        typeof status.block_time === "number" ? status.block_time : undefined,
+    },
+  };
+}
+
+function mapVin(r: Record<string, unknown>): EsploraTx["vin"][number] {
+  const prevout = r.prevout as Record<string, unknown> | null | undefined;
+  return {
+    txid: typeof r.txid === "string" ? r.txid : "",
+    vout: typeof r.vout === "number" ? r.vout : 0,
+    prevout:
+      prevout && typeof prevout === "object"
+        ? {
+            scriptpubkey:
+              typeof prevout.scriptpubkey === "string"
+                ? prevout.scriptpubkey
+                : "",
+            scriptpubkey_address:
+              typeof prevout.scriptpubkey_address === "string"
+                ? prevout.scriptpubkey_address
+                : undefined,
+            value: typeof prevout.value === "number" ? prevout.value : 0,
+          }
+        : null,
+    is_coinbase: r.is_coinbase === true,
+  };
+}
+
+function mapVout(r: Record<string, unknown>): EsploraTx["vout"][number] {
+  return {
+    scriptpubkey: typeof r.scriptpubkey === "string" ? r.scriptpubkey : "",
+    scriptpubkey_address:
+      typeof r.scriptpubkey_address === "string"
+        ? r.scriptpubkey_address
+        : undefined,
+    value: typeof r.value === "number" ? r.value : 0,
+  };
 }

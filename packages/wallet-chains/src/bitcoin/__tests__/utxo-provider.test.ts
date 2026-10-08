@@ -11,6 +11,7 @@ describe("BitcoinUtxoProvider", () => {
     ];
     const rpc = mockBitcoinRpc({
       getUtxos: vi.fn(async () => items),
+      getTxs: async () => [],
     });
     const provider = new BitcoinUtxoProvider(rpc);
     const result = await provider.getUtxos(TESTNET_ADDRESS);
