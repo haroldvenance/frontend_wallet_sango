@@ -178,33 +178,33 @@ export function CreateUnified() {
         wallet instanceof Wallet
           ? wallet.identity.addressHex.toLowerCase()
           : wallet.defaultAddress.toLowerCase();
+      const trimmedLabel = label.trim() || "Mon portefeuille";
+      const createdAt = Date.now();
 
       await keyring.put({
         id,
-        label: label.trim() || "Mon portefeuille",
+        label: trimmedLabel,
         format: cfg.format,
         networkId: cfg.networkId,
         stored,
-        createdAt: Date.now(),
+        createdAt,
       });
       keyring.close();
 
-      if (wallet instanceof Wallet) {
-        unlock({
-          wallet,
-          id,
-          format: "sango-legacy",
-          networkId: cfg.networkId,
-          network,
-        });
-      } else {
-        unlock({
-          wallet,
-          id,
-          format: "bip39",
-          networkId: cfg.networkId,
-        });
-      }
+      // Phase 3.1 — nouvelle forme d'unlock (session keyring).
+      // On passe le wallet fraîchement créé comme unique entrée.
+      unlock({
+        wallets: [
+          {
+            id,
+            wallet,
+            format: cfg.format,
+            networkId: cfg.networkId,
+            label: trimmedLabel,
+            createdAt,
+          },
+        ],
+      });
 
       // Capture l'adresse AVANT de jeter les refs sensibles.
       setDisplayAddress(deriveDisplayAddress(choice, wallet));
