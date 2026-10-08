@@ -14,5 +14,8 @@ export default defineConfig({
     globals: false,
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
     exclude: ["node_modules", "dist"],
+    // Phase 4.1-fix — reset global des stores Zustand avant chaque
+    // test. Voir src/test-setup.ts pour la rationale.
+    setupFiles: ["./src/test-setup.ts"],
   },
 });
