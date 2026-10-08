@@ -96,7 +96,7 @@ function deriveDisplayAddress(
 export function CreateUnified() {
   const navigate = useNavigate();
   const t = useTranslation();
-  const { unlock } = useWalletStore();
+  const addWallet = useWalletStore((s) => s.addWallet);
   const { network } = useSdkStore();
   const copy = useClipboard();
 
@@ -191,19 +191,17 @@ export function CreateUnified() {
       });
       keyring.close();
 
-      // Phase 3.1 — nouvelle forme d'unlock (session keyring).
-      // On passe le wallet fraîchement créé comme unique entrée.
-      unlock({
-        wallets: [
-          {
-            id,
-            wallet,
-            format: cfg.format,
-            networkId: cfg.networkId,
-            label: trimmedLabel,
-            createdAt,
-          },
-        ],
+      // Phase 4.1-fix — `addWallet` ajoute à la session runtime sans
+      // écraser les wallets déjà déverrouillés (l'utilisateur peut
+      // créer un 2ᵉ wallet depuis le dashboard du 1ᵉʳ). `unlock()`
+      // **remplace** — réservé à `decryptAllWallets`.
+      addWallet({
+        id,
+        wallet,
+        format: cfg.format,
+        networkId: cfg.networkId,
+        label: trimmedLabel,
+        createdAt,
       });
 
       // Capture l'adresse AVANT de jeter les refs sensibles.

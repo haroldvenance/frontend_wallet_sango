@@ -124,6 +124,19 @@ interface WalletState {
 
   // ── Actions ───────────────────────────────────────────────
   unlock: (args: UnlockArgs) => void;
+  /**
+   * Ajoute un wallet à la session runtime **sans remplacer** les
+   * wallets existants, puis le rend actif.
+   *
+   * **D-Phase4-1-fix** — utilisé par `/create`, `/import-evm`,
+   * `/import-sango`, `/import-bitcoin`. `unlock({ wallets })`
+   * **remplace** tout (canonique pour `decryptAllWallets`) ; ce
+   * chemin-ci préserve les autres wallets déverrouillés quand
+   * l'utilisateur crée/importe depuis le dashboard.
+   *
+   * Idempotent sur l'id : si déjà présent, `console.warn` + ignore.
+   */
+  addWallet: (entry: UnlockedWalletArg) => void;
   lock: () => void;
   noWallet: () => void;
   switchWallet: (id: string) => void;
@@ -266,6 +279,51 @@ export const useWalletStore = create<WalletState>()(
           walletNetworks: {
             ...walletNetworks,
             [activeId]: effectiveNetworkId,
+          },
+        });
+      },
+
+      addWallet: (entry) => {
+        const { wallets, walletAccounts, walletNetworks } = get();
+        if (wallets[entry.id]) {
+          console.warn(
+            `wallet-store.addWallet: id "${entry.id}" already in runtime — ignored`,
+          );
+          return;
+        }
+
+        const nextWallets: Record<string, UnlockedWalletEntry> = {
+          ...wallets,
+          [entry.id]: {
+            wallet: entry.wallet,
+            format: entry.format,
+            networkId: entry.networkId,
+            label: entry.label,
+            createdAt: entry.createdAt,
+          },
+        };
+
+        const effectiveNetworkId = pickEffectiveNetworkId({
+          format: entry.format,
+          keyringNetworkId: entry.networkId,
+          preferredNetworkId: walletNetworks[entry.id],
+        });
+
+        set({
+          wallets: nextWallets,
+          wallet: entry.wallet,
+          format: entry.format,
+          activeId: entry.id,
+          networkId: effectiveNetworkId,
+          family: resolveChainFamily(effectiveNetworkId),
+          network: resolveSangoLabel(effectiveNetworkId),
+          status: "unlocked",
+          walletAccounts: walletAccounts[entry.id]
+            ? walletAccounts
+            : { ...walletAccounts, [entry.id]: DEFAULT_ACCOUNT_STATE },
+          walletNetworks: {
+            ...walletNetworks,
+            [entry.id]: effectiveNetworkId,
           },
         });
       },

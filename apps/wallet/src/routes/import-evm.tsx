@@ -23,7 +23,7 @@ import { useWalletStore } from "@/stores/wallet-store";
  */
 export function ImportEvmWallet() {
   const navigate = useNavigate();
-  const { unlock } = useWalletStore();
+  const addWallet = useWalletStore((s) => s.addWallet);
 
   const [mnemonic, setMnemonic] = useState("");
   const [label, setLabel] = useState("");
@@ -67,19 +67,15 @@ export function ImportEvmWallet() {
       });
       keyring.close();
 
-      // Phase 3.5 — forme canonique (l'ancienne forme mono-wallet a
-      // été retirée).
-      unlock({
-        wallets: [
-          {
-            id,
-            wallet,
-            format: "bip39",
-            networkId: selectedNetworkId,
-            label: trimmedLabel,
-            createdAt,
-          },
-        ],
+      // Phase 4.1-fix — `addWallet` préserve les wallets déjà
+      // déverrouillés (create/import depuis un dashboard existant).
+      addWallet({
+        id,
+        wallet,
+        format: "bip39",
+        networkId: selectedNetworkId,
+        label: trimmedLabel,
+        createdAt,
       });
       toast.success("Wallet EVM importé");
       navigate("/");

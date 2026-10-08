@@ -16,7 +16,7 @@ import { useWalletStore } from "@/stores/wallet-store";
  */
 export function ImportBitcoinWallet() {
   const navigate = useNavigate();
-  const { unlock } = useWalletStore();
+  const addWallet = useWalletStore((s) => s.addWallet);
 
   const [mnemonic, setMnemonic] = useState("");
   const [label, setLabel] = useState("");
@@ -58,17 +58,14 @@ export function ImportBitcoinWallet() {
       });
       keyring.close();
 
-      unlock({
-        wallets: [
-          {
-            id,
-            wallet,
-            format: "bip39",
-            networkId,
-            label: trimmedLabel,
-            createdAt,
-          },
-        ],
+      // Phase 4.1-fix — `addWallet` préserve les wallets existants.
+      addWallet({
+        id,
+        wallet,
+        format: "bip39",
+        networkId,
+        label: trimmedLabel,
+        createdAt,
       });
       toast.success("Wallet Bitcoin importé");
       navigate("/");

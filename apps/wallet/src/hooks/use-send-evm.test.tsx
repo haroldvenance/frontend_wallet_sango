@@ -156,6 +156,9 @@ describe("🔒 useSendEvm — nativeAsset par réseau", () => {
       format: "bip39",
       status: "unlocked",
       networkId: "unknown-evm-net",
+      // Phase 4.1-fix — `family` explicite. Auparavant, ce test
+      // passait par pollution d'un test précédent (family="evm").
+      family: "evm",
     });
     const { session, send } = makeSession();
     const qc = makeQc();

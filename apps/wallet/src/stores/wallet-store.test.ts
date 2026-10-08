@@ -808,3 +808,71 @@ describe("wallet-store — Phase 3.4 (forgetWallet next active)", () => {
     expect(useWalletStore.getState().activeId).toBe("0xa");
   });
 });
+
+// ────────────────────────────────────────────────────────────
+//  Phase 4.1-fix — addWallet (préserve la session runtime)
+// ────────────────────────────────────────────────────────────
+
+describe("wallet-store — Phase 4.1-fix (addWallet)", () => {
+  function makeArg(id: string, createdAt: number, networkId = "ethereum-sepolia") {
+    return {
+      id,
+      wallet: fakeBip39Wallet,
+      format: "bip39" as const,
+      networkId,
+      label: id,
+      createdAt,
+    };
+  }
+
+  it("ajoute un wallet à une session existante et le rend actif", () => {
+    useWalletStore.getState().unlock({
+      wallets: [makeArg("0xa", 100)],
+    });
+    expect(useWalletStore.getState().activeId).toBe("0xa");
+
+    useWalletStore.getState().addWallet(makeArg("0xb", 200));
+
+    const s = useWalletStore.getState();
+    expect(Object.keys(s.wallets).sort()).toEqual(["0xa", "0xb"]);
+    expect(s.activeId).toBe("0xb");
+    expect(s.status).toBe("unlocked");
+  });
+
+  it("sur session verrouillée : démarre une nouvelle session", () => {
+    useWalletStore.getState().lock();
+    useWalletStore.getState().addWallet(makeArg("0xa", 100));
+
+    const s = useWalletStore.getState();
+    expect(Object.keys(s.wallets)).toEqual(["0xa"]);
+    expect(s.activeId).toBe("0xa");
+    expect(s.status).toBe("unlocked");
+  });
+
+  it("id déjà présent : warn + ignore", () => {
+    useWalletStore.getState().unlock({
+      wallets: [makeArg("0xa", 100)],
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    useWalletStore.getState().addWallet(makeArg("0xa", 200));
+
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("already in runtime"),
+    );
+    // L'état est inchangé (0xa toujours actif, pas de 200 écrasé)
+    expect(useWalletStore.getState().wallets["0xa"]!.createdAt).toBe(100);
+    warn.mockRestore();
+  });
+
+  it("walletAccounts du nouveau wallet est initialisé", () => {
+    useWalletStore.getState().unlock({
+      wallets: [makeArg("0xa", 100)],
+    });
+    useWalletStore.getState().addWallet(makeArg("0xb", 200));
+
+    expect(useWalletStore.getState().walletAccounts["0xb"]).toEqual({
+      highestIndex: 0,
+      activeIndex: 0,
+    });
+  });
+});
