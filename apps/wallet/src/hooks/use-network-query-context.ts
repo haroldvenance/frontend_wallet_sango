@@ -28,6 +28,13 @@ import { useWalletStore } from "@/stores/wallet-store";
  *   - family === "evm"   → premier endpoint du Network EVM courant
  *                          (via `defaultRpcEndpoints[0]`)
  *
+ * `account.accountIndex` est lu depuis
+ * `wallet-store.walletAccountIndexes[activeId]` (D-E2.6-1).
+ * Fallback 0 si l'entrée n'existe pas encore. Les hooks qui dérivent
+ * une adresse (`useBitcoinAddress`, `session.getAccount`, etc.)
+ * utilisent donc **naturellement** l'index HD actif — pas besoin de
+ * le propager manuellement à chaque call site.
+ *
  * **D-E1.7-10** : l'ancien comportement (endpoint SANGO injecté dans
  * les query keys EVM) faisait qu'un changement d'endpoint SANGO
  * invalidait des queries EVM sans raison. Correction : chaque famille
@@ -58,10 +65,21 @@ export function useNetworkQueryContext(): NetworkQueryContext {
   const sangoEndpoint = useSdkStore((s) => s.endpoint);
   const family = useWalletStore((s) => s.family);
   const networkId = useWalletStore((s) => s.networkId);
+  const activeId = useWalletStore((s) => s.activeId);
+  const walletAccountIndexes = useWalletStore((s) => s.walletAccountIndexes);
 
   return useMemo(() => {
     const nativeAsset = resolveNativeAsset(family, networkId);
     const endpoint = resolveEndpoint(family, sangoEndpoint, networkId);
+
+    // Index HD du wallet actif (D-E2.6-1). Fallback 0 :
+    //   - wallet SANGO legacy (jamais dans le record) ;
+    //   - wallet BIP-39 fraîchement déverrouillé (pas encore dans
+    //     le record).
+    const accountIndex = activeId
+      ? (walletAccountIndexes[activeId] ?? 0)
+      : 0;
+
     return {
       endpoint,
       networkId,
@@ -69,11 +87,11 @@ export function useNetworkQueryContext(): NetworkQueryContext {
       nativeAsset,
       account: {
         family,
-        accountIndex: 0,
+        accountIndex,
         networkId,
       },
     };
-  }, [sangoEndpoint, family, networkId]);
+  }, [sangoEndpoint, family, networkId, activeId, walletAccountIndexes]);
 }
 
 /**

@@ -20,6 +20,12 @@ export type AnyWallet = Wallet | Bip39Wallet;
  * ⚠️ Ne contient JAMAIS de seed en clair : uniquement l'instance
  *    `Wallet`/`Bip39Wallet` (dont le secret est privé au runtime JS).
  *
+ * **Phase 2.1 (D-E2.6-1)** — `walletAccountIndexes` est la **seule**
+ * source persistée de l'index HD actif. Clé = `activeId` (ID du
+ * keyring, lowercase address). Un `accountIndex` global séparé serait
+ * une seconde source de vérité qui pourrait diverger — on l'évite en
+ * dérivant l'index actif du record : `walletAccountIndexes[activeId] ?? 0`.
+
  * **E2.1.b.6.1 (D-E2.1-18)** — `family` est dérivée de `networkId`
  * par `resolveChainFamily()`. Elle n'est **jamais** fournie par
  * l'UI ni persistée. Toute mutation de `networkId` recalcule
@@ -61,6 +67,18 @@ interface WalletState {
   /** Identifiant canonique wallet-chains. */
   networkId: string;
   /**
+   * Index HD du compte actif, PAR wallet keyring ID.
+   *
+   * **D-E2.6-1** — Source de vérité **unique** pour l'account index.
+   * Clé = `activeId` (lowercase address de l'entrée keyring). Un
+   * wallet SANGO legacy n'y apparaît jamais (toujours index 0).
+   * Persisté en localStorage.
+   *
+   * Pour lire l'index du wallet courant :
+   *   `walletAccountIndexes[activeId] ?? 0`
+   */
+  walletAccountIndexes: Readonly<Record<string, number>>;
+  /**
    * Famille de chaîne, **dérivée** de `networkId` (D-E2.1-18).
    * Non persistée — recalculée à chaque mutation de `networkId`.
    */
@@ -90,6 +108,22 @@ interface WalletState {
    * bsc, Bitcoin : testnet → mainnet).
    */
   setNetworkId: (networkId: string) => void;
+
+  /**
+   * **Phase 2.1 (D-E2.6-1)** — Change l'index HD du compte actif
+   * pour le wallet courant (identifié par `activeId`).
+   *
+   * Refusé si :
+   *   - le format n'est pas `"bip39"` (SANGO legacy = index 0 figé) ;
+   *   - aucun wallet actif (`activeId` null) ;
+   *   - l'index n'est pas un entier ≥ 0.
+   *
+   * La persistance est automatique (clé `walletAccountIndexes`).
+   * L'appelant est responsable d'invalider les queries dépendantes si
+   * nécessaire — en pratique, la propagation de `accountIndex` dans
+   * les query keys (Phase 2.2) suffit.
+   */
+  setAccountIndex: (index: number) => void;
 }
 
 const PERSIST_KEY = "sango.wallet-session.v1";
@@ -105,6 +139,7 @@ export const useWalletStore = create<WalletState>()(
       network: "testnet",
       status: "no-wallet",
       activeId: null,
+      walletAccountIndexes: {},
 
       unlock: ({ wallet, id, format, networkId: keyringNetworkId, network }) => {
         const networkId = resolveUnlockedNetworkId(
@@ -172,6 +207,39 @@ export const useWalletStore = create<WalletState>()(
           family: nextFamily,
         });
       },
+
+      setAccountIndex: (index) => {
+        const { format, activeId } = get();
+
+        // SANGO legacy = mono-compte, index 0 figé.
+        if (format !== "bip39") {
+          console.warn(
+            `wallet-store.setAccountIndex: ignored (format="${format}", expected "bip39")`,
+          );
+          return;
+        }
+
+        if (!activeId) {
+          console.warn(
+            "wallet-store.setAccountIndex: ignored (no activeId)",
+          );
+          return;
+        }
+
+        if (!Number.isInteger(index) || index < 0) {
+          console.warn(
+            `wallet-store.setAccountIndex: ignored (invalid index="${index}")`,
+          );
+          return;
+        }
+
+        set((state) => ({
+          walletAccountIndexes: {
+            ...state.walletAccountIndexes,
+            [activeId]: index,
+          },
+        }));
+      },
     }),
     {
       name: PERSIST_KEY,
@@ -179,11 +247,17 @@ export const useWalletStore = create<WalletState>()(
         ? createJSONStorage(() => localStorage)
         : undefined,
       /**
-       * **D-E2.3-1** — seule la préférence de session (`networkId`)
-       * est persistée. `family` est dérivée à la rehydratation.
-       * Ni wallet, ni format, ni statut, ni activeId.
+       * **D-E2.3-1 + D-E2.6-1** — on persiste :
+       *   - `networkId` (préférence de session) ;
+       *   - `walletAccountIndexes` (index HD par wallet).
+       *
+       * Ni wallet, ni format, ni statut, ni activeId (session-only).
+       * `family` est dérivée à la rehydratation.
        */
-      partialize: (state) => ({ networkId: state.networkId }),
+      partialize: (state) => ({
+        networkId: state.networkId,
+        walletAccountIndexes: state.walletAccountIndexes,
+      }),
       /**
        * Au rehydrate, on valide le `networkId` persisté contre les
        * registres EVM/Bitcoin/SANGO. Un `networkId` inconnu est
@@ -191,17 +265,42 @@ export const useWalletStore = create<WalletState>()(
        * recalculée pour cohérence (D-E2.1-18).
        */
       merge: (persisted, current) => {
-        const p = persisted as { networkId?: unknown } | undefined;
+        const p = persisted as
+          | {
+              networkId?: unknown;
+              walletAccountIndexes?: unknown;
+            }
+          | undefined;
+
         const candidate =
           typeof p?.networkId === "string" ? p.networkId : null;
         const valid =
           candidate && isKnownNetworkId(candidate)
             ? candidate
             : current.networkId;
+
+        // Sanitize : ne garder que les entrées (string → integer ≥ 0).
+        const rawIndexes = p?.walletAccountIndexes;
+        const walletAccountIndexes: Record<string, number> = {};
+        if (rawIndexes && typeof rawIndexes === "object") {
+          for (const [k, v] of Object.entries(rawIndexes)) {
+            if (
+              typeof k === "string" &&
+              k.length > 0 &&
+              typeof v === "number" &&
+              Number.isInteger(v) &&
+              v >= 0
+            ) {
+              walletAccountIndexes[k] = v;
+            }
+          }
+        }
+
         return {
           ...current,
           networkId: valid,
           family: resolveChainFamily(valid),
+          walletAccountIndexes,
         };
       },
     },
