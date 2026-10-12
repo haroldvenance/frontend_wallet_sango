@@ -13,6 +13,7 @@ import { NavLink } from "react-router-dom";
 
 import { LocaleToggle } from "@/components/settings/locale-toggle";
 import { NetworkSelector } from "@/components/settings/network-selector";
+import { FamilySelector } from "@/components/settings/family-selector";
 import { BitcoinNetworkBadge } from "@/features/bitcoin/bitcoin-network-badge";
 import { BitcoinNetworkSelector } from "@/features/bitcoin/bitcoin-network-selector";
 import { EvmNetworkBadge } from "@/features/evm/evm-network-badge";
@@ -163,6 +164,14 @@ export function AppShell({ children }: AppShellProps) {
               <ExternalLink className="size-4" />
               Explorer
             </a>
+
+            {/* Phase 5.4 — sélecteur de famille (SANGO/EVM/Bitcoin)
+                au-dessus du sous-sélecteur de réseau contextuel.
+                Le store applique la contrainte V1 (SANGO-only) : l'UI
+                désactive les pills incompatibles. */}
+            <div className="mt-3">
+              <FamilySelector />
+            </div>
 
             {isSango && (
               <>

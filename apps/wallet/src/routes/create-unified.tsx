@@ -157,24 +157,31 @@ export function CreateUnified() {
 
   // ── Étape 3 : succès ────────────────────────────────────────
   if (step === "success" && addresses) {
+    // **D-Phase5-3.bis** — "EVM" au lieu de "Ethereum" : une même
+    // adresse 0x… est utilisable sur Ethereum, BNB Chain, Base,
+    // Arbitrum, etc. Le sous-titre le rappelle.
     const chains: Array<{
-      key: "ethereum" | "bitcoin" | "sango";
+      key: "evm" | "bitcoin" | "sango";
       label: string;
+      subtitle?: string;
       value: string;
     }> = [
       {
-        key: "ethereum",
-        label: t.onboarding.create.chainLabels.ethereum,
+        key: "evm",
+        label: t.onboarding.create.chainLabels.evm,
+        subtitle: t.onboarding.create.chainLabels.evmSubtitle,
         value: addresses.evm,
       },
       {
         key: "bitcoin",
         label: t.onboarding.create.chainLabels.bitcoin,
+        subtitle: t.onboarding.create.chainLabels.bitcoinSubtitle,
         value: addresses.btc,
       },
       {
         key: "sango",
         label: t.onboarding.create.chainLabels.sango,
+        subtitle: t.onboarding.create.chainLabels.sangoSubtitle,
         value: addresses.sango,
       },
     ];
@@ -205,6 +212,11 @@ export function CreateUnified() {
               <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
                 {c.label}
               </p>
+              {c.subtitle && (
+                <p className="mt-0.5 text-[10px] text-muted-foreground/80">
+                  {c.subtitle}
+                </p>
+              )}
               <p className="mt-1 break-all font-mono text-xs leading-relaxed">
                 {c.value}
               </p>

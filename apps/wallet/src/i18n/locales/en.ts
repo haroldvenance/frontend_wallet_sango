@@ -59,9 +59,12 @@ export const en = {
       successCopy: "Copy",
       successEnter: "Enter wallet",
       chainLabels: {
-        ethereum: "Ethereum",
+        evm: "EVM",
+        evmSubtitle: "Ethereum, BNB Chain, Base, Arbitrum…",
         bitcoin: "Bitcoin",
+        bitcoinSubtitle: "Bitcoin mainnet (bc1q…)",
         sango: "Sango",
+        sangoSubtitle: "Sango native chain",
       },
     },
     import: {
@@ -250,6 +253,13 @@ export const en = {
       success: "Wallet forgotten",
       error: "Could not forget the wallet",
     },
+  },
+  chains: {
+    title: "Chain family",
+    sango: "SANGO",
+    evm: "EVM",
+    bitcoin: "Bitcoin",
+    disabledTooltip: "This wallet only supports SANGO",
   },
   accounts: {
     primary: "Primary",

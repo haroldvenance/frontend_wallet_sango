@@ -61,9 +61,12 @@ export const fr: TranslationSchema = {
       successCopy: "Copier",
       successEnter: "Accéder au portefeuille",
       chainLabels: {
-        ethereum: "Ethereum",
+        evm: "EVM",
+        evmSubtitle: "Ethereum, BNB Chain, Base, Arbitrum…",
         bitcoin: "Bitcoin",
+        bitcoinSubtitle: "Bitcoin mainnet (bc1q…)",
         sango: "Sango",
+        sangoSubtitle: "Chaîne native Sango",
       },
     },
     import: {
@@ -255,6 +258,13 @@ export const fr: TranslationSchema = {
       success: "Portefeuille oublié",
       error: "Impossible d'oublier le portefeuille",
     },
+  },
+  chains: {
+    title: "Famille de chaîne",
+    sango: "SANGO",
+    evm: "EVM",
+    bitcoin: "Bitcoin",
+    disabledTooltip: "Ce portefeuille ne supporte que SANGO",
   },
   accounts: {
     primary: "Principal",
