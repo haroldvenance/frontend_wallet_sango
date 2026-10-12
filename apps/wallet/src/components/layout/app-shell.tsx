@@ -33,11 +33,10 @@ interface AppShellProps {
  *     mainnet déployé). La route reste accessible via `/validators`
  *     si besoin.
  *
- * Navigation desktop :
+ * Navigation desktop (groupée en haut de la sidebar) :
  *   - Tableau de bord
  *   - Envoyer
  *   - Historique
- *   ---
  *   - Paramètres
  *   - Explorer (lien externe)
  */
@@ -68,6 +67,11 @@ export function AppShell({ children }: AppShellProps) {
             </div>
           </div>
 
+          {/*
+            Phase 5.7 — Tous les items sont groupés dans un seul
+            `<nav>` (Tableau de bord, Envoyer, Historique, Paramètres,
+            Explorer). Pas de séparation visuelle en bas.
+          */}
           <nav className="flex-1 space-y-1 p-3">
             {navigation.map((item) => {
               const Icon = item.icon;
@@ -90,9 +94,7 @@ export function AppShell({ children }: AppShellProps) {
                 </NavLink>
               );
             })}
-          </nav>
 
-          <div className="border-t p-3">
             <NavLink
               to="/settings"
               className={({ isActive }) =>
@@ -107,16 +109,17 @@ export function AppShell({ children }: AppShellProps) {
               <Settings className="size-4" />
               {t.nav.settings}
             </NavLink>
+
             <a
               href={EXPLORER_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
               <ExternalLink className="size-4" />
               {t.nav.explorer}
             </a>
-          </div>
+          </nav>
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
