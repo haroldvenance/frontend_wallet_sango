@@ -1,4 +1,5 @@
 import { bitcoinNetworkById } from "@sango/wallet-chains";
+import { useNavigate } from "react-router-dom";
 
 import { AssetLogo } from "@/components/branding/asset-logo";
 import { AssetSection, type AssetItem } from "@/components/ui/asset-section";
@@ -13,6 +14,7 @@ import { useWalletStore } from "@/stores/wallet-store";
  * Structure identique à `AssetListEvm` mais avec un seul item.
  */
 export function BitcoinAssetList() {
+  const navigate = useNavigate();
   const networkId = useWalletStore((s) => s.networkId);
   const network = bitcoinNetworkById(networkId);
   const networkName = network?.name ?? networkId;
@@ -40,6 +42,7 @@ export function BitcoinAssetList() {
           {networkName}
         </span>,
       ],
+      onClick: () => navigate("/asset/btc"),
     },
   ];
 

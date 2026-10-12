@@ -1,4 +1,5 @@
 import { evmNetworkById } from "@sango/wallet-chains";
+import { useNavigate } from "react-router-dom";
 
 import { AssetLogo } from "@/components/branding/asset-logo";
 import { AssetSection, type AssetItem } from "@/components/ui/asset-section";
@@ -18,6 +19,7 @@ import { useWalletStore } from "@/stores/wallet-store";
  * fiat en E1.6 (nécessiterait une API externe, hors scope).
  */
 export function AssetListEvm() {
+  const navigate = useNavigate();
   const networkId = useWalletStore((s) => s.networkId);
   const network = evmNetworkById(networkId);
   const networkName = network?.name ?? networkId;
@@ -49,6 +51,7 @@ export function AssetListEvm() {
         {networkName}
       </span>,
     ],
+    onClick: () => navigate(`/asset/${nativeAsset}`),
   };
 
   const tokenItems: AssetItem[] = (tokens ?? []).map(({ token, balance }) => ({
@@ -70,6 +73,7 @@ export function AssetListEvm() {
       balance !== null
         ? `≈ ${formatStablecoinUsd(balance, token.metadata.decimals)}`
         : undefined,
+    onClick: () => navigate(`/asset/${token.assetId}`),
   }));
 
   const items: AssetItem[] = [nativeItem, ...tokenItems];

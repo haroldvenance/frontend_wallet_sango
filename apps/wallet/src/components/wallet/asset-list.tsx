@@ -1,6 +1,8 @@
 import { AssetLogo } from "@/components/branding/asset-logo";
 import { AssetSection, type AssetItem } from "@/components/ui/asset-section";
 import { useAccount } from "@/hooks/use-account";
+import { useNavigate } from "react-router-dom";
+
 import { useTranslation } from "@/i18n/use-translation";
 import { formatSango } from "@/lib/format";
 
@@ -11,6 +13,7 @@ import { formatSango } from "@/lib/format";
  */
 export function AssetList() {
   const t = useTranslation();
+  const navigate = useNavigate();
   const { data: account, isLoading } = useAccount();
 
   const balance = account
@@ -26,6 +29,7 @@ export function AssetList() {
       symbol: "SANGO",
       name: t.assets.sangoName,
       balance,
+      onClick: () => navigate("/asset/sango"),
     },
   ];
 
