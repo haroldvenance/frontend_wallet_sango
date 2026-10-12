@@ -37,7 +37,6 @@ export function BalanceCardEvm() {
       icon={<AssetLogo assetId={nativeAsset} size={44} />}
       title={`Solde ${nativeSymbol}`}
       subtitle={`${networkName}${network?.isTestnet ? " · testnet" : ""}`}
-      tag="BIP-39"
       balance={balanceDisplay}
       symbol={nativeSymbol}
       addressPill={

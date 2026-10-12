@@ -36,11 +36,6 @@ export function AssetList() {
       countLabel={`1 ${t.assets.asset}`}
       items={items}
       loading={isLoading}
-      footer={
-        <>
-          {t.assets.onChainVia} <code>sango_getAccount</code>
-        </>
-      }
     />
   );
 }

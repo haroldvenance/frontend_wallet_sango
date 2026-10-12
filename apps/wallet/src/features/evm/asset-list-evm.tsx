@@ -1,5 +1,4 @@
 import { evmNetworkById } from "@sango/wallet-chains";
-import { Link } from "react-router-dom";
 
 import { AssetLogo } from "@/components/branding/asset-logo";
 import { AssetSection, type AssetItem } from "@/components/ui/asset-section";
@@ -83,24 +82,6 @@ export function AssetListEvm() {
       countLabel={`${count} actif${count > 1 ? "s" : ""}`}
       items={items}
       loading={isLoading}
-      footer={
-        <>
-          Via <code>eth_getBalance</code>
-          {tokenItems.length > 0 && (
-            <>
-              {" · "}
-              <code>eth_call balanceOf</code>
-              {" · "}
-              <Link
-                to="/approvals"
-                className="font-medium text-primary hover:underline"
-              >
-                Gérer les approbations →
-              </Link>
-            </>
-          )}
-        </>
-      }
     />
   );
 }

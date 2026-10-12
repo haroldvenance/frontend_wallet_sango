@@ -50,11 +50,6 @@ export function BitcoinAssetList() {
       countLabel={`${items.length} actif`}
       items={items}
       loading={isLoading && !balance}
-      footer={
-        <>
-          Via <code>mempool.space /address/{"{addr}"}/utxo</code>
-        </>
-      }
     />
   );
 }

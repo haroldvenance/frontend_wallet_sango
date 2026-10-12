@@ -39,7 +39,6 @@ export function BitcoinBalanceCard() {
       icon={<AssetLogo assetId="btc" size={44} />}
       title="Solde BTC"
       subtitle={`${networkName}${network?.isTestnet ? " · testnet" : ""}`}
-      tag="BIP-39"
       balance={balanceDisplay}
       symbol="BTC"
       addressPill={
