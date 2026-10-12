@@ -1,4 +1,4 @@
-import { SangoCoinIcon } from "@/components/branding/sango-coin-icon";
+import { AssetLogo } from "@/components/branding/asset-logo";
 import { AssetSection, type AssetItem } from "@/components/ui/asset-section";
 import { useAccount } from "@/hooks/use-account";
 import { useTranslation } from "@/i18n/use-translation";
@@ -22,7 +22,7 @@ export function AssetList() {
   const items: AssetItem[] = [
     {
       id: "sango",
-      icon: <SangoCoinIcon size={40} />,
+      icon: <AssetLogo assetId="sango" size={40} />,
       symbol: "SANGO",
       name: t.assets.sangoName,
       balance,

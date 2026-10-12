@@ -1,6 +1,6 @@
 import { bitcoinNetworkById } from "@sango/wallet-chains";
 
-import { NativeAssetIcon } from "@/components/branding/native-asset-icon";
+import { AssetLogo } from "@/components/branding/asset-logo";
 import { AssetSection, type AssetItem } from "@/components/ui/asset-section";
 import { useBitcoinBalance } from "@/hooks/use-bitcoin-balance";
 import { formatBitcoin } from "@/lib/bitcoin";
@@ -28,7 +28,7 @@ export function BitcoinAssetList() {
   const items: AssetItem[] = [
     {
       id: "btc",
-      icon: <NativeAssetIcon assetId="btc" size="sm" />,
+      icon: <AssetLogo assetId="btc" size={40} />,
       symbol: "BTC",
       name: `Bitcoin · ${networkName}`,
       balance: balanceDisplay,

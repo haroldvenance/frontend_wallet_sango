@@ -1,6 +1,6 @@
 import { bitcoinNetworkById } from "@sango/wallet-chains";
 
-import { NativeAssetIcon } from "@/components/branding/native-asset-icon";
+import { AssetLogo } from "@/components/branding/asset-logo";
 import { AddressPill, HeroAssetCard } from "@/components/ui/hero-asset-card";
 import { useBitcoinAddress } from "@/hooks/use-bitcoin-address";
 import { useBitcoinBalance } from "@/hooks/use-bitcoin-balance";
@@ -36,7 +36,7 @@ export function BitcoinBalanceCard() {
 
   return (
     <HeroAssetCard
-      icon={<NativeAssetIcon assetId="btc" size="md" />}
+      icon={<AssetLogo assetId="btc" size={44} />}
       title="Solde BTC"
       subtitle={`${networkName}${network?.isTestnet ? " · testnet" : ""}`}
       tag="BIP-39"

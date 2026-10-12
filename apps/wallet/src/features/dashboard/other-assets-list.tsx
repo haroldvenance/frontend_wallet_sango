@@ -1,7 +1,6 @@
 import { useState } from "react";
 
-import { NativeAssetIcon } from "@/components/branding/native-asset-icon";
-import { SangoCoinIcon } from "@/components/branding/sango-coin-icon";
+import { AssetLogo } from "@/components/branding/asset-logo";
 import {
   AssetSection,
   type AssetItem,
@@ -86,19 +85,9 @@ export function OtherAssetsList() {
 }
 
 function assetIcon(a: UnifiedAsset) {
-  if (a.assetRef.kind === "native") {
-    // Phase 4.2 — SANGO a son propre branding (SangoCoinIcon rond).
-    // `NativeAssetIcon` afficherait "SAN" (fallback 3-char).
-    if (a.assetRef.assetId === "sango") {
-      return <SangoCoinIcon size={40} />;
-    }
-    return <NativeAssetIcon assetId={a.assetRef.assetId} size="sm" />;
-  }
-  return (
-    <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-500/10 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-      {a.symbol.slice(0, 4)}
-    </div>
-  );
+  const assetId =
+    a.assetRef.kind === "native" ? a.assetRef.assetId : a.symbol;
+  return <AssetLogo assetId={assetId} fallbackSymbol={a.symbol} size={40} />;
 }
 
 function formatAssetBalance(a: UnifiedAsset): string {

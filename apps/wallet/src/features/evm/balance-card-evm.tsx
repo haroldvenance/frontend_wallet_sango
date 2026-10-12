@@ -1,6 +1,6 @@
 import { Bip39Wallet } from "@sango/wallet-core";
 import { evmNetworkById } from "@sango/wallet-chains";
-import { NativeAssetIcon } from "@/components/branding/native-asset-icon";
+import { AssetLogo } from "@/components/branding/asset-logo";
 import { AddressPill, HeroAssetCard } from "@/components/ui/hero-asset-card";
 import { useClipboard } from "@/hooks/use-clipboard";
 import { useEvmAccount } from "@/hooks/use-evm-account";
@@ -34,7 +34,7 @@ export function BalanceCardEvm() {
 
   return (
     <HeroAssetCard
-      icon={<NativeAssetIcon assetId={nativeAsset} size="md" />}
+      icon={<AssetLogo assetId={nativeAsset} size={44} />}
       title={`Solde ${nativeSymbol}`}
       subtitle={`${networkName}${network?.isTestnet ? " · testnet" : ""}`}
       tag="BIP-39"

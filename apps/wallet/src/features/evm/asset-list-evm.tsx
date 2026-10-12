@@ -1,7 +1,7 @@
 import { evmNetworkById } from "@sango/wallet-chains";
 import { Link } from "react-router-dom";
 
-import { NativeAssetIcon } from "@/components/branding/native-asset-icon";
+import { AssetLogo } from "@/components/branding/asset-logo";
 import { AssetSection, type AssetItem } from "@/components/ui/asset-section";
 import { useEvmAccount } from "@/hooks/use-evm-account";
 import { useEvmTokens } from "@/hooks/use-evm-tokens";
@@ -38,7 +38,7 @@ export function AssetListEvm() {
 
   const nativeItem: AssetItem = {
     id: nativeAsset,
-    icon: <NativeAssetIcon assetId={nativeAsset} size="sm" />,
+    icon: <AssetLogo assetId={nativeAsset} size={40} />,
     symbol: nativeSymbol,
     name: `${nativeSymbol} · ${networkName}`,
     balance: nativeBalance,
@@ -55,9 +55,11 @@ export function AssetListEvm() {
   const tokenItems: AssetItem[] = (tokens ?? []).map(({ token, balance }) => ({
     id: token.assetId,
     icon: (
-      <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-500/10 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-        {token.metadata.symbol.slice(0, 4)}
-      </div>
+      <AssetLogo
+        assetId={token.assetId}
+        fallbackSymbol={token.metadata.symbol}
+        size={40}
+      />
     ),
     symbol: token.metadata.symbol,
     name: token.metadata.name,

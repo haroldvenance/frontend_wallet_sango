@@ -1,4 +1,8 @@
 /**
+ * @deprecated **Phase 5.6** — remplacé par `<AssetLogo />` (logos
+ * officiels SVG + fallback pastille). Conservé temporairement pour
+ * la compat ; ne pas utiliser dans du nouveau code.
+ *
  * Icône générique d'un asset natif (ETH, BNB, …).
  *
  * Basée sur `assetId` — pas couplée à EVM. Le style visuel reste

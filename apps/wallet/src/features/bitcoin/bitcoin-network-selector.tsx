@@ -6,6 +6,7 @@ import { Check, Globe } from "lucide-react";
 import { toast } from "sonner";
 
 import { SHOW_TESTNETS } from "@/lib/env-flags";
+import { NetworkLogo } from "@/components/branding/network-logo";
 import { useWalletStore } from "@/stores/wallet-store";
 
 /**
@@ -93,6 +94,7 @@ export function BitcoinNetworkSelector(
               <span className="flex items-center gap-2">
                 {isActive && <Check className="size-3.5" />}
                 {!isActive && <span className="w-3.5" />}
+                <NetworkLogo networkId={n.id} size={18} />
                 <span>{n.name}</span>
                 {n.isTestnet && (
                   <span className="text-[10px] text-muted-foreground">
