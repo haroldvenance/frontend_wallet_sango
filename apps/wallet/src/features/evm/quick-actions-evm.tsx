@@ -7,6 +7,8 @@ import { useClipboard } from "@/hooks/use-clipboard";
 import { useWalletStore } from "@/stores/wallet-store";
 import { Bip39Wallet } from "@sango/wallet-core";
 
+import { SHOW_TESTNETS } from "@/lib/env-flags";
+
 /**
  * Actions rapides EVM — wrapper de `ActionsRow`.
  *
@@ -36,7 +38,9 @@ export function QuickActionsEvm() {
       }}
       sendLabel="Envoyer"
       receiveLabel="Recevoir"
-      trailing={<EvmFaucetButton variant="ghost" />}
+      trailing={
+        SHOW_TESTNETS ? <EvmFaucetButton variant="ghost" /> : undefined
+      }
     />
   );
 }

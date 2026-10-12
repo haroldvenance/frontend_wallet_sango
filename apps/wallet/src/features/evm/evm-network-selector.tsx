@@ -2,6 +2,7 @@ import { ALL_EVM_NETWORKS, evmNetworkById } from "@sango/wallet-chains";
 import { Check, Globe } from "lucide-react";
 import { toast } from "sonner";
 
+import { SHOW_TESTNETS } from "@/lib/env-flags";
 import { useWalletStore } from "@/stores/wallet-store";
 
 import { MainnetWarning } from "./mainnet-warning";
@@ -84,7 +85,10 @@ export function EvmNetworkSelector(props: EvmNetworkSelectorProps = {}) {
       </div>
 
       <div className="mt-2 space-y-1">
-        {ALL_EVM_NETWORKS.map((n) => {
+        {(SHOW_TESTNETS
+          ? ALL_EVM_NETWORKS
+          : ALL_EVM_NETWORKS.filter((n) => !n.isTestnet)
+        ).map((n) => {
           const isActive = n.id === currentId;
           return (
             <button

@@ -5,6 +5,7 @@ import { ActionsRow } from "@/components/ui/actions-row";
 import { FaucetButton } from "./faucet-button";
 import { ReceiveModal } from "./receive-modal";
 import { useTranslation } from "@/i18n/use-translation";
+import { SHOW_TESTNETS } from "@/lib/env-flags";
 
 /**
  * Actions rapides SANGO — wrapper de `ActionsRow`.
@@ -24,7 +25,9 @@ export function QuickActions() {
         onReceive={() => setReceiveOpen(true)}
         sendLabel={t.quickActions.send}
         receiveLabel={t.quickActions.receive}
-        trailing={<FaucetButton variant="ghost" />}
+        trailing={
+          SHOW_TESTNETS ? <FaucetButton variant="ghost" /> : undefined
+        }
       />
       <ReceiveModal
         open={receiveOpen}

@@ -5,6 +5,7 @@ import {
 import { Check, Globe } from "lucide-react";
 import { toast } from "sonner";
 
+import { SHOW_TESTNETS } from "@/lib/env-flags";
 import { useWalletStore } from "@/stores/wallet-store";
 
 /**
@@ -70,7 +71,10 @@ export function BitcoinNetworkSelector(
       </div>
 
       <div className="mt-2 space-y-1">
-        {ALL_BITCOIN_NETWORKS.map((n) => {
+        {(SHOW_TESTNETS
+          ? ALL_BITCOIN_NETWORKS
+          : ALL_BITCOIN_NETWORKS.filter((n) => !n.isTestnet)
+        ).map((n) => {
           const isActive = n.id === currentId;
           return (
             <button

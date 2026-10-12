@@ -5,6 +5,7 @@ import { ActionsRow } from "@/components/ui/actions-row";
 import { BitcoinFaucetButton } from "./bitcoin-faucet-button";
 import { useBitcoinAddress } from "@/hooks/use-bitcoin-address";
 import { useClipboard } from "@/hooks/use-clipboard";
+import { SHOW_TESTNETS } from "@/lib/env-flags";
 
 /**
  * Actions rapides Bitcoin — E2.1.b.6.3.
@@ -32,7 +33,9 @@ export function QuickActionsBitcoin() {
       }}
       sendLabel="Envoyer"
       receiveLabel="Recevoir"
-      trailing={<BitcoinFaucetButton variant="ghost" />}
+      trailing={
+        SHOW_TESTNETS ? <BitcoinFaucetButton variant="ghost" /> : undefined
+      }
     />
   );
 }

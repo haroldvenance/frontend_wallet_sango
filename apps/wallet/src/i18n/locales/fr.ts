@@ -332,9 +332,9 @@ export const fr: TranslationSchema = {
   networkSelector: {
     label: "Réseau",
     mainnet: "Mainnet",
-    testnet: "Testnet (devnet local)",
+    testnet: "Sango",
     custom: "Endpoint personnalisé…",
-    devnetHint: "Le devnet partage le HRP tsango",
+    devnetHint: "Réseau natif Sango",
     notDeployed: "Pas encore déployé",
     switchWarning:
       "Changer de réseau modifie l'endpoint RPC. L'adresse du wallet reste identique.",

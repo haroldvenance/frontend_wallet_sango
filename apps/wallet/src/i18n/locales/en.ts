@@ -326,9 +326,9 @@ export const en = {
   networkSelector: {
     label: "Network",
     mainnet: "Mainnet",
-    testnet: "Testnet (local devnet)",
+    testnet: "Sango",
     custom: "Custom endpoint…",
-    devnetHint: "Devnet shares the tsango HRP",
+    devnetHint: "Sango native network",
     notDeployed: "Not yet deployed",
     switchWarning:
       "Switching changes the RPC endpoint. Your wallet address stays the same.",
