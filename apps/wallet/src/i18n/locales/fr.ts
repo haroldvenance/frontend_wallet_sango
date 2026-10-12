@@ -96,11 +96,14 @@ export const fr: TranslationSchema = {
     send: "Envoyer",
     validators: "Validateurs",
     settings: "Paramètres",
+    explorer: "Explorer",
     mobile: {
       home: "Accueil",
-      activity: "Activité",
+      history: "Historique",
       staking: "Staking",
+      send: "Envoyer",
       settings: "Paramètres",
+      explorer: "Explorer",
     },
   },
   network: {

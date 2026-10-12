@@ -5,7 +5,6 @@ import {
   Clock,
   Globe,
   Info,
-  Link as LinkIcon,
   Lock,
   LogOut,
   Moon,
@@ -15,7 +14,11 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
+import { FamilySelector } from "@/components/settings/family-selector";
+import { NetworkSelector } from "@/components/settings/network-selector";
 import { SettingsModal } from "@/components/settings/settings-modal";
+import { BitcoinNetworkSelector } from "@/features/bitcoin/bitcoin-network-selector";
+import { EvmNetworkSelector } from "@/features/evm/evm-network-selector";
 import { useTranslation } from "@/i18n/use-translation";
 import { useLocaleStore } from "@/stores/locale-store";
 import {
@@ -47,7 +50,7 @@ import { useWalletStore } from "@/stores/wallet-store";
 export function SettingsRoute() {
   const t = useTranslation();
   const navigate = useNavigate();
-  const { lock, activeId, networkId } = useWalletStore();
+  const { lock, activeId, family } = useWalletStore();
   const { locale, toggle: toggleLocale } = useLocaleStore();
   const { theme, toggle: toggleTheme } = useThemeStore();
   const autoLockMs = usePreferencesStore((s) => s.autoLockMs);
@@ -135,6 +138,29 @@ export function SettingsRoute() {
       </div>
 
       {/* Sections */}
+      {/*
+        Phase 5.7 — Section Réseau en tête. Regroupe :
+          - le sélecteur de famille (SANGO/EVM/Bitcoin),
+          - le sous-sélecteur contextuel (NetworkSelector pour SANGO,
+            EvmNetworkSelector pour EVM, BitcoinNetworkSelector pour
+            Bitcoin),
+          - le MainnetWarning (inclus dans EvmNetworkSelector).
+        Le MainnetWarning sur /send reste inchangé (E2.3.a.3).
+      */}
+      <SettingsSection title={t.settings.sections.networks}>
+        <div className="space-y-3 border-b p-3">
+          <FamilySelector />
+          {family === "sango" && <NetworkSelector />}
+          {family === "evm" && <EvmNetworkSelector />}
+          {family === "bitcoin" && <BitcoinNetworkSelector />}
+        </div>
+        <SettingRow
+          icon={<CheckCircle2 className="size-4" />}
+          label={t.settings.items.approvals}
+          onClick={() => navigate("/approvals")}
+        />
+      </SettingsSection>
+
       <SettingsSection title={t.settings.sections.security}>
         <SettingRow
           icon={<ShieldCheck className="size-4" />}
@@ -185,19 +211,6 @@ export function SettingsRoute() {
             </div>
           </div>
         )}
-      </SettingsSection>
-
-      <SettingsSection title={t.settings.sections.networks}>
-        <SettingRow
-          icon={<LinkIcon className="size-4" />}
-          label={t.settings.items.defaultNetwork}
-          value={networkId}
-        />
-        <SettingRow
-          icon={<CheckCircle2 className="size-4" />}
-          label={t.settings.items.approvals}
-          onClick={() => navigate("/approvals")}
-        />
       </SettingsSection>
 
       <SettingsSection title={t.settings.sections.preferences}>

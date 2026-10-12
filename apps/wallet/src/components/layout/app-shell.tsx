@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   ExternalLink,
   Settings,
-  ShieldCheck,
   Wifi,
   WifiOff,
 } from "lucide-react";
@@ -12,18 +11,10 @@ import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 
 import { LocaleToggle } from "@/components/settings/locale-toggle";
-import { NetworkSelector } from "@/components/settings/network-selector";
-import { FamilySelector } from "@/components/settings/family-selector";
-import { BitcoinNetworkBadge } from "@/features/bitcoin/bitcoin-network-badge";
-import { BitcoinNetworkSelector } from "@/features/bitcoin/bitcoin-network-selector";
-import { EvmNetworkBadge } from "@/features/evm/evm-network-badge";
-import { EvmNetworkSelector } from "@/features/evm/evm-network-selector";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { useChainInfo } from "@/hooks/use-chain-info";
-import { useWalletStore } from "@/stores/wallet-store";
 import { useTranslation } from "@/i18n/use-translation";
-import { shortenHash } from "@/lib/format";
 import { EXPLORER_URL } from "@/lib/config";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 
@@ -31,72 +22,33 @@ interface AppShellProps {
   children: ReactNode;
 }
 
-function NetworkBadge() {
-  const t = useTranslation();
-  const { data, isError, isLoading } = useChainInfo();
-
-  if (isLoading) {
-    return (
-      <div className="mt-3 rounded-xl border bg-card p-3">
-        <div className="flex items-center gap-2">
-          <span className="size-2 animate-pulse rounded-full bg-muted-foreground" />
-          <span className="text-xs font-medium">{t.network.connecting}</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (isError || !data) {
-    return (
-      <div className="mt-3 rounded-xl border border-destructive/40 bg-destructive/5 p-3">
-        <div className="flex items-center gap-2">
-          <WifiOff className="size-3 text-destructive" />
-          <span className="text-xs font-medium text-destructive">{t.network.offline}</span>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-3 rounded-xl border bg-card p-3">
-      <div className="flex items-center gap-2">
-        <span className="size-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.45)]" />
-        <span className="text-xs font-medium">{t.network.sangoNetwork}</span>
-      </div>
-      <p className="mt-1 pl-4 text-[11px] text-muted-foreground">
-        {t.network.height} {data.height ?? "—"} · v{data.protocolVersion}
-      </p>
-      <p className="mt-0.5 pl-4 font-mono text-[10px] text-muted-foreground">
-        {shortenHash(data.chainId, 6)}
-      </p>
-    </div>
-  );
-}
-
+/**
+ * Coquille applicative — Phase 5.7.
+ *
+ * **Changements Phase 5.7** :
+ *   - Les sélecteurs de famille (SANGO/EVM/Bitcoin) et de réseau ont
+ *     été **déplacés dans Paramètres** (`/settings`). La sidebar ne
+ *     garde que la navigation.
+ *   - "Validateurs" n'est plus dans le nav principal (SANGO-only, sans
+ *     mainnet déployé). La route reste accessible via `/validators`
+ *     si besoin.
+ *
+ * Navigation desktop :
+ *   - Tableau de bord
+ *   - Envoyer
+ *   - Historique
+ *   ---
+ *   - Paramètres
+ *   - Explorer (lien externe)
+ */
 export function AppShell({ children }: AppShellProps) {
   const t = useTranslation();
   const { data, isError } = useChainInfo();
-  const family = useWalletStore((s) => s.family);
-  const isSango = family === "sango";
-  const isBitcoin = family === "bitcoin";
 
-  // Nav UX-2.c : routes canoniques `/send` et `/history`, dispatchées
-  // par `SendRoute`/`HistoryRoute` selon `wallet.format`. Seul
-  // "Validateurs" reste conditionnel (SANGO uniquement).
   const navigation = [
     { to: "/", label: t.nav.dashboard, icon: LayoutDashboard, end: true },
     { to: "/send", label: t.nav.send, icon: ArrowLeftRight, end: false },
     { to: "/history", label: t.nav.history, icon: History, end: false },
-    ...(isSango
-      ? [
-          {
-            to: "/validators",
-            label: t.nav.validators,
-            icon: ShieldCheck,
-            end: false,
-          },
-        ]
-      : []),
   ];
 
   return (
@@ -158,45 +110,12 @@ export function AppShell({ children }: AppShellProps) {
             <a
               href={EXPLORER_URL}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
               <ExternalLink className="size-4" />
-              Explorer
+              {t.nav.explorer}
             </a>
-
-            {/* Phase 5.4 — sélecteur de famille (SANGO/EVM/Bitcoin)
-                au-dessus du sous-sélecteur de réseau contextuel.
-                Le store applique la contrainte V1 (SANGO-only) : l'UI
-                désactive les pills incompatibles. */}
-            <div className="mt-3">
-              <FamilySelector />
-            </div>
-
-            {isSango && (
-              <>
-                <div className="mt-3">
-                  <NetworkSelector />
-                </div>
-                <NetworkBadge />
-              </>
-            )}
-            {family === "evm" && (
-              <>
-                <div className="mt-3">
-                  <EvmNetworkSelector />
-                </div>
-                <EvmNetworkBadge />
-              </>
-            )}
-            {isBitcoin && (
-              <>
-                <div className="mt-3">
-                  <BitcoinNetworkSelector />
-                </div>
-                <BitcoinNetworkBadge />
-              </>
-            )}
           </div>
         </aside>
 
@@ -229,7 +148,9 @@ export function AppShell({ children }: AppShellProps) {
                   <>
                     <Wifi className="size-3.5 text-emerald-500" />
                     <span className="text-xs font-medium">
-                      {data?.height != null ? `${t.network.height} ${data.height}` : t.network.online}
+                      {data?.height != null
+                        ? `${t.network.height} ${data.height}`
+                        : t.network.online}
                     </span>
                   </>
                 )}
@@ -238,7 +159,7 @@ export function AppShell({ children }: AppShellProps) {
               <ThemeToggle />
               <NavLink
                 to="/settings"
-                aria-label="Paramètres"
+                aria-label={t.nav.settings}
                 className="inline-flex size-9 items-center justify-center rounded-xl border bg-card text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:hidden"
               >
                 <Settings className="size-4" />
@@ -253,7 +174,6 @@ export function AppShell({ children }: AppShellProps) {
       </div>
 
       <MobileBottomNav />
-
     </div>
   );
 }

@@ -94,11 +94,14 @@ export const en = {
     send: "Send",
     validators: "Validators",
     settings: "Settings",
+    explorer: "Explorer",
     mobile: {
       home: "Home",
-      activity: "Activity",
+      history: "History",
       staking: "Staking",
+      send: "Send",
       settings: "Settings",
+      explorer: "Explorer",
     },
   },
   network: {
