@@ -32,11 +32,15 @@ export function SangoHeroCard() {
   const sango = assets.find((a) => getDisplayAssetId(a) === "sango");
   if (!sango && !loading) return null;
 
-  const balanceStr = sango?.balance !== null && sango?.balance !== undefined
-    ? formatSango(sango.balance)
-    : loading
-      ? "…"
-      : "0";
+  // Fallback aligné Phase 4.2 (D1·A) : quand le RPC échoue,
+  // afficher "0" plutôt que "…" perpétuel. Le solde exact n'est
+  // jamais inventé — c'est une convention d'affichage.
+  const balanceStr =
+    sango?.balance !== null && sango?.balance !== undefined
+      ? formatSango(sango.balance)
+      : loading
+        ? "…"
+        : "0";
 
   return (
     <button

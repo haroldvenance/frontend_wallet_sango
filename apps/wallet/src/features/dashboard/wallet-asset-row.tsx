@@ -66,8 +66,10 @@ export function WalletAssetRow({ asset, price, onClick }: Props) {
       {/* Logo + badge réseau */}
       <div className="relative shrink-0">
         <AssetLogo assetId={getDisplayAssetId(asset)} size={44} />
-        <div className="absolute -bottom-1 -right-1 rounded-full ring-2 ring-card">
-          <NetworkLogo networkId={asset.networkId} size={18} />
+        {/* Badge réseau — taille 22, ring plus épais pour bien le
+            détacher du logo sous-jacent. */}
+        <div className="absolute -bottom-1.5 -right-1.5 rounded-full bg-card p-0.5 ring-2 ring-card">
+          <NetworkLogo networkId={asset.networkId} size={22} />
         </div>
       </div>
 
