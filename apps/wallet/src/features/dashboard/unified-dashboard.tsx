@@ -1,18 +1,16 @@
 import { bitcoinNetworkById, evmNetworkById } from "@sango/wallet-chains";
 
 import { HistoryListBitcoin } from "@/features/bitcoin/history-list-bitcoin";
-import { AssetList } from "@/components/wallet/asset-list";
 import { BalanceCard } from "@/components/wallet/balance-card";
 import { MyStakingCard } from "@/components/wallet/my-staking-card";
 import { NetworkOverviewCard } from "@/components/wallet/network-overview-card";
 import { QuickActions } from "@/components/wallet/quick-actions";
 import { RecentActivity } from "@/components/wallet/recent-activity";
-import { BitcoinAssetList } from "@/features/bitcoin/bitcoin-asset-list";
 import { WalletSwitcher } from "@/features/wallet/wallet-switcher";
 import { OtherAssetsList } from "./other-assets-list";
+import { AllTokensList } from "./all-tokens-list";
 import { QuickActionsBitcoin } from "@/features/bitcoin/quick-actions-bitcoin";
 import { BitcoinBalanceCard } from "@/features/bitcoin/bitcoin-balance-card";
-import { AssetListEvm } from "@/features/evm/asset-list-evm";
 import { BalanceCardEvm } from "@/features/evm/balance-card-evm";
 import { HistoryListEvm } from "@/features/evm/history-list-evm";
 import { QuickActionsEvm } from "@/features/evm/quick-actions-evm";
@@ -81,10 +79,10 @@ export function UnifiedDashboard() {
             Retourne null si < 2 wallets déverrouillés. */}
         <OtherAssetsList />
 
-        {/* Assets */}
-        {isSango && <AssetList />}
-        {family === "evm" && <AssetListEvm />}
-        {isBitcoin && <BitcoinAssetList />}
+        {/* Tokens — Phase 8 : liste multi-chain unifiée (SANGO en
+            premier, puis triés par valeur fiat décroissante). Les
+            anciennes listes par famille ont été retirées. */}
+        <AllTokensList />
 
         {/* Staking (SANGO uniquement) */}
         {isSango && <MyStakingCard />}

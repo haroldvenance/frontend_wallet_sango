@@ -181,6 +181,11 @@ export const fr: TranslationSchema = {
   dashboard: {
     overview: "Vue d'ensemble",
     title: "Tableau de bord",
+    tokens: {
+      title: "Cryptos",
+      countSingular: "{n} actif",
+      countPlural: "{n} actifs",
+    },
     otherAssets: {
       title: "Autres cryptos",
       manage: "Gérer",

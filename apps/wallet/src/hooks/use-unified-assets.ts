@@ -79,7 +79,7 @@ function sortAssets(a: UnifiedAsset, b: UnifiedAsset): number {
   return a.symbol.localeCompare(b.symbol);
 }
 
-interface WalletPlan {
+export interface WalletPlan {
   readonly id: string;
   readonly networkId: string;
   readonly accountIndex: number;
@@ -123,7 +123,7 @@ function resolveNativeMeta(
 }
 
 // Wrapper réel utilisé par le hook (reçoit la session via closure).
-async function fetchWalletAssetsWith(
+export async function fetchWalletAssetsWith(
   session: WalletSession,
   plan: WalletPlan,
 ): Promise<UnifiedAsset[]> {

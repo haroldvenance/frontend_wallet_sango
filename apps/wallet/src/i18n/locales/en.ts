@@ -177,6 +177,11 @@ export const en = {
   dashboard: {
     overview: "Overview",
     title: "Dashboard",
+    tokens: {
+      title: "Tokens",
+      countSingular: "{n} asset",
+      countPlural: "{n} assets",
+    },
     otherAssets: {
       title: "Other assets",
       manage: "Manage",
