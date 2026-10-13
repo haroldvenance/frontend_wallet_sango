@@ -14,6 +14,11 @@ const HistoryRoute = lazy(() => import("@/routes/history").then(m => ({ default:
 const ReceiveRoute = lazy(() =>
   import("@/routes/receive").then((m) => ({ default: m.ReceiveRoute })),
 );
+const AssetDetailLegacyRedirect = lazy(() =>
+  import("@/routes/asset-detail-legacy-redirect").then((m) => ({
+    default: m.AssetDetailLegacyRedirect,
+  })),
+);
 const AssetDetailRoute = lazy(() =>
   import("@/routes/asset-detail").then((m) => ({ default: m.AssetDetailRoute })),
 );
@@ -78,7 +83,14 @@ export default function App() {
             <Route path="/validators/:address" element={<ValidatorDetailRoute />} />
             <Route path="/become-validator" element={<BecomeValidatorRoute />} />
             <Route path="/history" element={<HistoryRoute />} />
-            <Route path="/asset/:assetId" element={<AssetDetailRoute />} />
+            <Route
+              path="/asset/:networkId/:assetId"
+              element={<AssetDetailRoute />}
+            />
+            <Route
+              path="/asset/:assetId"
+              element={<AssetDetailLegacyRedirect />}
+            />
             <Route path="/receive" element={<ReceiveRoute />} />
             <Route path="/history-evm" element={<Navigate to="/history" replace />} />
             <Route path="/approvals" element={<ApprovalsRoute />} />

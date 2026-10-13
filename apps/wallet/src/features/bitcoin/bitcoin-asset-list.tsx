@@ -42,7 +42,7 @@ export function BitcoinAssetList() {
           {networkName}
         </span>,
       ],
-      onClick: () => navigate("/asset/btc"),
+      onClick: () => navigate("/asset/bitcoin-mainnet/btc"),
     },
   ];
 

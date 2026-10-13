@@ -1,58 +1,52 @@
 import { useMemo } from "react";
 
-import {
-  bitcoinNetworkById,
-  evmNetworkById,
-  type AssetRef,
-  type ChainFamily,
-} from "@sango/wallet-chains";
+import type { AssetRef, ChainFamily } from "@sango/wallet-chains";
 
+import {
+  getDisplayAssetId,
+  useAllWalletAssets,
+  type WalletAsset,
+} from "@/hooks/use-all-wallet-assets";
 import { useBitcoinAddress } from "@/hooks/use-bitcoin-address";
-import { useBitcoinBalance } from "@/hooks/use-bitcoin-balance";
-import { useEvmAccount } from "@/hooks/use-evm-account";
-import { useEvmTokens } from "@/hooks/use-evm-tokens";
-import { useAccount } from "@/hooks/use-account";
 import { useSangoWallet } from "@/hooks/use-sango-wallet";
 import { useWalletStore } from "@/stores/wallet-store";
 
 /**
- * Résolution d'un actif pour la page détail (`/asset/:assetId`) —
- * Phase 6.
+ * Résolution d'un actif pour la page détail — Phase 9.4.
  *
- * **D6-c·A** — l'actif est résolu dans le **contexte courant** :
- *   - `family` (SANGO/EVM/Bitcoin) ;
- *   - `networkId` sélectionné ;
- *   - wallet et compte actifs.
+ * **D9-i·A** — la route canonique est
+ * `/asset/:networkId/:assetId`. Le `networkId` permet de distinguer
+ * deux tokens portant le même symbole sur des réseaux différents
+ * (ex. `USDT·Ethereum` vs `USDT·BNB`).
  *
- * **Résolution** :
- *   - `sango` + family=sango    → SANGO natif
- *   - `btc`   + family=bitcoin  → BTC natif
- *   - `{nativeAsset}` + family=evm → ETH ou BNB natif
- *   - `usdc`/`usdt` + family=evm   → token ERC-20 (recherche dans
- *                                    `useEvmTokens()`)
+ * **Source de vérité** : `useAllWalletAssets()` — le même hook qui
+ * alimente la liste du dashboard. Ce choix garantit :
+ *   - cohérence entre la liste et la page détail ;
+ *   - pas de dépendance au réseau **actif** du store ;
+ *   - pas de refetch RPC redondant (React Query cache partagé).
  *
- * **Cas "not found"** : l'assetId n'existe pas dans le contexte courant.
- * Ex. `/asset/btc` sur un wallet EVM → notFound.
+ * **Invariant D9-c** — le solde affiché provient **toujours** du
+ * couple `(networkId, assetId)`, jamais d'un autre contexte.
  *
- * **Invariant D6-c** — le solde affiché provient **toujours** du
- * contexte réel (networkId + compte). Aucun mélange de réseaux.
+ * Retourne :
+ *   - `notFound: true` si l'asset n'existe pas sur ce réseau.
+ *   - `loading: true` tant que l'agrégat n'a pas convergé.
  */
 
 export interface AssetDetail {
+  readonly networkId: string;
   readonly assetId: string;
   readonly symbol: string;
   readonly name: string;
   readonly decimals: number;
   readonly balance: bigint | null;
   readonly family: ChainFamily;
-  readonly networkId: string;
   readonly networkName: string;
   readonly assetRef: AssetRef;
-  /** Adresse de réception dans le contexte courant (EVM/BTC/SANGO). */
+  /** Adresse de réception dans le contexte du wallet actif. */
   readonly address: string;
   /** Adresse du contrat ERC-20 — `null` pour les natifs. */
   readonly contract: string | null;
-  /** `true` si natif, `false` si token. */
   readonly isNative: boolean;
 }
 
@@ -63,164 +57,79 @@ export interface UseAssetDetailResult {
 }
 
 export function useAssetDetail(
+  networkId: string | undefined,
   assetId: string | undefined,
 ): UseAssetDetailResult {
-  const family = useWalletStore((s) => s.family);
-  const networkId = useWalletStore((s) => s.networkId);
-
-  // Tous les hooks sont appelés inconditionnellement (règle des hooks),
-  // la sélection se fait dans le useMemo.
-  const sangoAccount = useAccount();
-  const evmAccount = useEvmAccount();
-  const btcBalance = useBitcoinBalance();
-  const evmTokens = useEvmTokens();
+  const { assets, loading } = useAllWalletAssets();
+  const wallet = useWalletStore((s) => s.wallet);
+  const format = useWalletStore((s) => s.format);
   const sangoWallet = useSangoWallet();
   const btcAddress = useBitcoinAddress();
 
   return useMemo<UseAssetDetailResult>(() => {
-    if (!assetId) {
+    if (!networkId || !assetId) {
       return { detail: null, loading: false, notFound: true };
     }
+
     const lower = assetId.toLowerCase();
+    const match: WalletAsset | undefined = assets.find(
+      (a) =>
+        a.networkId === networkId &&
+        getDisplayAssetId(a).toLowerCase() === lower,
+    );
 
-    // ── SANGO ──────────────────────────────────────────────
-    if (family === "sango") {
-      if (lower !== "sango") {
-        return { detail: null, loading: false, notFound: true };
-      }
-      const balance = sangoAccount.data
-        ? BigInt(sangoAccount.data.balance)
-        : null;
-      const addr = sangoWallet?.identity.addressBech32 ?? "";
+    if (!match) {
+      // Tant que l'agrégat charge, ne pas crier "not found".
       return {
-        detail: {
-          assetId: "sango",
-          symbol: "SANGO",
-          name: "SangoCoin",
-          decimals: 7,
-          balance,
-          family: "sango",
-          networkId,
-          networkName: "Sango",
-          assetRef: { kind: "native", assetId: "sango", networkId },
-          address: addr,
-          contract: null,
-          isNative: true,
-        },
-        loading: sangoAccount.isLoading,
-        notFound: false,
+        detail: null,
+        loading,
+        notFound: !loading && format !== null,
       };
     }
 
-    // ── Bitcoin ────────────────────────────────────────────
-    if (family === "bitcoin") {
-      if (lower !== "btc") {
-        return { detail: null, loading: false, notFound: true };
+    // Résolution de l'adresse de réception (par famille).
+    let address = "";
+    if (match.family === "sango") {
+      address = sangoWallet?.identity.addressBech32 ?? "";
+    } else if (match.family === "bitcoin") {
+      address = btcAddress?.address ?? "";
+    } else if (match.family === "evm" && wallet) {
+      // Bip39Wallet.getIdentity(0).addressHex
+      // On évite `instanceof` : discriminant `format` (store).
+      if (format === "bip39") {
+        const w = wallet as { getIdentity?: (i: number) => { addressHex: string } };
+        address = w.getIdentity?.(match.accountIndex).addressHex ?? "";
       }
-      const network = bitcoinNetworkById(networkId);
-      return {
-        detail: {
-          assetId: "btc",
-          symbol: "BTC",
-          name: "Bitcoin",
-          decimals: 8,
-          balance: btcBalance.data?.amount ?? null,
-          family: "bitcoin",
-          networkId,
-          networkName: network?.name ?? "Bitcoin",
-          assetRef: { kind: "native", assetId: "btc", networkId },
-          address: btcAddress?.address ?? "",
-          contract: null,
-          isNative: true,
-        },
-        loading: btcBalance.isLoading,
-        notFound: false,
-      };
     }
 
-    // ── EVM ────────────────────────────────────────────────
-    if (family === "evm") {
-      const network = evmNetworkById(networkId);
-      if (!network) {
-        return { detail: null, loading: false, notFound: true };
-      }
+    const native = match.assetRef.kind === "native";
+    const contract = native ? null : match.assetRef.contract;
 
-      // Natif ?
-      if (lower === network.nativeAsset) {
-        const symbol = network.nativeAsset.toUpperCase();
-        return {
-          detail: {
-            assetId: lower,
-            symbol,
-            name: `${symbol} · ${network.name}`,
-            decimals: 18,
-            balance: evmAccount.data?.balance ?? null,
-            family: "evm",
-            networkId,
-            networkName: network.name,
-            assetRef: {
-              kind: "native",
-              assetId: network.nativeAsset,
-              networkId,
-            },
-            address: evmAccount.data?.address ?? "",
-            contract: null,
-            isNative: true,
-          },
-          loading: evmAccount.isLoading,
-          notFound: false,
-        };
-      }
-
-      // Token ERC-20 ?
-      const tokens = evmTokens.data ?? [];
-      const entry = tokens.find((t) => t.token.assetId === lower);
-      if (!entry) {
-        // Si on n'a pas fini de charger les tokens, ce n'est pas un
-        // "not found" définitif.
-        return {
-          detail: null,
-          loading: evmTokens.isLoading,
-          notFound: !evmTokens.isLoading,
-        };
-      }
-      return {
-        detail: {
-          assetId: lower,
-          symbol: entry.token.metadata.symbol,
-          name: entry.token.metadata.name,
-          decimals: entry.token.metadata.decimals,
-          balance: entry.balance,
-          family: "evm",
-          networkId,
-          networkName: network.name,
-          assetRef: {
-            kind: "token",
-            networkId,
-            contract: entry.token.contract,
-          },
-          address: evmAccount.data?.address ?? "",
-          contract: entry.token.contract,
-          isNative: false,
-        },
-        loading: false,
-        notFound: false,
-      };
-    }
-
-    return { detail: null, loading: false, notFound: true };
+    return {
+      detail: {
+        networkId: match.networkId,
+        assetId: lower,
+        symbol: match.symbol,
+        name: match.name,
+        decimals: match.decimals,
+        balance: match.balance,
+        family: match.family,
+        networkName: match.subtitle,
+        assetRef: match.assetRef,
+        address,
+        contract,
+        isNative: native,
+      },
+      loading: false,
+      notFound: false,
+    };
   }, [
-    assetId,
-    family,
     networkId,
-    sangoAccount.data,
-    sangoAccount.isLoading,
-    evmAccount.data,
-    evmAccount.isLoading,
-    btcBalance.data,
-    btcBalance.isLoading,
-    evmTokens.data,
-    evmTokens.isLoading,
+    assetId,
+    assets,
+    loading,
+    wallet,
+    format,
     sangoWallet,
     btcAddress,
   ]);

@@ -118,7 +118,11 @@ export function AllTokensList() {
             key={`${asset.networkId}:${getDisplayAssetId(asset)}`}
             asset={asset}
             price={prices[getDisplayAssetId(asset).toLowerCase()]}
-            onClick={() => navigate(`/asset/${getDisplayAssetId(asset)}`)}
+            onClick={() =>
+              navigate(
+                `/asset/${asset.networkId}/${getDisplayAssetId(asset)}`,
+              )
+            }
           />
         ))}
       </div>

@@ -38,8 +38,15 @@ import { formatSango, truncateMiddle } from "@/lib/format";
 export function AssetDetailRoute() {
   const t = useTranslation();
   const navigate = useNavigate();
-  const { assetId } = useParams<{ assetId: string }>();
-  const { detail, loading: detailLoading, notFound } = useAssetDetail(assetId);
+  const { networkId, assetId } = useParams<{
+    networkId: string;
+    assetId: string;
+  }>();
+  const {
+    detail,
+    loading: detailLoading,
+    notFound,
+  } = useAssetDetail(networkId, assetId);
 
   const [timeframe, setTimeframe] = useState<Timeframe>("1d");
   const [receiveOpen, setReceiveOpen] = useState(false);

@@ -29,7 +29,7 @@ export function AssetList() {
       symbol: "SANGO",
       name: t.assets.sangoName,
       balance,
-      onClick: () => navigate("/asset/sango"),
+      onClick: () => navigate("/asset/sango-devnet/sango"),
     },
   ];
 

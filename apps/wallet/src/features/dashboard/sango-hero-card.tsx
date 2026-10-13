@@ -42,7 +42,7 @@ export function SangoHeroCard() {
     <button
       type="button"
       data-testid="sango-hero-card"
-      onClick={() => navigate("/asset/sango")}
+      onClick={() => navigate("/asset/sango-devnet/sango")}
       className="group relative w-full overflow-hidden rounded-3xl border-2 border-primary/40 bg-gradient-to-br from-primary/[0.08] via-card to-emerald-500/[0.05] p-6 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg sm:p-8"
     >
       {/* Halos */}

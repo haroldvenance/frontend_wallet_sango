@@ -51,7 +51,7 @@ export function AssetListEvm() {
         {networkName}
       </span>,
     ],
-    onClick: () => navigate(`/asset/${nativeAsset}`),
+    onClick: () => navigate(`/asset/${networkId}/${nativeAsset}`),
   };
 
   const tokenItems: AssetItem[] = (tokens ?? []).map(({ token, balance }) => ({
@@ -73,7 +73,7 @@ export function AssetListEvm() {
       balance !== null
         ? `≈ ${formatStablecoinUsd(balance, token.metadata.decimals)}`
         : undefined,
-    onClick: () => navigate(`/asset/${token.assetId}`),
+    onClick: () => navigate(`/asset/${networkId}/${token.assetId}`),
   }));
 
   const items: AssetItem[] = [nativeItem, ...tokenItems];
