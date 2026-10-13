@@ -69,8 +69,11 @@ describe("SangoHeroCard — Phase 9.1", () => {
       loading: false,
     });
     render(<SangoHeroCard />, { wrapper: Wrapper });
-    expect(screen.getByText("SANGO")).toBeTruthy();
+    // "SANGO" apparaît 2× (titre + suffixe de la balance) → getAllByText.
+    expect(screen.getAllByText("SANGO").length).toBeGreaterThan(0);
     expect(screen.getByTestId("sango-hero-card")).toBeTruthy();
+    // Vérifie que la balance formatée est présente.
+    expect(screen.getByText("12486")).toBeTruthy();
   });
 
   it("affiche … si loading", () => {
