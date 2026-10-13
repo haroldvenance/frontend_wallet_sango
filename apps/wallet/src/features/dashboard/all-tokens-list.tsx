@@ -37,12 +37,20 @@ export function AllTokensList() {
       asset: (typeof assets)[number];
       fiatValue: number | null;
     };
-    // **Phase 9.1 (D9-e·A)** — SANGO est exclu de la liste : il
-    // dispose de sa propre carte (`SangoHeroCard`, section 3 du
-    // dashboard).
-    const filtered = assets.filter(
-      (a) => getDisplayAssetId(a) !== "sango",
-    );
+    // **Phase 9.1 (D9-e·A)** — SANGO exclu (carte dédiée).
+    // **Phase 9.2 (D9-d·A)** — garde-fou production :
+    //   - les natifs sont toujours visibles (ils définissent les
+    //     réseaux supportés : ETH, BNB, BTC) ;
+    //   - les tokens (USDC/USDT) ne sont affichés que si le solde
+    //     est > 0, pour éviter 12 lignes « 0 USDT » à zéro.
+    // Un solde en erreur (`balance === null`) n'est PAS traité comme
+    // un solde nul — il est masqué pour ne pas mentir.
+    const filtered = assets.filter((a) => {
+      const id = getDisplayAssetId(a);
+      if (id === "sango") return false;
+      if (a.kind === "native") return true;
+      return a.balance !== null && a.balance > 0n;
+    });
     const enriched: Enriched[] = filtered.map((asset) => {
       const price = prices[getDisplayAssetId(asset).toLowerCase()];
       if (!price || asset.balance === null) {
@@ -53,19 +61,18 @@ export function AllTokensList() {
     });
 
     enriched.sort((a, b) => {
-      // SANGO toujours premier.
-      const aIsSango = getDisplayAssetId(a.asset) === "sango";
-      const bIsSango = getDisplayAssetId(b.asset) === "sango";
-      if (aIsSango && !bIsSango) return -1;
-      if (bIsSango && !aIsSango) return 1;
       // Fiat décroissant.
       if (a.fiatValue !== null && b.fiatValue !== null) {
-        return b.fiatValue - a.fiatValue;
+        if (a.fiatValue !== b.fiatValue) return b.fiatValue - a.fiatValue;
+      } else if (a.fiatValue !== null) {
+        return -1;
+      } else if (b.fiatValue !== null) {
+        return 1;
       }
-      if (a.fiatValue !== null) return -1;
-      if (b.fiatValue !== null) return 1;
-      // Alphabétique.
-      return a.asset.symbol.localeCompare(b.asset.symbol);
+      // Tie-break : symbole puis réseau (stable pour les 0).
+      const sym = a.asset.symbol.localeCompare(b.asset.symbol);
+      if (sym !== 0) return sym;
+      return a.asset.networkId.localeCompare(b.asset.networkId);
     });
 
     return enriched;
