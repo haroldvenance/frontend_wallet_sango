@@ -1,4 +1,5 @@
 import type { TxHistory } from "@sango/wallet-chains";
+import { evmNetworkById } from "@sango/wallet-chains";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 
 import { networkQueryKey } from "@/lib/network-query";
@@ -9,30 +10,49 @@ import { useNetworkQueryContext } from "./use-network-query-context";
 const REFRESH_MS = 30_000;
 
 /**
- * Historique EVM du wallet actif (D-INDEXER-3).
+ * Historique EVM — **Phase 9.3** : accepte un `networkId` optionnel
+ * pour agréger plusieurs réseaux en parallèle.
  *
- * Refresh : 30 s. Le `useSendEvm` déclenche en plus une invalidation
- * immédiate après un envoi (pas besoin d'attendre 30 s).
+ * - `useEvmHistory(20)` → réseau actif (comportement historique).
+ * - `useEvmHistory(20, "bsc")` → historique du réseau BSC.
  *
- * Le composant peut appeler `refetch()` pour un refresh manuel.
+ * **D9.3-a** — chaque réseau a sa propre `queryKey` (endpoint +
+ * networkId), donc pas de collision de cache.
+ *
+ * Note React : l'appelant qui agrège N réseaux doit faire **N appels
+ * explicites** (pas de `.map()` sur `useQuery` — règle des hooks).
  */
-export function useEvmHistory(limit = 20): UseQueryResult<TxHistory, Error> {
+export function useEvmHistory(
+  limit = 20,
+  networkId?: string,
+): UseQueryResult<TxHistory, Error> {
   const session = useWalletSession();
   const { status, format } = useWalletStore();
-  const { endpoint, networkId, account } = useNetworkQueryContext();
+  const ctx = useNetworkQueryContext();
+
+  const effectiveNetworkId = networkId ?? ctx.networkId;
+  // Construit un `AccountRef` indépendant du réseau actif si
+  // `networkId` est fourni.
+  const account = {
+    family: "evm" as const,
+    accountIndex: ctx.account.accountIndex,
+    networkId: effectiveNetworkId,
+  };
+
+  // Endpoint contextuel — pour un networkId explicite, on prend le
+  // premier endpoint par défaut du `Network`.
+  const network = evmNetworkById(effectiveNetworkId);
+  const endpoint = network?.defaultRpcEndpoints[0] ?? ctx.endpoint;
 
   const enabled =
     format === "bip39" && status === "unlocked" && Boolean(session);
 
   return useQuery<TxHistory, Error>({
-    // D-Phase2-4 : `accountIndex` explicite — historique par compte.
-    // (`account.networkId` reste en extra, héritage E1.5.)
     queryKey: networkQueryKey(
       ["evm-history"],
       endpoint,
-      networkId,
+      effectiveNetworkId,
       account.accountIndex,
-      account.networkId,
     ),
     queryFn: async () => {
       if (!session) return { total: 0, items: [] };

@@ -1,16 +1,14 @@
 import { bitcoinNetworkById, evmNetworkById } from "@sango/wallet-chains";
 
-import { HistoryListBitcoin } from "@/features/bitcoin/history-list-bitcoin";
-import { RecentActivity } from "@/components/wallet/recent-activity";
 import { WalletSwitcher } from "@/features/wallet/wallet-switcher";
 import { QuickActions } from "@/components/wallet/quick-actions";
 import { QuickActionsBitcoin } from "@/features/bitcoin/quick-actions-bitcoin";
 import { QuickActionsEvm } from "@/features/evm/quick-actions-evm";
-import { HistoryListEvm } from "@/features/evm/history-list-evm";
 import { useTranslation } from "@/i18n/use-translation";
 import { useWalletStore } from "@/stores/wallet-store";
 
 import { AllTokensList } from "./all-tokens-list";
+import { RecentActivityAggregated } from "./recent-activity-aggregated";
 import { NetworkCard } from "./network-card";
 import { SangoHeroCard } from "./sango-hero-card";
 
@@ -73,10 +71,8 @@ export function UnifiedDashboard() {
         {/* 5. Tokens cross-chain (SANGO exclu — cf. carte 3) */}
         <AllTokensList />
 
-        {/* 6. Activité récente — par famille (agrégat en 9.3) */}
-        {isSango && <RecentActivity />}
-        {family === "evm" && <HistoryListEvm />}
-        {isBitcoin && <HistoryListBitcoin />}
+        {/* 6. Activité récente — Phase 9.3 : agrégat cross-chain */}
+        <RecentActivityAggregated />
       </div>
     </div>
   );

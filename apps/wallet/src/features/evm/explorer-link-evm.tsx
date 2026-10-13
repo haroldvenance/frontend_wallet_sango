@@ -5,6 +5,8 @@ import { useWalletStore } from "@/stores/wallet-store";
 interface Props {
   hash: string;
   className?: string;
+  /** **Phase 9.3** — override du réseau (défaut : réseau actif). */
+  networkId?: string;
 }
 
 /**
@@ -16,8 +18,13 @@ interface Props {
  * Rendu : lien inline ouvrant dans un nouvel onglet. `null` si le
  * réseau n'a pas d'explorer (aucun cas connu en E1.5).
  */
-export function ExplorerLinkEvm({ hash, className }: Props) {
-  const networkId = useWalletStore((s) => s.networkId);
+export function ExplorerLinkEvm({
+  hash,
+  className,
+  networkId: override,
+}: Props) {
+  const storeNetworkId = useWalletStore((s) => s.networkId);
+  const networkId = override ?? storeNetworkId;
   const network = evmNetworkById(networkId);
   if (!network?.explorer) return null;
 

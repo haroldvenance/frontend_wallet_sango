@@ -367,7 +367,9 @@ export const en = {
   },
   activity: {
     title: "Recent activity",
-    subtitle: "Your latest wallet transactions",
+    subtitle: "All chains combined",
+    empty: "No transactions",
+    sourcesUnavailable: "Unavailable: {networks}",
     viewAll: "View all",
     demoNote: "Demo activity — transaction history will come from Sango RPC.",
     received: "Received SANGO",

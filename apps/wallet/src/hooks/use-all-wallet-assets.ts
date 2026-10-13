@@ -162,20 +162,7 @@ export function useAllWalletAssets(): UseAllWalletAssetsResult {
     for (const r of results) {
       if (r.isLoading) loading = true;
       if (r.data) flat.push(...r.data);
-      // DIAGNOSTIC TEMPORAIRE — Phase 9.2.bis.
-      // À retirer une fois le mystère BTC résolu.
-      if (r.error) {
-        // eslint-disable-next-line no-console
-        console.warn("[useAllWalletAssets] query failed:", r.error);
-      }
     }
-    // eslint-disable-next-line no-console
-    console.info(
-      "[useAllWalletAssets] plans:",
-      plans.map((p) => `${p.family}:${p.networkId}`),
-      "→",
-      flat.map((a) => `${a.family}:${a.symbol}@${a.networkId}`),
-    );
     return { assets: flat, loading };
-  }, [results, plans]);
+  }, [results]);
 }

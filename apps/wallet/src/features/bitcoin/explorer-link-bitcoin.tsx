@@ -5,6 +5,8 @@ import { useWalletStore } from "@/stores/wallet-store";
 interface Props {
   hash: string;
   className?: string;
+  /** **Phase 9.3** — override du réseau (défaut : réseau actif). */
+  networkId?: string;
 }
 
 /**
@@ -17,8 +19,13 @@ interface Props {
  *
  * Compatible mainnet dès que le wallet y basculera (D-E2.1-22).
  */
-export function ExplorerLinkBitcoin({ hash, className }: Props) {
-  const networkId = useWalletStore((s) => s.networkId);
+export function ExplorerLinkBitcoin({
+  hash,
+  className,
+  networkId: override,
+}: Props) {
+  const storeNetworkId = useWalletStore((s) => s.networkId);
+  const networkId = override ?? storeNetworkId;
   const network = bitcoinNetworkById(networkId);
   if (!network?.explorer) return null;
 

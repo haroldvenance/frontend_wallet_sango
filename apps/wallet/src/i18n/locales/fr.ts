@@ -372,7 +372,9 @@ export const fr: TranslationSchema = {
   },
   activity: {
     title: "Activité récente",
-    subtitle: "Tes dernières transactions",
+    subtitle: "Toutes chaînes confondues",
+    empty: "Aucune transaction",
+    sourcesUnavailable: "Indisponible : {networks}",
     viewAll: "Tout voir",
     demoNote:
       "Activité de démonstration — l'historique viendra du RPC Sango.",
