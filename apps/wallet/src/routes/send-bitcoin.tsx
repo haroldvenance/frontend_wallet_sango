@@ -1,12 +1,16 @@
 import { bitcoinNetworkById } from "@sango/wallet-chains";
 import type { Address } from "@sango/wallet-chains";
 import type { BitcoinNetwork } from "@sango/wallet-core";
-import { ArrowLeft, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 import { MainnetWarning } from "@/features/evm/mainnet-warning";
+import {
+  SendBalanceCard,
+  SendShell,
+  SendSubmit,
+} from "@/features/send/send-shell";
 import { useBitcoinBalance } from "@/hooks/use-bitcoin-balance";
 import { useBitcoinFeeRates } from "@/hooks/use-bitcoin-fee-rates";
 import { useSendBitcoin } from "@/hooks/use-send-bitcoin";
@@ -118,22 +122,17 @@ export function SendBitcoinRoute() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-6 py-10">
-      <Link
-        to="/"
-        className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="size-3" /> Retour au tableau de bord
-      </Link>
-
-      <h1 className="mt-6 text-xl font-semibold tracking-tight">Envoyer</h1>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Réseau : {network?.name ?? networkId}
-      </p>
-
-      <p className="mt-3 text-xs text-muted-foreground">
-        Solde : {balanceDisplay} BTC
-      </p>
+    <SendShell
+      title="Envoyer BTC"
+      subtitle={network?.name ?? networkId}
+      balanceCard={
+        <SendBalanceCard
+          assetId="btc"
+          balance={balanceDisplay}
+          symbol="BTC"
+        />
+      }
+    >
 
       {lastTxId && (
         <div className="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-3 text-xs">
@@ -267,16 +266,14 @@ export function SendBitcoinRoute() {
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={send.isPending}
-          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
-        >
-          <Send className="size-4" />
-          {send.isPending ? "Envoi…" : "Envoyer BTC"}
-        </button>
+        <SendSubmit
+          label="Envoyer BTC"
+          pending={send.isPending}
+          pendingLabel="Envoi…"
+          icon={<Send className="size-4" />}
+        />
       </form>
-    </div>
+    </SendShell>
   );
 }
 

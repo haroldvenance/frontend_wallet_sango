@@ -262,6 +262,27 @@ export const fr: TranslationSchema = {
       error: "Impossible d'oublier le portefeuille",
     },
   },
+  receivePage: {
+    title: "Recevoir",
+    subtitle: "Partage ton adresse pour recevoir des fonds sur chaque chaîne.",
+    empty: "Aucune adresse disponible pour ce portefeuille.",
+    sections: {
+      evm: "Ethereum & chaînes EVM",
+      bitcoin: "Bitcoin",
+      sango: "Sango",
+    },
+    networkLabel: {
+      evm: "Ethereum, BNB Chain, Base, Arbitrum…",
+      bitcoin: "Bitcoin mainnet",
+      sango: "Chaîne native Sango",
+    },
+    actions: {
+      copy: "Copier",
+      copied: "Adresse copiée",
+      share: "Partager",
+      download: "Télécharger QR",
+    },
+  },
   assetDetail: {
     back: "Retour",
     notFound: "Actif introuvable",
@@ -368,6 +389,13 @@ export const fr: TranslationSchema = {
     txPendingDesc: "Pas encore incluse après 15 s",
     txFailed: "Échec de la transaction",
     dashboardLink: "Tableau de bord",
+    shell: {
+      back: "Retour",
+      availableBalance: "Solde disponible",
+      recipient: "Destinataire",
+      amount: "Montant",
+      fees: "Frais estimés",
+    },
   },
   receive: {
     title: "Recevoir du SANGO",

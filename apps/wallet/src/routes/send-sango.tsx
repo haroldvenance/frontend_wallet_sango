@@ -1,15 +1,19 @@
 import type { AddressHex } from "@sango/types";
-import { ArrowLeft, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
-import { useAccount } from "@/hooks/use-account";
-import { useTranslation } from "@/i18n/use-translation";
-import { useSendTx } from "@/hooks/use-send-tx";
-import { formatSango, parseSango } from "@/lib/format";
-import { SangoCoinIcon } from "@/components/branding/sango-coin-icon";
 import { FiatLine } from "@/components/branding/fiat-line";
+import {
+  SendBalanceCard,
+  SendField,
+  SendShell,
+  SendSubmit,
+} from "@/features/send/send-shell";
+import { useAccount } from "@/hooks/use-account";
+import { useSendTx } from "@/hooks/use-send-tx";
+import { useTranslation } from "@/i18n/use-translation";
+import { formatSango, parseSango } from "@/lib/format";
 
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 
@@ -30,7 +34,9 @@ export function SangoSendRoute() {
     try {
       amountBaseUnits = parseSango(amount);
     } catch (err) {
-      return toast.error(t.send.invalidAmount, { description: (err as Error).message });
+      return toast.error(t.send.invalidAmount, {
+        description: (err as Error).message,
+      });
     }
     if (amountBaseUnits <= 0n) return toast.error(t.send.amountPositive);
 
@@ -46,64 +52,62 @@ export function SangoSendRoute() {
     await sendTx.mutateAsync({ to: to as AddressHex, amountBaseUnits });
   }
 
+  const balanceStr = account ? formatSango(account.balance) : "0";
+
   return (
-    <div className="mx-auto max-w-md px-6 py-10">
-      <Link to="/" className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="size-3" /> {t.send.dashboardLink}
-      </Link>
-
-      <h1 className="mt-6 text-xl font-semibold tracking-tight">Envoyer</h1>
-      {account && (
-        <p className="mt-2 text-xs text-muted-foreground">
-          {t.send.available} : {formatSango(account.balance)} 
-            <SangoCoinIcon size={14} className="inline-block align-text-bottom" />
-            <span>SANGO</span>
-        </p>
-      )}
-
-      <form onSubmit={onSubmit} className="mt-6 space-y-4">
-        <label className="block">
-          <span className="text-xs font-medium">{t.send.recipient}</span>
+    <SendShell
+      title={`Envoyer SANGO`}
+      subtitle="Sango native chain"
+      balanceCard={
+        <SendBalanceCard
+          assetId="sango"
+          balance={balanceStr}
+          symbol="SANGO"
+        />
+      }
+    >
+      <form onSubmit={onSubmit} className="space-y-4">
+        <SendField label={t.send.recipient}>
           <input
             type="text"
             value={to}
             onChange={(e) => setTo(e.target.value)}
             placeholder={t.send.recipientPlaceholder}
-            className="mt-1 flex h-10 w-full rounded-xl border border-input bg-background px-3 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            spellCheck={false}
+            autoComplete="off"
+            className="flex h-11 w-full rounded-xl border border-input bg-background px-3 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
-        </label>
+        </SendField>
 
-        <label className="block">
-          <span className="text-xs font-medium">{t.send.amount}</span>
+        <SendField
+          label={t.send.amount}
+          hint={
+            amount && (() => {
+              try {
+                return <FiatLine baseUnits={parseSango(amount).toString()} />;
+              } catch {
+                return null;
+              }
+            })()
+          }
+        >
           <input
             type="text"
+            inputMode="decimal"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder={t.send.amountPlaceholder}
-            className="mt-1 flex h-10 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
-          {amount && (() => {
-            try {
-              return (
-                <p className="mt-1.5 text-xs">
-                  <FiatLine baseUnits={parseSango(amount).toString()} />
-                </p>
-              );
-            } catch {
-              return null;
-            }
-          })()}
-        </label>
+        </SendField>
 
-        <button
-          type="submit"
-          disabled={sendTx.isPending}
-          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
-        >
-          <Send className="size-4" />
-          {sendTx.isPending ? t.send.sending : t.send.button}
-        </button>
+        <SendSubmit
+          label={t.send.button}
+          pending={sendTx.isPending}
+          pendingLabel={t.send.sending}
+          icon={<Send className="size-4" />}
+        />
       </form>
-    </div>
+    </SendShell>
   );
 }

@@ -11,6 +11,9 @@ const CreateUnifiedRoute = lazy(() =>
 );
 const HistoryDetailRoute = lazy(() => import("@/routes/history-detail").then(m => ({ default: m.HistoryDetailRoute })));
 const HistoryRoute = lazy(() => import("@/routes/history").then(m => ({ default: m.HistoryRoute })));
+const ReceiveRoute = lazy(() =>
+  import("@/routes/receive").then((m) => ({ default: m.ReceiveRoute })),
+);
 const AssetDetailRoute = lazy(() =>
   import("@/routes/asset-detail").then((m) => ({ default: m.AssetDetailRoute })),
 );
@@ -76,6 +79,7 @@ export default function App() {
             <Route path="/become-validator" element={<BecomeValidatorRoute />} />
             <Route path="/history" element={<HistoryRoute />} />
             <Route path="/asset/:assetId" element={<AssetDetailRoute />} />
+            <Route path="/receive" element={<ReceiveRoute />} />
             <Route path="/history-evm" element={<Navigate to="/history" replace />} />
             <Route path="/approvals" element={<ApprovalsRoute />} />
             <Route path="/settings" element={<SettingsRoute />} />

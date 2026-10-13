@@ -1,10 +1,7 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ActionsRow } from "@/components/ui/actions-row";
 import { BitcoinFaucetButton } from "./bitcoin-faucet-button";
-import { useBitcoinAddress } from "@/hooks/use-bitcoin-address";
-import { useClipboard } from "@/hooks/use-clipboard";
 import { SHOW_TESTNETS } from "@/lib/env-flags";
 
 /**
@@ -17,20 +14,11 @@ import { SHOW_TESTNETS } from "@/lib/env-flags";
  */
 export function QuickActionsBitcoin() {
   const navigate = useNavigate();
-  const addressInfo = useBitcoinAddress();
-  const copy = useClipboard();
-  const [, setReceiveCopied] = useState(false);
 
   return (
     <ActionsRow
       onSend={() => navigate("/send")}
-      onReceive={() => {
-        if (addressInfo) {
-          copy(addressInfo.address, "Adresse copiée");
-          setReceiveCopied(true);
-          setTimeout(() => setReceiveCopied(false), 1500);
-        }
-      }}
+      onReceive={() => navigate("/receive")}
       sendLabel="Envoyer"
       receiveLabel="Recevoir"
       trailing={

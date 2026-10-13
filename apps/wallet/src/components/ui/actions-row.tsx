@@ -13,7 +13,7 @@ import type { ReactNode } from "react";
  *   - Acheter  : désactivé (E1.6+)
  *   - Échanger : désactivé (E1.6+)
  *   - Envoyer  : actif (route dispatchée par le wrapper)
- *   - Recevoir : actif (ouvre le ReceiveModal du wrapper)
+ *   - Recevoir : actif (navigation gérée par le wrapper)
  *
  * Le wrapper fournit les handlers `onSend` et `onReceive`.
  */

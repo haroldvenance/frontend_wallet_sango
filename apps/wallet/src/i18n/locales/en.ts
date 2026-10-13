@@ -257,6 +257,27 @@ export const en = {
       error: "Could not forget the wallet",
     },
   },
+  receivePage: {
+    title: "Receive",
+    subtitle: "Share your address to receive funds on each chain.",
+    empty: "No address available for this wallet.",
+    sections: {
+      evm: "Ethereum & EVM chains",
+      bitcoin: "Bitcoin",
+      sango: "Sango",
+    },
+    networkLabel: {
+      evm: "Ethereum, BNB Chain, Base, Arbitrum…",
+      bitcoin: "Bitcoin mainnet",
+      sango: "Sango native chain",
+    },
+    actions: {
+      copy: "Copy",
+      copied: "Address copied",
+      share: "Share",
+      download: "Download QR",
+    },
+  },
   assetDetail: {
     back: "Back",
     notFound: "Asset not found",
@@ -362,6 +383,13 @@ export const en = {
     txPendingDesc: "Not included after 15 s",
     txFailed: "Transaction failed",
     dashboardLink: "Dashboard",
+    shell: {
+      back: "Back",
+      availableBalance: "Available balance",
+      recipient: "Recipient",
+      amount: "Amount",
+      fees: "Estimated fees",
+    },
   },
   receive: {
     title: "Receive SANGO",

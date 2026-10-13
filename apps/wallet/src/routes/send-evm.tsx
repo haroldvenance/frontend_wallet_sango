@@ -1,11 +1,16 @@
 import type { Address, Token } from "@sango/wallet-chains";
 import { evmNetworkById } from "@sango/wallet-chains";
-import { ArrowLeft, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { ExplorerLinkEvm } from "@/features/evm/explorer-link-evm";
+import {
+  SendBalanceCard,
+  SendShell,
+  SendSubmit,
+} from "@/features/send/send-shell";
 import { MainnetWarning } from "@/features/evm/mainnet-warning";
 import { useEvmAccount } from "@/hooks/use-evm-account";
 import { useEvmTokens } from "@/hooks/use-evm-tokens";
@@ -56,8 +61,18 @@ export function SendEvmRoute() {
     [tokensWithBalance],
   );
 
+  // Prefill via query param `/send?asset=usdc` (D7-d·A).
+  const [searchParams] = useSearchParams();
+  const prefillAsset = searchParams.get("asset")?.toLowerCase() ?? null;
+
   // Token sélectionné : "eth" (string sentinel) ou contrat du token.
-  const [selected, setSelected] = useState<string>("eth");
+  // Init : si `?asset=usdc` est fourni ET que le token correspondant
+  // existe sur le réseau courant, on le sélectionne. Sinon "eth".
+  const [selected, setSelected] = useState<string>(() => {
+    if (!prefillAsset) return "eth";
+    if (prefillAsset === "eth" || prefillAsset === "bnb") return "eth";
+    return prefillAsset; // ex. "usdc" — peut être vide si pas dispo
+  });
   const selectedToken: Token | undefined = availableTokens.find(
     (t) => t.contract === selected,
   );
@@ -217,24 +232,19 @@ export function SendEvmRoute() {
       : null;
 
   return (
-    <div className="mx-auto max-w-md px-6 py-10">
-      <Link
-        to="/"
-        className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="size-3" /> Retour au tableau de bord
-      </Link>
-
-      <h1 className="mt-6 text-xl font-semibold tracking-tight">
-        Envoyer
-      </h1>
-      <p className="mt-1 text-xs text-muted-foreground">Réseau : {networkName}</p>
-
-      {balanceDisplay !== null && (
-        <p className="mt-3 text-xs text-muted-foreground">
-          Solde : {balanceDisplay} {symbol}
-        </p>
-      )}
+    <SendShell
+      title={`Envoyer ${symbol}`}
+      subtitle={networkName}
+      balanceCard={
+        balanceDisplay !== null ? (
+          <SendBalanceCard
+            assetId={selected === "eth" ? (network?.nativeAsset ?? "eth") : selectedToken?.assetId ?? "eth"}
+            balance={balanceDisplay}
+            symbol={symbol}
+          />
+        ) : null
+      }
+    >
 
       {lastTxHash && (
         <div className="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-3 text-xs">
@@ -366,15 +376,13 @@ export function SendEvmRoute() {
           <p className="text-[11px] text-muted-foreground">Estimation des frais…</p>
         )}
 
-        <button
-          type="submit"
-          disabled={sendEvm.isPending}
-          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
-        >
-          <Send className="size-4" />
-          {sendEvm.isPending ? "Envoi…" : `Envoyer ${symbol}`}
-        </button>
+        <SendSubmit
+          label={`Envoyer ${symbol}`}
+          pending={sendEvm.isPending}
+          pendingLabel="Envoi…"
+          icon={<Send className="size-4" />}
+        />
       </form>
-    </div>
+    </SendShell>
   );
 }
