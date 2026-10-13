@@ -186,6 +186,17 @@ export const fr: TranslationSchema = {
       countSingular: "{n} actif",
       countPlural: "{n} actifs",
     },
+    sangoCard: {
+      subtitle: "SangoCoin · chaîne native",
+    },
+    networkCard: {
+      title: "Réseau actif",
+      change: "Changer",
+    },
+    networkPicker: {
+      title: "Changer de réseau",
+      done: "Terminé",
+    },
     otherAssets: {
       title: "Autres cryptos",
       manage: "Gérer",

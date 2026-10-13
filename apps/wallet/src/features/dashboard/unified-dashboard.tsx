@@ -1,40 +1,36 @@
 import { bitcoinNetworkById, evmNetworkById } from "@sango/wallet-chains";
 
 import { HistoryListBitcoin } from "@/features/bitcoin/history-list-bitcoin";
-import { BalanceCard } from "@/components/wallet/balance-card";
-import { MyStakingCard } from "@/components/wallet/my-staking-card";
-import { NetworkOverviewCard } from "@/components/wallet/network-overview-card";
-import { QuickActions } from "@/components/wallet/quick-actions";
 import { RecentActivity } from "@/components/wallet/recent-activity";
 import { WalletSwitcher } from "@/features/wallet/wallet-switcher";
-import { OtherAssetsList } from "./other-assets-list";
-import { AllTokensList } from "./all-tokens-list";
+import { QuickActions } from "@/components/wallet/quick-actions";
 import { QuickActionsBitcoin } from "@/features/bitcoin/quick-actions-bitcoin";
-import { BitcoinBalanceCard } from "@/features/bitcoin/bitcoin-balance-card";
-import { BalanceCardEvm } from "@/features/evm/balance-card-evm";
-import { HistoryListEvm } from "@/features/evm/history-list-evm";
 import { QuickActionsEvm } from "@/features/evm/quick-actions-evm";
+import { HistoryListEvm } from "@/features/evm/history-list-evm";
 import { useTranslation } from "@/i18n/use-translation";
 import { useWalletStore } from "@/stores/wallet-store";
 
+import { AllTokensList } from "./all-tokens-list";
+import { NetworkCard } from "./network-card";
+import { SangoHeroCard } from "./sango-hero-card";
+
 /**
- * Dashboard unifié SANGO + EVM + Bitcoin (E2.1.b.6.2).
+ * Dashboard unifié — Phase 9.1.
  *
- * **D-E2.1-18** — dispatch sur `family` (dérivée de `networkId`), pas
- * sur `format`. `format === "bip39"` couvre EVM **et** Bitcoin :
- * ce n'est pas un discriminant valide pour la famille.
+ * **Ordre des sections** (D9-a → i) :
+ *   1. WalletSwitcher        — identité du portefeuille actif
+ *   2. Actions               — Acheter / Échanger / Envoyer / Recevoir
+ *   3. SangoHeroCard         — coin natif de la plateforme, mis en avant
+ *   4. NetworkCard           — réseau actif + bouton "Changer"
+ *   5. AllTokensList         — actifs cross-chain (hors SANGO)
+ *   6. Activité récente      — dispatch par famille (agrégat en 9.3)
  *
- * Slot par slot :
- *
- *   ActionsRow   → QuickActions | QuickActionsEvm | QuickActionsBitcoin
- *   HeroCard     → BalanceCard | BalanceCardEvm | BitcoinBalanceCard
- *   AssetSection → AssetList  | AssetListEvm  | BitcoinAssetList
- *   Activity     → RecentActivity | HistoryListEvm | ComingSoon
- *   Staking      → MyStakingCard | (absent)
- *   NetworkInfo  → NetworkOverviewCard | (absent)
- *
- * Le slot Bitcoin "Activité" reste un placeholder (ComingSoon)
- * jusqu'à un futur patch history Bitcoin.
+ * **Retirés du dashboard principal** (D9-g·A, D9-h·A) :
+ *   - `MyStakingCard` — reste accessible via `/validators`.
+ *   - `NetworkOverviewCard` — info réseau dans `/settings` (network card).
+ *   - `OtherAssetsList` — redondant avec `WalletSwitcher`.
+ *   - Anciens `BalanceCard*` / `AssetList*` — remplacés par `SangoHeroCard`
+ *     + `AllTokensList`.
  */
 export function UnifiedDashboard() {
   const t = useTranslation();
@@ -59,41 +55,28 @@ export function UnifiedDashboard() {
         </h1>
       </div>
 
-      <div className="space-y-8">
-        {/* Actions rapides */}
+      <div className="space-y-6">
+        {/* 1. WalletSwitcher — identité du portefeuille */}
+        <WalletSwitcher />
+
+        {/* 2. Actions rapides */}
         {isSango && <QuickActions />}
         {family === "evm" && <QuickActionsEvm />}
         {isBitcoin && <QuickActionsBitcoin />}
 
-        {/* Hero card (solde + adresse) */}
-        {isSango && <BalanceCard />}
-        {family === "evm" && <BalanceCardEvm />}
-        {isBitcoin && <BitcoinBalanceCard />}
+        {/* 3. Grande carte SANGO — coin natif mis en avant */}
+        <SangoHeroCard />
 
-        {/* Card wallet unifiée (Phase 3.3, D1·A). Affiche wallet +
-            compte actif en une ligne. `useWallets().activeWallet` est
-            null après lock() → cachée. */}
-        <WalletSwitcher />
+        {/* 4. Carte réseau actif + changement */}
+        <NetworkCard />
 
-        {/* Autres cryptos (Phase 4, D1·A) — agrégation cross-wallet.
-            Retourne null si < 2 wallets déverrouillés. */}
-        <OtherAssetsList />
-
-        {/* Tokens — Phase 8 : liste multi-chain unifiée (SANGO en
-            premier, puis triés par valeur fiat décroissante). Les
-            anciennes listes par famille ont été retirées. */}
+        {/* 5. Tokens cross-chain (SANGO exclu — cf. carte 3) */}
         <AllTokensList />
 
-        {/* Staking (SANGO uniquement) */}
-        {isSango && <MyStakingCard />}
-
-        {/* Activité récente */}
+        {/* 6. Activité récente — par famille (agrégat en 9.3) */}
         {isSango && <RecentActivity />}
         {family === "evm" && <HistoryListEvm />}
         {isBitcoin && <HistoryListBitcoin />}
-
-        {/* Réseau SANGO (height, validators — SANGO uniquement) */}
-        {isSango && <NetworkOverviewCard />}
       </div>
     </div>
   );

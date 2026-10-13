@@ -37,7 +37,13 @@ export function AllTokensList() {
       asset: (typeof assets)[number];
       fiatValue: number | null;
     };
-    const enriched: Enriched[] = assets.map((asset) => {
+    // **Phase 9.1 (D9-e·A)** — SANGO est exclu de la liste : il
+    // dispose de sa propre carte (`SangoHeroCard`, section 3 du
+    // dashboard).
+    const filtered = assets.filter(
+      (a) => getDisplayAssetId(a) !== "sango",
+    );
+    const enriched: Enriched[] = filtered.map((asset) => {
       const price = prices[getDisplayAssetId(asset).toLowerCase()];
       if (!price || asset.balance === null) {
         return { asset, fiatValue: null };

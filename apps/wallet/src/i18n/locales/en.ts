@@ -182,6 +182,17 @@ export const en = {
       countSingular: "{n} asset",
       countPlural: "{n} assets",
     },
+    sangoCard: {
+      subtitle: "SangoCoin · native chain",
+    },
+    networkCard: {
+      title: "Active network",
+      change: "Change",
+    },
+    networkPicker: {
+      title: "Change network",
+      done: "Done",
+    },
     otherAssets: {
       title: "Other assets",
       manage: "Manage",
