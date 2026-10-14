@@ -304,7 +304,10 @@ export function SendEvmRoute() {
             }}
             className="flex h-12 w-full rounded-xl border border-input bg-background px-3.5 text-sm outline-none transition-colors focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <option value="eth">ETH — natif</option>
+            {/* **Phase 10.2.1** — le label natif dépend du réseau
+                (ETH sur Ethereum/Base/Arbitrum, BNB sur BSC).
+                La valeur sentinelle reste `"eth"` (interne). */}
+            <option value="eth">{nativeSymbol} — natif</option>
             {availableTokens.map((t) => (
               <option key={t.contract} value={t.contract}>
                 {t.metadata.symbol} — {t.metadata.name}
