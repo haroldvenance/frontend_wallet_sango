@@ -1,7 +1,7 @@
 import type { Address, Token } from "@sango/wallet-chains";
 import { evmNetworkById } from "@sango/wallet-chains";
 import { Send } from "lucide-react";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -67,14 +67,41 @@ export function SendEvmRoute() {
   const [searchParams] = useSearchParams();
   const prefillAsset = searchParams.get("asset")?.toLowerCase() ?? null;
 
-  // Token sélectionné : "eth" (string sentinel) ou contrat du token.
-  // Init : si `?asset=usdc` est fourni ET que le token correspondant
-  // existe sur le réseau courant, on le sélectionne. Sinon "eth".
-  const [selected, setSelected] = useState<string>(() => {
-    if (!prefillAsset) return "eth";
-    if (prefillAsset === "eth" || prefillAsset === "bnb") return "eth";
-    return prefillAsset; // ex. "usdc" — peut être vide si pas dispo
-  });
+  // Token sélectionné : `"eth"` (sentinelle native — nom figé, indépendant
+  // du réseau) ou contrat ERC-20 `0x…`.
+  const [selected, setSelected] = useState<string>("eth");
+
+  // **Phase 10.2.2** — préfill via useEffect, car `?asset=usdt` (assetId
+  // humain) doit être résolu en contrat `0x…` une fois les tokens
+  // chargés. Le `useRef` garantit que l'application est one-shot (ne
+  // réécrase pas un choix manuel de l'utilisateur).
+  const prefillAppliedRef = useRef(false);
+  useEffect(() => {
+    if (prefillAppliedRef.current) return;
+    if (!prefillAsset) {
+      prefillAppliedRef.current = true;
+      return;
+    }
+    if (!tokensWithBalance) return; // attend le chargement
+
+    // Natif ? On compare au `nativeAsset` du contexte (eth / bnb).
+    if (prefillAsset === nativeAsset) {
+      setSelected("eth");
+      prefillAppliedRef.current = true;
+      return;
+    }
+    // Token ? Match sur assetId (`usdt`) OU symbol lowercase (`usdt`).
+    const match = tokensWithBalance.find(
+      (t) =>
+        t.token.assetId.toLowerCase() === prefillAsset ||
+        t.token.metadata.symbol.toLowerCase() === prefillAsset,
+    );
+    if (match) {
+      setSelected(match.token.contract);
+    }
+    prefillAppliedRef.current = true;
+  }, [prefillAsset, tokensWithBalance, nativeAsset]);
+
   const selectedToken: Token | undefined = availableTokens.find(
     (t) => t.contract === selected,
   );
