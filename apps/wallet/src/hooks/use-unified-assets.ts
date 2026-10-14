@@ -17,6 +17,31 @@ import { useSdkStore } from "@/stores/sdk-store";
 import { useWalletStore } from "@/stores/wallet-store";
 
 /**
+ * **Phase 9.3.bis** — Enveloppe une promesse avec un timeout.
+ *
+ * Le type de retour est **explicite** (`Promise<T>`), ce qui permet à
+ * TS d'inférer correctement `T` au call site. Contrairement à un
+ * `Promise.race([p, timeoutAfter()])` où le helper retourne un
+ * `Promise<T>` fantôme jamais résolu, ici la signature dit clairement
+ * « je retourne exactement `p` ou je rejette ».
+ *
+ * Utilisé pour ne pas bloquer l'agrégat sur un RPC lent
+ * (mempool.space, devnet SANGO éteint).
+ */
+function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  message: string,
+): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error(message)), ms);
+    }),
+  ]);
+}
+
+/**
  * Agrégation des balances cross-wallet (Phase 4, D1·A).
  *
  * **Contrat** (D-Phase4) :
@@ -143,7 +168,15 @@ export async function fetchWalletAssetsWith(
   };
   let nativeBalance: bigint | null = null;
   try {
-    const bal = await session.getBalance(account, nativeRef);
+    // **Phase 9.3.bis** — timeout 15 s. Certains RPC (mempool.space
+    // mainnet, devnet SANGO éteint) peuvent rester bloqués
+    // indéfiniment ; on veut pouvoir afficher `0` plutôt que de
+    // laisser la ligne en chargement perpétuel.
+    const bal = await withTimeout(
+      session.getBalance(account, nativeRef),
+      15_000,
+      `getBalance(${plan.networkId}) timed out`,
+    );
     nativeBalance = bal.amount;
   } catch {
     nativeBalance = null;
@@ -174,7 +207,11 @@ export async function fetchWalletAssetsWith(
     for (const token of tokens) {
       let bal: bigint | null = null;
       try {
-        bal = await session.getTokenBalance(account, token);
+        bal = await withTimeout(
+          session.getTokenBalance(account, token),
+          15_000,
+          `getTokenBalance(${token.assetId}) timed out`,
+        );
       } catch {
         bal = null;
       }
@@ -268,4 +305,3 @@ export function useUnifiedAssets(): UseUnifiedAssetsResult {
     return { assets: flat, loading };
   }, [results]);
 }
-

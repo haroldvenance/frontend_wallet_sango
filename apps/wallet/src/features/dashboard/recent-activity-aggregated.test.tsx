@@ -121,6 +121,8 @@ describe("RecentActivityAggregated — Phase 9.3", () => {
       refetch: () => {},
     });
     renderComponent();
-    expect(screen.getByText(/Indisponible/)).toBeTruthy();
+    // Phase 9.3.bis — message changé de "Indisponible" à
+    // "Sources en attente" (temporisation RPC, pas une erreur).
+    expect(screen.getByText(/Sources en attente/)).toBeTruthy();
   });
 });

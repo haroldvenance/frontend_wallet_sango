@@ -369,7 +369,7 @@ export const en = {
     title: "Recent activity",
     subtitle: "All chains combined",
     empty: "No transactions",
-    sourcesUnavailable: "Unavailable: {networks}",
+    sourcesUnavailable: "Pending sources: {networks}",
     viewAll: "View all",
     demoNote: "Demo activity — transaction history will come from Sango RPC.",
     received: "Received SANGO",

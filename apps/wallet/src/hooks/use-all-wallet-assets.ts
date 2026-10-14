@@ -158,11 +158,15 @@ export function useAllWalletAssets(): UseAllWalletAssetsResult {
 
   return useMemo<UseAllWalletAssetsResult>(() => {
     const flat: WalletAsset[] = [];
-    let loading = false;
+    // **Phase 9.3.bis** — `loading` n'est vrai que si **toutes** les
+    // queries sont encore en vol. Dès qu'une seule a répondu, on
+    // considère l'agrégat comme partiellement prêt (les réseaux
+    // lents ne bloquent pas l'affichage des autres).
+    const allPending =
+      results.length > 0 && results.every((r) => r.isLoading);
     for (const r of results) {
-      if (r.isLoading) loading = true;
       if (r.data) flat.push(...r.data);
     }
-    return { assets: flat, loading };
+    return { assets: flat, loading: allPending };
   }, [results]);
 }
