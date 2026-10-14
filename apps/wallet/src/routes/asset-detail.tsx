@@ -179,7 +179,9 @@ export function AssetDetailRoute() {
         <ActionButton
           icon={<ArrowUpFromLine className="size-4" />}
           label={t.assetDetail.actions.send}
-          onClick={() => navigate("/send")}
+          onClick={() =>
+            navigate(`/send?network=${detail.networkId}&asset=${detail.assetId}`)
+          }
           testId="asset-action-send"
         />
         <ActionButton

@@ -413,6 +413,15 @@ export const fr: TranslationSchema = {
       recipient: "Destinataire",
       amount: "Montant",
       fees: "Frais estimés",
+      max: "MAX",
+      continue: "Continuer",
+    },
+    picker: {
+      title: "Envoyer",
+      subtitle: "Choisis un actif et un réseau",
+      empty: "Aucun actif disponible",
+      available: "Disponible",
+      zero: "Aucun solde",
     },
   },
   receive: {

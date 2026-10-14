@@ -1,26 +1,57 @@
-import { SendBitcoinRoute } from "./send-bitcoin";
-import { useWalletStore } from "@/stores/wallet-store";
+import { useSearchParams } from "react-router-dom";
 
-import { SangoSendRoute } from "./send-sango";
+import { SendAssetPicker } from "@/features/send/send-asset-picker";
+import { isKnownNetworkId, resolveChainFamily } from "@/lib/chain-family";
+import { NetworkOverrideProvider } from "@/providers/network-override-context";
+
+import { SendBitcoinRoute } from "./send-bitcoin";
 import { SendEvmRoute } from "./send-evm";
+import { SangoSendRoute } from "./send-sango";
 
 /**
- * Dispatcher `/send` — UX-2.a + E2.1.b.6.1.
+ * Dispatcher `/send` — Phase 10 (D10-b·A, D10-h·A).
  *
- * **D-E2.1-18** — dispatch sur `family` (dérivée de `networkId`),
- * pas sur `format`. `format === "bip39"` couvre EVM **et** Bitcoin :
- * ce n'est plus un proxy valide pour la famille.
+ * **Route canonique** : `/send?network=<networkId>&asset=<assetId>`.
  *
- *   family === "sango"   → <SangoSendRoute />
- *   family === "evm"     → <SendEvmRoute />
- *   family === "bitcoin" → <SendBitcoinRoute /> (E2.1.b.6.3)
+ * **Validation** :
+ *   - les deux params sont requis ;
+ *   - `networkId` doit être **connu** (`isKnownNetworkId`) ;
+ *   - la famille est dérivée via `resolveChainFamily(networkId)`.
  *
- * Les routes `/send-evm` et `/send-bitcoin` (à venir) resteront des
- * alias, mais le dispatch canonique est ici.
+ * **En cas de params manquants ou invalides** → `SendAssetPicker`.
+ * Aucun throw, aucune erreur bloquante : l'utilisateur revient au
+ * point de départ sans perdre le fil.
+ *
+ * **Override de réseau** : le sous-arbre est enveloppé dans un
+ * `NetworkOverrideProvider` avec le réseau dérivé des params. Tous
+ * les hooks consommateurs (`useNetworkQueryContext`,
+ * `useSendEvm`, `useBitcoinBalance`, `useAccount`…) voient le
+ * réseau demandé, indépendamment du réseau actif du store.
+ *
+ * Le store `useWalletStore.networkId` **n'est jamais modifié**.
  */
 export function SendRoute() {
-  const family = useWalletStore((s) => s.family);
-  if (family === "bitcoin") return <SendBitcoinRoute />;
-  if (family === "evm") return <SendEvmRoute />;
-  return <SangoSendRoute />;
+  const [searchParams] = useSearchParams();
+  const rawNetwork = searchParams.get("network");
+  const rawAsset = searchParams.get("asset");
+
+  // Aucun paramètre → picker.
+  if (!rawNetwork || !rawAsset) {
+    return <SendAssetPicker />;
+  }
+
+  // Paramètres invalides → picker (pas d'erreur bloquante).
+  if (!isKnownNetworkId(rawNetwork)) {
+    return <SendAssetPicker />;
+  }
+
+  const family = resolveChainFamily(rawNetwork);
+
+  return (
+    <NetworkOverrideProvider networkId={rawNetwork} family={family}>
+      {family === "bitcoin" && <SendBitcoinRoute />}
+      {family === "evm" && <SendEvmRoute />}
+      {family === "sango" && <SangoSendRoute />}
+    </NetworkOverrideProvider>
+  );
 }

@@ -14,7 +14,7 @@ import {
 import { useBitcoinBalance } from "@/hooks/use-bitcoin-balance";
 import { useBitcoinFeeRates } from "@/hooks/use-bitcoin-fee-rates";
 import { useSendBitcoin } from "@/hooks/use-send-bitcoin";
-import { useWalletStore } from "@/stores/wallet-store";
+import { useNetworkQueryContext } from "@/hooks/use-network-query-context";
 import {
   formatBitcoin,
   isValidBitcoinAddress,
@@ -36,7 +36,9 @@ type FeePriority = "fast" | "normal" | "slow" | "custom";
  * le builder qui la calcule au moment du send.
  */
 export function SendBitcoinRoute() {
-  const networkId = useWalletStore((s) => s.networkId);
+  // **Phase 10 (D10-a)** — `networkId` provient du contexte
+  // (override-aware).
+  const { networkId } = useNetworkQueryContext();
   const network = bitcoinNetworkById(networkId);
   const btcNetwork: BitcoinNetwork =
     networkId === "bitcoin-mainnet" ? "mainnet" : "testnet";

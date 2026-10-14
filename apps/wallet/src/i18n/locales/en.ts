@@ -407,6 +407,15 @@ export const en = {
       recipient: "Recipient",
       amount: "Amount",
       fees: "Estimated fees",
+      max: "MAX",
+      continue: "Continue",
+    },
+    picker: {
+      title: "Send",
+      subtitle: "Choose an asset and a network",
+      empty: "No asset available",
+      available: "Available",
+      zero: "No balance",
     },
   },
   receive: {

@@ -25,7 +25,6 @@ import {
 } from "@/lib/eth";
 import { useNetworkQueryContext } from "@/hooks/use-network-query-context";
 import { useWalletSession } from "@/providers/wallet-session-context";
-import { useWalletStore } from "@/stores/wallet-store";
 
 /**
  * Envoi d'un actif EVM — ETH natif ou token ERC-20 (E1.6.a.5).
@@ -46,8 +45,10 @@ import { useWalletStore } from "@/stores/wallet-store";
  */
 export function SendEvmRoute() {
   const session = useWalletSession();
-  const networkId = useWalletStore((s) => s.networkId);
-  const { account } = useNetworkQueryContext();
+  // **Phase 10 (D10-a)** — `networkId`, `family`, `nativeAsset`
+  // proviennent du contexte (override-aware). Le store n'est plus lu
+  // directement ici.
+  const { account, networkId, nativeAsset } = useNetworkQueryContext();
   const { data: evmAccount } = useEvmAccount();
   const { data: tokensWithBalance } = useEvmTokens();
   const sendEvm = useSendEvm();
@@ -120,13 +121,19 @@ export function SendEvmRoute() {
       return;
     }
 
+    // **Phase 10** — `assetId` natif résolu par le contexte
+    // (eth sur Ethereum/Base/Arbitrum, bnb sur BSC).
     const assetRef = selectedToken
       ? ({
           kind: "token",
           networkId,
           contract: selectedToken.contract,
         } as const)
-      : ({ kind: "native", assetId: "eth", networkId } as const);
+      : ({
+          kind: "native",
+          assetId: nativeAsset ?? "eth",
+          networkId,
+        } as const);
 
     let cancelled = false;
     setFeeLoading(true);
@@ -159,7 +166,7 @@ export function SendEvmRoute() {
     return () => {
       cancelled = true;
     };
-  }, [session, to, amount, networkId, account, selectedToken]);
+  }, [session, to, amount, networkId, account, selectedToken, nativeAsset]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();

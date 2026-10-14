@@ -6,6 +6,7 @@ import {
 } from "@sango/wallet-chains";
 import type { AccountRef, ChainFamily } from "@sango/wallet-chains";
 
+import { useNetworkOverride } from "@/providers/network-override-context";
 import { useSdkStore } from "@/stores/sdk-store";
 import {
   selectActiveAccountIndex,
@@ -14,6 +15,10 @@ import {
 
 /**
  * Contexte de réseau pour les queries React Query.
+ *
+ * **Phase 10 (D10-a)** — lit un éventuel `NetworkOverrideContext`
+ * s'il est présent dans l'arbre React. Sinon, retombe sur le store.
+ * Voir `providers/network-override-context.tsx`.
  *
  * **Source de vérité** (D-SIGNER-1) :
  *
@@ -65,12 +70,19 @@ export interface NetworkQueryContext {
 }
 
 export function useNetworkQueryContext(): NetworkQueryContext {
+  const override = useNetworkOverride();
   const sangoEndpoint = useSdkStore((s) => s.endpoint);
-  const family = useWalletStore((s) => s.family);
-  const networkId = useWalletStore((s) => s.networkId);
+  const storeFamily = useWalletStore((s) => s.family);
+  const storeNetworkId = useWalletStore((s) => s.networkId);
   // Phase 2.3 (D-Phase2-1) — index de compte actif, lu via sélecteur.
   // Fallback 0 : SANGO legacy, wallet sans entrée, activeId null.
   const accountIndex = useWalletStore(selectActiveAccountIndex);
+
+  // **Phase 10 (D10-a)** — l'override (NetworkOverrideContext) prime
+  // sur le store si présent. Hors du form Send, `override === null` et
+  // le comportement historique est strictement préservé.
+  const family = override?.family ?? storeFamily;
+  const networkId = override?.networkId ?? storeNetworkId;
 
   return useMemo(() => {
     const nativeAsset = resolveNativeAsset(family, networkId);
