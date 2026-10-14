@@ -61,6 +61,8 @@ export function SangoSendRoute() {
 
   return (
     <SendShell
+      assetId="sango"
+      networkId="sango-devnet"
       title={`Envoyer SANGO`}
       subtitle="Sango native chain"
       balanceCard={
@@ -80,7 +82,7 @@ export function SangoSendRoute() {
             placeholder={t.send.recipientPlaceholder}
             spellCheck={false}
             autoComplete="off"
-            className="flex h-11 w-full rounded-xl border border-input bg-background px-3 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex h-12 w-full rounded-xl border border-input bg-background px-3.5 font-mono text-xs outline-none transition-colors focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
           />
         </SendField>
 
@@ -102,7 +104,7 @@ export function SangoSendRoute() {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder={t.send.amountPlaceholder}
-            className="flex h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex h-12 w-full rounded-xl border border-input bg-background px-3.5 text-sm outline-none transition-colors focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
           />
         </SendField>
 
@@ -111,6 +113,7 @@ export function SangoSendRoute() {
           pending={sendTx.isPending}
           pendingLabel={t.send.sending}
           icon={<Send className="size-4" />}
+          assetId="sango"
         />
       </form>
     </SendShell>

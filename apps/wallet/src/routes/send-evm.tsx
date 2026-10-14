@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { ExplorerLinkEvm } from "@/features/evm/explorer-link-evm";
 import {
   SendBalanceCard,
+  SendField,
   SendShell,
   SendSubmit,
 } from "@/features/send/send-shell";
@@ -254,6 +255,12 @@ export function SendEvmRoute() {
 
   return (
     <SendShell
+      assetId={
+        selected === "eth"
+          ? nativeAsset ?? "eth"
+          : selectedToken?.assetId ?? nativeAsset ?? "eth"
+      }
+      networkId={networkId}
       title={`Envoyer ${symbol}`}
       subtitle={networkName}
       balanceCard={
@@ -295,7 +302,7 @@ export function SendEvmRoute() {
               setAmount("");
               setFeeHint(null);
             }}
-            className="mt-1 flex h-10 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex h-12 w-full rounded-xl border border-input bg-background px-3.5 text-sm outline-none transition-colors focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
           >
             <option value="eth">ETH — natif</option>
             {availableTokens.map((t) => (
@@ -306,8 +313,7 @@ export function SendEvmRoute() {
           </select>
         </label>
 
-        <label className="block">
-          <span className="text-xs font-medium">Destinataire</span>
+        <SendField label="Destinataire">
           <input
             type="text"
             value={to}
@@ -316,12 +322,11 @@ export function SendEvmRoute() {
             spellCheck={false}
             autoCapitalize="none"
             autoComplete="off"
-            className="mt-1 flex h-10 w-full rounded-xl border border-input bg-background px-3 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex h-12 w-full rounded-xl border border-input bg-background px-3.5 font-mono text-xs outline-none transition-colors focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
           />
-        </label>
+        </SendField>
 
-        <label className="block">
-          <span className="text-xs font-medium">Montant ({symbol})</span>
+        <SendField label={`Montant (${symbol})`}>
           <div className="relative">
             <input
               type="text"
@@ -329,7 +334,7 @@ export function SendEvmRoute() {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder={selectedToken ? "1.00" : "0.01"}
-              className="mt-1 flex h-10 w-full rounded-xl border border-input bg-background px-3 pr-16 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex h-12 w-full rounded-xl border border-input bg-background px-3.5 pr-16 text-sm outline-none transition-colors focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
             />
             {selectedBalance !== null && selectedBalance > 0n && (
               <button
@@ -358,22 +363,22 @@ export function SendEvmRoute() {
               </button>
             )}
           </div>
-          {selectedToken && amount && (
-            <p className="mt-1.5 text-xs text-muted-foreground">
-              ≈{" "}
-              {(() => {
-                try {
-                  return formatStablecoinUsd(
-                    parseTokenAmount(amount, selectedToken.metadata.decimals),
-                    selectedToken.metadata.decimals,
-                  );
-                } catch {
-                  return "—";
-                }
-              })()}
-            </p>
-          )}
-        </label>
+        </SendField>
+        {selectedToken && amount && (
+          <p className="text-xs text-muted-foreground">
+            ≈{" "}
+            {(() => {
+              try {
+                return formatStablecoinUsd(
+                  parseTokenAmount(amount, selectedToken.metadata.decimals),
+                  selectedToken.metadata.decimals,
+                );
+              } catch {
+                return "—";
+              }
+            })()}
+          </p>
+        )}
 
         {feeHint && (
           <div className="rounded-xl border bg-muted/30 p-3 text-[11px] text-muted-foreground">

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { MainnetWarning } from "@/features/evm/mainnet-warning";
 import {
   SendBalanceCard,
+  SendField,
   SendShell,
   SendSubmit,
 } from "@/features/send/send-shell";
@@ -130,6 +131,8 @@ export function SendBitcoinRoute() {
 
   return (
     <SendShell
+      assetId="btc"
+      networkId={networkId}
       title="Envoyer BTC"
       subtitle={network?.name ?? networkId}
       balanceCard={
@@ -163,8 +166,7 @@ export function SendBitcoinRoute() {
       <MainnetWarning networkId={networkId} className="mt-4" />
 
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
-        <label className="block">
-          <span className="text-xs font-medium">Destinataire</span>
+        <SendField label="Destinataire">
           <input
             type="text"
             value={to}
@@ -173,26 +175,25 @@ export function SendBitcoinRoute() {
             spellCheck={false}
             autoCapitalize="none"
             autoComplete="off"
-            className="mt-1 flex h-10 w-full rounded-xl border border-input bg-background px-3 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex h-12 w-full rounded-xl border border-input bg-background px-3.5 font-mono text-xs outline-none transition-colors focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
           />
-          {toTrimmed && !toValid && (
-            <p className="mt-1 text-[11px] text-destructive">
-              Adresse P2WPKH invalide pour ce réseau.
-            </p>
-          )}
-        </label>
+        </SendField>
+        {toTrimmed && !toValid && (
+          <p className="text-[11px] text-destructive">
+            Adresse P2WPKH invalide pour ce réseau.
+          </p>
+        )}
 
-        <label className="block">
-          <span className="text-xs font-medium">Montant (BTC)</span>
+        <SendField label="Montant (BTC)">
           <input
             type="text"
             inputMode="decimal"
             value={amountInput}
             onChange={(e) => setAmountInput(e.target.value)}
             placeholder="0.001"
-            className="mt-1 flex h-10 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex h-12 w-full rounded-xl border border-input bg-background px-3.5 text-sm outline-none transition-colors focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
           />
-        </label>
+        </SendField>
 
         <fieldset className="rounded-xl border bg-card p-3">
           <legend className="px-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -278,6 +279,7 @@ export function SendBitcoinRoute() {
           pending={send.isPending}
           pendingLabel="Envoi…"
           icon={<Send className="size-4" />}
+          assetId="btc"
         />
       </form>
     </SendShell>
