@@ -7,6 +7,7 @@ import {
 } from "@/hooks/use-all-wallet-assets";
 import { useWalletAssetPrices } from "@/hooks/use-wallet-asset-prices";
 import { useTranslation } from "@/i18n/use-translation";
+import { useWalletStore } from "@/stores/wallet-store";
 
 import { WalletAssetRow } from "./wallet-asset-row";
 
@@ -29,6 +30,7 @@ import { WalletAssetRow } from "./wallet-asset-row";
 export function AllTokensList() {
   const t = useTranslation();
   const navigate = useNavigate();
+  const activeNetworkId = useWalletStore((s) => s.networkId);
   const { assets, loading } = useAllWalletAssets();
   const { prices } = useWalletAssetPrices(assets.map(getDisplayAssetId));
 
@@ -38,17 +40,18 @@ export function AllTokensList() {
       fiatValue: number | null;
     };
     // **Phase 9.1 (D9-e·A)** — SANGO exclu (carte dédiée).
-    // **Phase 9.2 (D9-d·A)** — garde-fou production :
-    //   - les natifs sont toujours visibles (ils définissent les
-    //     réseaux supportés : ETH, BNB, BTC) ;
-    //   - les tokens (USDC/USDT) ne sont affichés que si le solde
-    //     est > 0, pour éviter 12 lignes « 0 USDT » à zéro.
-    // Un solde en erreur (`balance === null`) n'est PAS traité comme
-    // un solde nul — il est masqué pour ne pas mentir.
+    // **Phase 9.2 (D9-d·A)** — natifs toujours visibles.
+    // **Phase 9.5.a** — tokens affichés :
+    //   - TOUJOURS sur le réseau actif (l'utilisateur voit ce qui
+    //     est disponible : `USDC · Ethereum`, `USDT · Ethereum`) ;
+    //   - sur les autres réseaux, uniquement si balance > 0.
+    // Un solde en erreur (`balance === null`) sur le réseau actif
+    // est affiché avec `—` (pas `0`, pas masqué).
     const filtered = assets.filter((a) => {
       const id = getDisplayAssetId(a);
       if (id === "sango") return false;
       if (a.kind === "native") return true;
+      if (a.networkId === activeNetworkId) return true;
       return a.balance !== null && a.balance > 0n;
     });
     const enriched: Enriched[] = filtered.map((asset) => {
@@ -76,7 +79,7 @@ export function AllTokensList() {
     });
 
     return enriched;
-  }, [assets, prices]);
+  }, [assets, prices, activeNetworkId]);
 
   const count = sorted.length;
   const countLabel =

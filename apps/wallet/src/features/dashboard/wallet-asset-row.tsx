@@ -73,15 +73,21 @@ export function WalletAssetRow({ asset, price, onClick }: Props) {
         </div>
       </div>
 
-      {/* Nom + prix */}
+      {/* Nom + réseau + prix */}
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <p className="truncate text-sm font-semibold">{asset.symbol}</p>
           {isSango && (
             <span className="shrink-0 rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-medium text-primary">
               NATIF
             </span>
           )}
+          {/* **Phase 9.5.a** — nom du réseau affiché inline pour
+              distinguer `ETH · Ethereum` de `ETH · Base` et
+              `ETH · Arbitrum One` (mêmes symbole + logo). */}
+          <span className="truncate text-[10px] text-muted-foreground">
+            · {asset.subtitle}
+          </span>
         </div>
         <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
           <span className="font-mono">{priceStr}</span>

@@ -105,3 +105,40 @@ describe("WalletAssetRow — Phase 8", () => {
     expect(cb).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("WalletAssetRow — Phase 9.5.a (network name)", () => {
+  it("affiche le nom du réseau à côté du symbole", () => {
+    render(
+      <WalletAssetRow
+        asset={makeAsset({ subtitle: "Ethereum" })}
+        price={{ usd: 2500, change24hPct: null }}
+        onClick={() => {}}
+      />,
+    );
+    // Le sous-titre contient "· Ethereum"
+    expect(screen.getByText(/· Ethereum/)).toBeTruthy();
+  });
+
+  it("distingue 2 ETH par leur sous-titre réseau", () => {
+    const { rerender } = render(
+      <WalletAssetRow
+        asset={makeAsset({ subtitle: "Base", networkId: "base" })}
+        price={{ usd: 2500, change24hPct: null }}
+        onClick={() => {}}
+      />,
+    );
+    expect(screen.getByText(/· Base/)).toBeTruthy();
+
+    rerender(
+      <WalletAssetRow
+        asset={makeAsset({
+          subtitle: "Arbitrum One",
+          networkId: "arbitrum-one",
+        })}
+        price={{ usd: 2500, change24hPct: null }}
+        onClick={() => {}}
+      />,
+    );
+    expect(screen.getByText(/· Arbitrum One/)).toBeTruthy();
+  });
+});
