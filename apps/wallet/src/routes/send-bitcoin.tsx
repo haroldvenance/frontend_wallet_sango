@@ -43,7 +43,7 @@ export function SendBitcoinRoute() {
   const btcNetwork: BitcoinNetwork =
     networkId === "bitcoin-mainnet" ? "mainnet" : "testnet";
 
-  const { data: balance } = useBitcoinBalance();
+  const { data: balance, isLoading: balanceLoading } = useBitcoinBalance();
   const { data: feeRates, isLoading: feeLoading } = useBitcoinFeeRates();
   const send = useSendBitcoin();
 
@@ -75,7 +75,12 @@ export function SendBitcoinRoute() {
     ? isValidBitcoinAddress(toTrimmed, btcNetwork)
     : false;
 
-  const balanceDisplay = balance ? formatBitcoin(balance.amount) : "—";
+  // **Phase 10.1** — loading → "…", erreur → "0", sinon valeur.
+  const balanceDisplay = balance
+    ? formatBitcoin(balance.amount)
+    : balanceLoading
+      ? "…"
+      : "0";
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();

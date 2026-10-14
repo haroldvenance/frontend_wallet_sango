@@ -19,7 +19,7 @@ const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 
 export function SangoSendRoute() {
   const t = useTranslation();
-  const { data: account } = useAccount();
+  const { data: account, isLoading: accountLoading } = useAccount();
   const sendTx = useSendTx();
 
   const [to, setTo] = useState("");
@@ -52,7 +52,12 @@ export function SangoSendRoute() {
     await sendTx.mutateAsync({ to: to as AddressHex, amountBaseUnits });
   }
 
-  const balanceStr = account ? formatSango(account.balance) : "0";
+  // **Phase 10.1** — loading → "…", sinon valeur (0 si absent).
+  const balanceStr = account
+    ? formatSango(account.balance)
+    : accountLoading
+      ? "…"
+      : "0";
 
   return (
     <SendShell

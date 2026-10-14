@@ -1,8 +1,9 @@
 import { ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { AssetLogo } from "@/components/branding/asset-logo";
+import { useTranslation } from "@/i18n/use-translation";
 
 /**
  * Enveloppe visuelle commune aux 3 routes Send — Phase 7 (D7-c·A).
@@ -28,14 +29,25 @@ export function SendShell({
   balanceCard,
   children,
 }: SendShellProps) {
+  const navigate = useNavigate();
+  const t = useTranslation();
   return (
     <div className="mx-auto max-w-md px-4 py-6 sm:px-6">
-      <Link
-        to="/"
-        className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+      {/* **Phase 10.1** — Retour à la page précédente. Fallback sur
+          `/` si l'historique est vide (lien direct, bookmark). */}
+      <button
+        type="button"
+        onClick={() => {
+          if (window.history.length > 1) {
+            navigate(-1);
+          } else {
+            navigate("/");
+          }
+        }}
+        className="inline-flex items-center gap-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
       >
-        <ArrowLeft className="size-3" /> Retour
-      </Link>
+        <ArrowLeft className="size-3" /> {t.send.shell.back}
+      </button>
 
       <header className="mt-6">
         <h1 className="text-xl font-semibold tracking-tight">{title}</h1>

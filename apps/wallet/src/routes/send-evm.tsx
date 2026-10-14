@@ -230,26 +230,42 @@ export function SendEvmRoute() {
     }
   }
 
-  const symbol = selectedToken?.metadata.symbol ?? "ETH";
-  const balanceDisplay =
-    selectedBalance !== null
-      ? selectedToken
-        ? formatTokenAmount(selectedBalance, selectedToken.metadata.decimals)
-        : formatNativeShort(selectedBalance)
-      : null;
+  // **Phase 10.1** — le symbole natif dépend du réseau (ETH sur
+  // Ethereum/Base/Arbitrum, BNB sur BSC). `nativeAsset` vient du
+  // contexte (override-aware).
+  const nativeSymbol = (nativeAsset ?? "eth").toUpperCase();
+  const symbol = selectedToken?.metadata.symbol ?? nativeSymbol;
+
+  // Balance affichée : loading → "…", erreur → "0", sinon valeur.
+  const balanceDisplay = (() => {
+    if (selectedBalance !== null) {
+      if (selectedToken) {
+        return formatTokenAmount(
+          selectedBalance,
+          selectedToken.metadata.decimals,
+        );
+      }
+      return formatNativeShort(selectedBalance);
+    }
+    // `selectedBalance === null` : soit en chargement, soit erreur.
+    // On affiche "…" pour distinguer du vrai zéro (UX).
+    return "…";
+  })();
 
   return (
     <SendShell
       title={`Envoyer ${symbol}`}
       subtitle={networkName}
       balanceCard={
-        balanceDisplay !== null ? (
-          <SendBalanceCard
-            assetId={selected === "eth" ? (network?.nativeAsset ?? "eth") : selectedToken?.assetId ?? "eth"}
-            balance={balanceDisplay}
-            symbol={symbol}
-          />
-        ) : null
+        <SendBalanceCard
+          assetId={
+            selected === "eth"
+              ? nativeAsset ?? "eth"
+              : selectedToken?.assetId ?? nativeAsset ?? "eth"
+          }
+          balance={balanceDisplay}
+          symbol={symbol}
+        />
       }
     >
 
