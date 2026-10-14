@@ -44,10 +44,13 @@ function rawTx(overrides: Record<string, string | undefined> = {}) {
 // ── Tests ────────────────────────────────────────────────────
 
 describe("EtherscanIndexer — construction", () => {
-  it("rejects a missing apiKey", () => {
+  it("accepts an empty apiKey (Routescan, Phase 9.5.b)", () => {
+    // Phase 9.5.b — `apiKey: ""` est désormais valide : Routescan et
+    // autres indexeurs compatibles Etherscan n'exigent pas de clé.
+    // Le `apikey` est simplement omis de l'URL.
     expect(
       () => new EtherscanIndexer({ apiKey: "", chainId: 1 }),
-    ).toThrow(/apiKey/);
+    ).not.toThrow();
   });
 
   it("rejects an invalid chainId", () => {
