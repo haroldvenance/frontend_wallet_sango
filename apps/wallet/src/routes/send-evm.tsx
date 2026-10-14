@@ -1,11 +1,15 @@
 import type { Address, Token } from "@sango/wallet-chains";
 import { evmNetworkById } from "@sango/wallet-chains";
 import { Send } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { ExplorerLinkEvm } from "@/features/evm/explorer-link-evm";
+import {
+  AssetSelect,
+  type AssetSelectOption,
+} from "@/features/send/asset-select";
 import {
   SendBalanceCard,
   SendField,
@@ -57,12 +61,6 @@ export function SendEvmRoute() {
   const network = evmNetworkById(networkId);
   const networkName = network?.name ?? networkId;
 
-  // Liste des tokens disponibles (ETH en premier, puis tokens configurés).
-  const availableTokens = useMemo(
-    () => (tokensWithBalance ?? []).map((t) => t.token),
-    [tokensWithBalance],
-  );
-
   // Prefill via query param `/send?asset=usdc` (D7-d·A).
   const [searchParams] = useSearchParams();
   const prefillAsset = searchParams.get("asset")?.toLowerCase() ?? null;
@@ -102,9 +100,9 @@ export function SendEvmRoute() {
     prefillAppliedRef.current = true;
   }, [prefillAsset, tokensWithBalance, nativeAsset]);
 
-  const selectedToken: Token | undefined = availableTokens.find(
-    (t) => t.contract === selected,
-  );
+  const selectedToken: Token | undefined = tokensWithBalance
+    ?.find((x) => x.token.contract === selected)
+    ?.token;
 
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
@@ -264,6 +262,32 @@ export function SendEvmRoute() {
   const nativeSymbol = (nativeAsset ?? "eth").toUpperCase();
   const symbol = selectedToken?.metadata.symbol ?? nativeSymbol;
 
+  // **Phase 10.3** — options du dropdown custom.
+  const assetOptions: AssetSelectOption[] = [
+    {
+      id: "eth",
+      assetId: nativeAsset ?? "eth",
+      symbol: nativeSymbol,
+      name: `${nativeSymbol} · natif`,
+      balance:
+        evmAccount
+          ? formatNativeShort(evmAccount.balance)
+          : "…",
+      isNative: true,
+    },
+    ...(tokensWithBalance ?? []).map(({ token, balance }) => ({
+      id: token.contract,
+      assetId: token.assetId,
+      symbol: token.metadata.symbol,
+      name: token.metadata.name,
+      balance:
+        balance === null
+          ? "—"
+          : formatTokenAmount(balance, token.metadata.decimals),
+      isNative: false,
+    })),
+  ];
+
   // Balance affichée : loading → "…", erreur → "0", sinon valeur.
   const balanceDisplay = (() => {
     if (selectedBalance !== null) {
@@ -320,28 +344,18 @@ export function SendEvmRoute() {
       <MainnetWarning networkId={networkId} className="mt-4" />
 
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
-        <label className="block">
-          <span className="text-xs font-medium">Actif</span>
-          <select
+        <div>
+          <span className="mb-1.5 block text-xs font-medium">Actif</span>
+          <AssetSelect
             value={selected}
-            onChange={(e) => {
-              setSelected(e.target.value);
+            onChange={(id) => {
+              setSelected(id);
               setAmount("");
               setFeeHint(null);
             }}
-            className="flex h-12 w-full rounded-xl border border-input bg-background px-3.5 text-sm outline-none transition-colors focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {/* **Phase 10.2.1** — le label natif dépend du réseau
-                (ETH sur Ethereum/Base/Arbitrum, BNB sur BSC).
-                La valeur sentinelle reste `"eth"` (interne). */}
-            <option value="eth">{nativeSymbol} — natif</option>
-            {availableTokens.map((t) => (
-              <option key={t.contract} value={t.contract}>
-                {t.metadata.symbol} — {t.metadata.name}
-              </option>
-            ))}
-          </select>
-        </label>
+            options={assetOptions}
+          />
+        </div>
 
         <SendField label="Destinataire">
           <input
