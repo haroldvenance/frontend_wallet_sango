@@ -24,6 +24,13 @@ import type { FetchLike } from "../rpc/rpc-pool";
  * Le UI l'utilise pour décider s'il faut afficher "Charger plus".
  */
 export interface EtherscanIndexerOptions {
+  /**
+   * Clé API Etherscan V2.
+   *
+   * **Phase 9.5.b** — optionnel. Passer une chaîne vide (ou omettre)
+   * pour utiliser un indexeur compatible Etherscan sans clé
+   * (ex. Routescan).
+   */
   readonly apiKey: string;
   /** ChainId décimal (Ethereum: 1, Sepolia: 11155111, Base: 8453, Arbitrum: 42161). */
   readonly chainId: number;
@@ -42,9 +49,9 @@ export class EtherscanIndexer implements EvmIndexer {
   readonly #baseUrl: string;
 
   constructor(options: EtherscanIndexerOptions) {
-    if (!options.apiKey) {
-      throw new Error("EtherscanIndexer: apiKey is required");
-    }
+    // **Phase 9.5.b** — `apiKey` optionnel. Les indexeurs compatibles
+    // Etherscan (Routescan) n'en ont pas besoin. Le paramètre est
+    // simplement omis de l'URL si vide.
     if (!Number.isInteger(options.chainId) || options.chainId <= 0) {
       throw new Error(
         `EtherscanIndexer: invalid chainId ${String(options.chainId)}`,
@@ -125,10 +132,16 @@ export class EtherscanIndexer implements EvmIndexer {
   }
 
   #buildUrl(params: Record<string, string>): string {
-    const qs = new URLSearchParams({
+    const base: Record<string, string> = {
       chainid: String(this.#chainId),
       ...params,
-    });
+    };
+    // **Phase 9.5.b** — `apikey` seulement s'il est non vide.
+    // Routescan et compatibles n'exigent pas de clé.
+    if (!this.#apiKey) {
+      delete base.apikey;
+    }
+    const qs = new URLSearchParams(base);
     return `${this.#baseUrl}?${qs.toString()}`;
   }
 

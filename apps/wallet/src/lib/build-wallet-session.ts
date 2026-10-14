@@ -31,7 +31,7 @@ import {
   type WalletSession,
 } from "@sango/wallet-session";
 import {
-  EtherscanIndexer,
+  createEvmIndexer,
   MempoolSpaceRpc,
   createRpcPool,
   EvmRpcUsingPool,
@@ -77,9 +77,12 @@ export function buildWalletSession(
     const evmRpc = new EvmRpcUsingPool(pool, network.id);
     const chainId = Number.parseInt(network.chainId, 16);
 
-    const indexer = ETHERSCAN_API_KEY
-      ? new EtherscanIndexer({ apiKey: ETHERSCAN_API_KEY, chainId })
-      : undefined;
+    // **Phase 9.5.b** — factory : Routescan pour BSC/Base,
+    // Etherscan V2 pour Ethereum/Arbitrum.
+    const indexer = createEvmIndexer({
+      chainId,
+      etherscanApiKey: ETHERSCAN_API_KEY || undefined,
+    });
 
     chainRegistry.register(network, () =>
       evmAdapterFactory(network, { rpc: evmRpc, signer, chainId, indexer }),
