@@ -45,6 +45,16 @@ export type { StoredWallet } from "./storage";
 export { Keyring } from "./keyring";
 export type { KeyringEntry } from "./keyring";
 
+// ── Phase 11.2 : changement de mot de passe ─────────────────────────
+
+export { reencryptStoredWallet } from "./storage";
+export { changeKeyringPassword } from "./change-password";
+export type {
+  ChangeKeyringPasswordArgs,
+  ChangeKeyringPasswordError,
+  ChangeKeyringPasswordResult,
+} from "./change-password";
+
 // ── E1 : primitives EVM (secp256k1, BIP-39, BIP-44) ──────────────
 
 export {

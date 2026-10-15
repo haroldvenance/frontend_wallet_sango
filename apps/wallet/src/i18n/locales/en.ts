@@ -671,6 +671,9 @@ export const en = {
         "Errors are always shown. Success/info toasts can be muted.",
       language: "Language",
       theme: "Theme",
+      showFiat: "Show fiat estimate",
+      showFiatHelp:
+        "Display an indicative conversion next to amounts. Off by default.",
       fiatCurrency: "Fiat currency",
       fiatCurrencyHelp:
         "Indicative conversion shown next to amounts. Not a market price.",
@@ -725,7 +728,28 @@ export const en = {
       m60: "60 minutes",
     },
     password: {
-      comingSoon: "Password change will be available in an upcoming update.",
+      changeTitle: "Change password",
+      changeIntro:
+        "Enter your current password, then choose a new one. Every wallet in the keyring will be re-encrypted.",
+      currentLabel: "Current password",
+      newLabel: "New password",
+      confirmLabel: "Confirm new password",
+      submit: "Change password",
+      submitting: "Changing…",
+      back: "Back to settings",
+      successTitle: "Password changed",
+      successBody:
+        "Your new password now encrypts every wallet in the keyring. It will be required to unlock the wallet.",
+      successAcknowledge: "Got it, lock and continue",
+      errors: {
+        tooShort: "New password must be at least 8 characters.",
+        mismatch: "The two new passwords do not match.",
+        sameAsCurrent: "New password must differ from the current one.",
+        wrongCurrent: "Current password is incorrect.",
+        emptyKeyring: "No wallet found in the keyring.",
+        generic:
+          "Could not change the password. Your old password is still valid.",
+      },
     },
     recoveryPhrase: {
       title: "Recovery phrase",

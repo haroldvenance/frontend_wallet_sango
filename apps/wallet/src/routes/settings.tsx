@@ -74,6 +74,8 @@ export function SettingsRoute() {
   );
   const fiatCurrency = usePreferencesStore((s) => s.fiatCurrency);
   const setFiatCurrency = usePreferencesStore((s) => s.setFiatCurrency);
+  const showFiat = usePreferencesStore((s) => s.showFiat);
+  const setShowFiat = usePreferencesStore((s) => s.setShowFiat);
 
   const [keyfileOpen, setKeyfileOpen] = useState(false);
   const [activeLabel, setActiveLabel] = useState<string | null>(null);
@@ -82,6 +84,12 @@ export function SettingsRoute() {
 
   const isSango = family === "sango";
   const isEvm = family === "evm";
+
+  const accountsCount = useWalletStore((s) => {
+    if (!s.activeId) return 1;
+    const entry = s.walletAccounts[s.activeId];
+    return (entry?.highestIndex ?? 0) + 1;
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -110,7 +118,7 @@ export function SettingsRoute() {
   }
 
   function onPasswordClick() {
-    toast.info(t.settings.password.comingSoon);
+    navigate("/settings/change-password");
   }
 
   const localeLabel =
@@ -149,7 +157,12 @@ export function SettingsRoute() {
               </span>
             </div>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              {t.settings.wallet.accountCount.replace("{n}", "1")}
+              {accountsCount === 1
+                ? t.settings.wallet.accountCount.replace("{n}", "1")
+                : t.settings.wallet.accountCountPlural.replace(
+                    "{n}",
+                    String(accountsCount),
+                  )}
             </p>
           </div>
           <button
@@ -279,6 +292,13 @@ export function SettingsRoute() {
           label={t.settings.items.theme}
           value={themeLabel}
           onClick={toggleTheme}
+        />
+        <SettingRowToggle
+          icon={<CheckCircle2 className="size-4" />}
+          label={t.settings.items.showFiat}
+          help={t.settings.items.showFiatHelp}
+          value={showFiat}
+          onChange={setShowFiat}
         />
         <SettingRow
           icon={<Coins className="size-4" />}

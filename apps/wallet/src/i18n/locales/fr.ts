@@ -678,6 +678,9 @@ export const fr: TranslationSchema = {
         "Les erreurs sont toujours affichées. Les toasts de succès peuvent être désactivés.",
       language: "Langue",
       theme: "Thème",
+      showFiat: "Afficher l'estimation fiat",
+      showFiatHelp:
+        "Affiche une conversion indicative à côté des montants. Désactivé par défaut.",
       fiatCurrency: "Devise d'affichage",
       fiatCurrencyHelp:
         "Estimation indicative affichée à côté des montants. Pas un prix de marché.",
@@ -732,7 +735,29 @@ export const fr: TranslationSchema = {
       m60: "60 minutes",
     },
     password: {
-      comingSoon: "Le changement de mot de passe sera disponible dans une prochaine mise à jour.",
+      changeTitle: "Changer le mot de passe",
+      changeIntro:
+        "Saisis ton mot de passe actuel, puis choisis-en un nouveau. Chaque portefeuille du keyring sera ré-encrypté.",
+      currentLabel: "Mot de passe actuel",
+      newLabel: "Nouveau mot de passe",
+      confirmLabel: "Confirmer le nouveau mot de passe",
+      submit: "Changer le mot de passe",
+      submitting: "Changement…",
+      back: "Retour aux paramètres",
+      successTitle: "Mot de passe changé",
+      successBody:
+        "Ton nouveau mot de passe chiffre désormais chaque portefeuille du keyring. Il sera requis pour déverrouiller le portefeuille.",
+      successAcknowledge: "Compris, verrouiller et continuer",
+      errors: {
+        tooShort: "Le nouveau mot de passe doit faire au moins 8 caractères.",
+        mismatch: "Les deux nouveaux mots de passe ne correspondent pas.",
+        sameAsCurrent:
+          "Le nouveau mot de passe doit être différent de l'actuel.",
+        wrongCurrent: "Le mot de passe actuel est incorrect.",
+        emptyKeyring: "Aucun portefeuille trouvé dans le keyring.",
+        generic:
+          "Impossible de changer le mot de passe. Ton ancien mot de passe reste valide.",
+      },
     },
     recoveryPhrase: {
       title: "Phrase de récupération",

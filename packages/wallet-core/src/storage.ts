@@ -132,6 +132,23 @@ function toHex(bytes: Uint8Array): string {
   return `0x${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
 }
 
+/** Inverse de `toHex` — accepte avec ou sans préfixe `0x`. */
+function hexToBytes(hex: string): Uint8Array {
+  const clean = hex.startsWith("0x") ? hex.slice(2) : hex;
+  if (clean.length % 2 !== 0) {
+    throw new Error(`hexToBytes: odd-length hex string (${hex.length} chars)`);
+  }
+  const out = new Uint8Array(clean.length / 2);
+  for (let i = 0; i < out.length; i++) {
+    const byte = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+    if (Number.isNaN(byte)) {
+      throw new Error(`hexToBytes: invalid hex character in "${hex}"`);
+    }
+    out[i] = byte;
+  }
+  return out;
+}
+
 /**
  * Chiffre un seed avec un mot de passe.
  *
@@ -285,3 +302,70 @@ export async function decryptBip39Secret(
   }
   return { seed };
 }
+
+// ── Phase 11.2 : ré-encryption (changement de mot de passe) ─────────
+
+/**
+ * Ré-encrypte un blob chiffré avec un nouveau mot de passe.
+ *
+ * **Invariants** :
+ *   - `version`, `format`, `network`, `addressHex`, `kdf`, `iterations`
+ *     sont **préservés** à l'identique.
+ *   - `salt` et `iv` sont **toujours régénérés** — réutiliser un IV
+ *     AES-GCM avec une clé dérivée différente viole la spec NIST et
+ *     casse la sécurité.
+ *   - Le secret déchiffré est **zéroïsé** dans un `finally` (pas de
+ *     trace en mémoire après retour).
+ *   - Lance `Error("Invalid password or corrupted wallet")` si
+ *     `currentPassword` est faux (via tag d'auth AES-GCM).
+ *
+ * ⚠️ Fait un déchiffrement **et** un chiffrement complets
+ *    (~1.2 M itérations PBKDF2 sur 600k × 2). Coût ≈ 2 déverrouillages.
+ */
+export async function reencryptStoredWallet(
+  stored: StoredWallet,
+  currentPassword: string,
+  newPassword: string,
+): Promise<StoredWallet> {
+  if (newPassword.length < 8) {
+    throw new Error("New password must be at least 8 characters");
+  }
+
+  if (stored.version === 1) {
+    const { secret, network } = await decryptWalletSecret(
+      stored,
+      currentPassword,
+    );
+    try {
+      return await encryptWalletSecret({
+        secret,
+        address: hexToBytes(stored.addressHex),
+        network,
+        password: newPassword,
+      });
+    } finally {
+      secret.fill(0);
+    }
+  }
+
+  if (stored.version === 2) {
+    const { seed } = await decryptBip39Secret(stored, currentPassword);
+    try {
+      const fresh = await encryptBip39Secret({
+        seed,
+        address: hexToBytes(stored.addressHex),
+        password: newPassword,
+      });
+      // `encryptBip39Secret` hardcode `network: "testnet"` — on
+      // restaure la valeur d'origine pour préserver le champ.
+      return { ...fresh, network: stored.network };
+    } finally {
+      seed.fill(0);
+    }
+  }
+
+  throw new Error(
+    `reencryptStoredWallet: unsupported version ${(stored as { version: number }).version}`,
+  );
+}
+

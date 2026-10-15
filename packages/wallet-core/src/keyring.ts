@@ -115,6 +115,34 @@ export class Keyring {
     });
   }
 
+  /**
+   * **Phase 11.2** — Remplace **atomiquement** toutes les entrées.
+   *
+   * **Garantie** : une seule transaction IndexedDB `readwrite`. Le
+   * `clear()` et chaque `put()` sont enfilés dans la même transaction ;
+   * IndexedDB commit l'ensemble ou rollback l'ensemble.
+   *
+   * **⚠️ Ne JAMAIS `await`** entre l'ouverture de la tx et
+   * `oncomplete` : une transaction `readwrite` s'auto-commit dès que
+   * la boucle d'événements tourne sans requête IDB en attente. Toutes
+   * les opérations crypto doivent être faites **avant** l'appel.
+   */
+  replaceAll(entries: readonly KeyringEntry[]): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const tx = this.#db.transaction(STORE, "readwrite");
+      const store = tx.objectStore(STORE);
+      store.clear();
+      for (const entry of entries) {
+        store.put(entry);
+      }
+      tx.oncomplete = () => resolve();
+      tx.onerror = () =>
+        reject(tx.error ?? new Error("Keyring.replaceAll: transaction error"));
+      tx.onabort = () =>
+        reject(tx.error ?? new Error("Keyring.replaceAll: transaction aborted"));
+    });
+  }
+
   clear(): Promise<void> {
     return new Promise((resolve, reject) => {
       const tx = this.#db.transaction(STORE, "readwrite");
