@@ -20,6 +20,10 @@ function isEnabled(): boolean {
   return usePreferencesStore.getState().notificationsEnabled;
 }
 
+function isIncomingEnabled(): boolean {
+  return usePreferencesStore.getState().incomingNotificationsEnabled;
+}
+
 export const notify = {
   success(message: string, options?: ToastOptions): void {
     if (isEnabled()) toast.success(message, options);
@@ -33,5 +37,13 @@ export const notify = {
   /** Jamais gaté — l'utilisateur doit toujours voir les erreurs. */
   error(message: string, options?: ToastOptions): void {
     toast.error(message, options);
+  },
+
+  /**
+   * **Phase 12-C** — Réception détectée sur une tx entrante. Gaté
+   * sur `incomingNotificationsEnabled` (≠ `notificationsEnabled`).
+   */
+  incoming(message: string, options?: ToastOptions): void {
+    if (isIncomingEnabled()) toast.success(message, options);
   },
 };

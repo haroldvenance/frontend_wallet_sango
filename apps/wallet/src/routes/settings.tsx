@@ -1,6 +1,7 @@
 import { Keyring } from "@sango/wallet-core";
 import {
   AlertTriangle,
+  ArrowDownLeft,
   BellRing,
   CheckCircle2,
   ChevronRight,
@@ -71,6 +72,12 @@ export function SettingsRoute() {
   );
   const setNotificationsEnabled = usePreferencesStore(
     (s) => s.setNotificationsEnabled,
+  );
+  const incomingNotificationsEnabled = usePreferencesStore(
+    (s) => s.incomingNotificationsEnabled,
+  );
+  const setIncomingNotificationsEnabled = usePreferencesStore(
+    (s) => s.setIncomingNotificationsEnabled,
   );
   const fiatCurrency = usePreferencesStore((s) => s.fiatCurrency);
   const setFiatCurrency = usePreferencesStore((s) => s.setFiatCurrency);
@@ -251,6 +258,13 @@ export function SettingsRoute() {
           help={t.settings.items.notificationsHelp}
           value={notificationsEnabled}
           onChange={setNotificationsEnabled}
+        />
+        <SettingRowToggle
+          icon={<ArrowDownLeft className="size-4" />}
+          label={t.settings.items.incomingNotificationsToggle}
+          help={t.settings.items.incomingNotificationsHelp}
+          value={incomingNotificationsEnabled}
+          onChange={setIncomingNotificationsEnabled}
         />
       </SettingsSection>
 

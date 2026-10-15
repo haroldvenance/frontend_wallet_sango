@@ -624,7 +624,7 @@ export const fr: TranslationSchema = {
   },
   preferences: {
     title: "Préférences",
-    fiat: {
+  fiat: {
       sectionTitle: "Affichage fiat",
       toggleLabel: "Afficher les montants en € et FCFA",
       toggleHelp:
@@ -635,6 +635,11 @@ export const fr: TranslationSchema = {
         "Valeur indicative, non contractuelle. Ne reflète pas un prix de marché.",
     },
   },
+  incomingTx: {
+    title: "Recu +{amount} {symbol}",
+    pending: "en attente",
+  },
+
   settings: {
     title: "Paramètres",
     tabs: {
@@ -674,6 +679,9 @@ export const fr: TranslationSchema = {
       defaultNetwork: "Réseau par défaut",
       approvals: "Approbations",
       notificationsToggle: "Afficher les notifications de succès",
+      incomingNotificationsToggle: "Notifier les receptions",
+      incomingNotificationsHelp:
+        "Toast a l'arrivee de fonds. La detection ne couvre que le portefeuille et le reseau actifs.",
       notificationsHelp:
         "Les erreurs sont toujours affichées. Les toasts de succès peuvent être désactivés.",
       language: "Langue",

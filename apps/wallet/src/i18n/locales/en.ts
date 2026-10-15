@@ -618,7 +618,7 @@ export const en = {
   },
   preferences: {
     title: "Preferences",
-    fiat: {
+  fiat: {
       sectionTitle: "Fiat display",
       toggleLabel: "Show amounts in € and FCFA",
       toggleHelp:
@@ -628,6 +628,11 @@ export const en = {
         "Indicative, non-binding value. Not a market price.",
     },
   },
+  incomingTx: {
+    title: "Down +{amount} {symbol} received",
+    pending: "pending",
+  },
+
   settings: {
     title: "Settings",
     tabs: {
@@ -667,6 +672,9 @@ export const en = {
       defaultNetwork: "Default network",
       approvals: "Approvals",
       notificationsToggle: "Show success notifications",
+      incomingNotificationsToggle: "Notify on incoming transfers",
+      incomingNotificationsHelp:
+        "Toast when funds arrive. Detection runs on the active wallet and network only.",
       notificationsHelp:
         "Errors are always shown. Success/info toasts can be muted.",
       language: "Language",

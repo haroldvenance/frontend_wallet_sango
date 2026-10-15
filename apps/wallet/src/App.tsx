@@ -5,6 +5,7 @@ import { UnlockOverlay } from "@/components/auth/unlock-overlay";
 import { AppShell } from "@/components/layout/app-shell";
 import { useAutoLock } from "@/hooks/use-auto-lock";
 import { useSdkWalletSync } from "@/hooks/use-sdk-wallet-sync";
+import { IncomingTxProvider } from "@/providers/incoming-tx-provider";
 import { UnifiedDashboard } from "@/features/dashboard/unified-dashboard";
 const CreateUnifiedRoute = lazy(() =>
   import("@/routes/create-unified").then((m) => ({ default: m.CreateUnified })),
@@ -74,7 +75,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <LockGate />
-      <Suspense fallback={<RouteFallback />}>
+      <IncomingTxProvider>
+        <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/welcome" element={<Welcome />} />
         <Route path="/create" element={<CreateUnifiedRoute />} />
@@ -107,8 +109,9 @@ export default function App() {
             <Route path="/history/:hash" element={<HistoryDetailRoute />} />
         </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
+          </Routes>
+        </Suspense>
+      </IncomingTxProvider>
     </BrowserRouter>
   );
 }

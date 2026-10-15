@@ -50,6 +50,14 @@ interface PreferencesState {
   notificationsEnabled: boolean;
   setNotificationsEnabled: (v: boolean) => void;
 
+  /**
+   * **Phase 12-C** — Notifie les réceptions de fonds (tx entrantes).
+   * Indépendant de `notificationsEnabled` : "mes actions" ≠ "le réseau
+   * me parle". Défaut `true`.
+   */
+  incomingNotificationsEnabled: boolean;
+  setIncomingNotificationsEnabled: (v: boolean) => void;
+
   /** Rappel de sauvegarde masqué par l'utilisateur. */
   backupReminderDismissed: boolean;
   setBackupReminderDismissed: (v: boolean) => void;
@@ -69,6 +77,10 @@ export const usePreferencesStore = create<PreferencesState>()(
 
       notificationsEnabled: true,
       setNotificationsEnabled: (v) => set({ notificationsEnabled: v }),
+
+      incomingNotificationsEnabled: true,
+      setIncomingNotificationsEnabled: (v) =>
+        set({ incomingNotificationsEnabled: v }),
 
       backupReminderDismissed: false,
       setBackupReminderDismissed: (v) =>
