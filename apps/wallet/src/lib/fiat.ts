@@ -75,6 +75,13 @@ export function formatUsd(v: number): string {
 /** Devise supportée par l'affichage fiat. */
 export type FiatCurrency = "EUR" | "USD" | "XAF";
 
+/** Devises disponibles pour l'affichage fiat (ordre d'affichage UI). */
+export const FIAT_CURRENCIES: readonly FiatCurrency[] = [
+  "EUR",
+  "USD",
+  "XAF",
+];
+
 /**
  * **Phase 11** — Formate une `FiatValue` (calculée en EUR/XAF) dans la
  * devise demandée. USD est dérivé de EUR via `EUR_TO_USD` (indicatif).

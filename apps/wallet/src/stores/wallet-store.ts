@@ -97,7 +97,7 @@ const DEFAULT_ACCOUNT_STATE: WalletAccountState = Object.freeze({
   activeIndex: 0,
 });
 
-interface WalletState {
+export interface WalletState {
   // ── Runtime (jamais persisté) ─────────────────────────────
   /** Wallets déverrouillés, clé = `KeyringEntry.id`. */
   wallets: Record<string, UnlockedWalletEntry>;

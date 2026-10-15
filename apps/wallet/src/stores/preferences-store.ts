@@ -26,14 +26,12 @@ export type AutoLockMs = (typeof AUTO_LOCK_OPTIONS_MS)[number];
 
 export const DEFAULT_AUTO_LOCK_MS: AutoLockMs = 15 * 60 * 1000;
 
-/** Devises supportées pour l'affichage fiat indicatif. */
-export type FiatCurrency = "EUR" | "USD" | "XAF";
-
-export const FIAT_CURRENCIES: readonly FiatCurrency[] = [
-  "EUR",
-  "USD",
-  "XAF",
-];
+// **Phase 11.3** — `FiatCurrency` et `FIAT_CURRENCIES` sont définis
+// dans `lib/fiat.ts` (source de vérité, couche utilitaire). Re-exportés
+// ici pour compatibilité des consommateurs existants.
+import type { FiatCurrency } from "@/lib/fiat";
+export type { FiatCurrency } from "@/lib/fiat";
+export { FIAT_CURRENCIES } from "@/lib/fiat";
 
 interface PreferencesState {
   /** Affiche les montants fiat à côté des montants SANGO. */
