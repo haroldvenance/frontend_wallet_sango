@@ -557,9 +557,18 @@ export const en = {
     feeEstimate: "Max estimated fee",
     data: "Data",
     viewInExplorer: "View in explorer",
+
   history: {
     title: "History",
     subtitle: "Transactions sent by your wallet",
+    backToDashboard: "Back to dashboard",
+    subtitleAll: "All chains combined",
+    familyFilter: {
+      all: "All",
+      evm: "EVM",
+      bitcoin: "Bitcoin",
+      sango: "SANGO",
+    },
     empty: "No transactions yet",
     emptyFiltered: "No transactions for this filter",
     loadMore: "Load more",

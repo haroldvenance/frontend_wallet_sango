@@ -1,25 +1,21 @@
+import { UnifiedHistoryList } from "@/features/history/unified-history-list";
 import { useHighlightTx } from "@/hooks/use-highlight-tx";
-import { useWalletStore } from "@/stores/wallet-store";
-
-import { HistoryBitcoinRoute } from "./history-bitcoin";
-import { HistoryEvmRoute } from "./history-evm";
-import { SangoHistoryRoute } from "./history-sango";
 
 /**
- * Dispatcher `/history` — UX-2.b + E2.1.b.6.1.
+ * Route `/history` — **Phase 13-C** : unifiée cross-chain.
  *
- * **D-E2.1-18** — dispatch sur `family`, pas `format`. Voir la note
- * dans `send.tsx` : `format === "bip39"` couvre EVM + Bitcoin.
+ * Historique : cette route dispatchait sur `family` (Sango/EVM/Bitcoin).
+ * Depuis 13-C elle rend l'agrégat cross-chain par défaut. Les vues
+ * spécialisées sont conservées sous :
+ *   - `/history/sango`   → `SangoHistoryRoute`
+ *   - `/history/evm`     → `HistoryEvmRoute`
+ *   - `/history/bitcoin` → `HistoryBitcoinRoute`
  *
- *   family === "sango"   → <SangoHistoryRoute />
- *   family === "evm"     → <HistoryEvmRoute />
- *   family === "bitcoin" → <BitcoinComingSoon /> (E2.1.b.6.2)
+ * **Deep-link notifications (Phase 12-E)** : `useHighlightTx` reste
+ * branché ici pour que `?tx=<hash>` scroll + highlight la row
+ * correspondante (rendue par `AggregatedRow` avec `id="tx-<hash>"`).
  */
-export function HistoryRoute() {
-  // **Phase 12-E** — deep-link depuis notif système (?tx=<hash>).
+export function UnifiedHistoryRoute() {
   useHighlightTx();
-  const family = useWalletStore((s) => s.family);
-  if (family === "bitcoin") return <HistoryBitcoinRoute />;
-  if (family === "evm") return <HistoryEvmRoute />;
-  return <SangoHistoryRoute />;
+  return <UnifiedHistoryList />;
 }

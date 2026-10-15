@@ -12,7 +12,10 @@ const CreateUnifiedRoute = lazy(() =>
   import("@/routes/create-unified").then((m) => ({ default: m.CreateUnified })),
 );
 const HistoryDetailRoute = lazy(() => import("@/routes/history-detail").then(m => ({ default: m.HistoryDetailRoute })));
-const HistoryRoute = lazy(() => import("@/routes/history").then(m => ({ default: m.HistoryRoute })));
+const UnifiedHistoryRoute = lazy(() => import("@/routes/history").then(m => ({ default: m.UnifiedHistoryRoute })));
+const SangoHistoryRoute = lazy(() => import("@/routes/history-sango").then(m => ({ default: m.SangoHistoryRoute })));
+const HistoryEvmRoute = lazy(() => import("@/routes/history-evm").then(m => ({ default: m.HistoryEvmRoute })));
+const HistoryBitcoinRoute = lazy(() => import("@/routes/history-bitcoin").then(m => ({ default: m.HistoryBitcoinRoute })));
 const ReceiveRoute = lazy(() =>
   import("@/routes/receive").then((m) => ({ default: m.ReceiveRoute })),
 );
@@ -93,7 +96,10 @@ export default function App() {
             <Route path="/validators" element={<ValidatorsRoute />} />
             <Route path="/validators/:address" element={<ValidatorDetailRoute />} />
             <Route path="/become-validator" element={<BecomeValidatorRoute />} />
-            <Route path="/history" element={<HistoryRoute />} />
+            <Route path="/history" element={<UnifiedHistoryRoute />} />
+            <Route path="/history/sango" element={<SangoHistoryRoute />} />
+            <Route path="/history/evm" element={<HistoryEvmRoute />} />
+            <Route path="/history/bitcoin" element={<HistoryBitcoinRoute />} />
             <Route
               path="/asset/:networkId/:assetId"
               element={<AssetDetailRoute />}

@@ -563,9 +563,18 @@ export const fr: TranslationSchema = {
     feeEstimate: "Frais max estimes",
     data: "Data",
     viewInExplorer: "Voir dans l'explorateur",
+
   history: {
     title: "Historique",
     subtitle: "Transactions emises par ton wallet",
+    backToDashboard: "Retour au tableau de bord",
+    subtitleAll: "Toutes chaînes confondues",
+    familyFilter: {
+      all: "Toutes",
+      evm: "EVM",
+      bitcoin: "Bitcoin",
+      sango: "SANGO",
+    },
     empty: "Aucune transaction pour le moment",
     emptyFiltered: "Aucune transaction pour ce filtre",
     loadMore: "Charger plus",
