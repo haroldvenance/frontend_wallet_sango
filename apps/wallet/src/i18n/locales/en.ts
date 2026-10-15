@@ -633,6 +633,14 @@ export const en = {
     pending: "pending",
   },
 
+  notificationBell: {
+    ariaLabel: "Notifications",
+    title: "Notifications",
+    empty: "No incoming transaction yet.",
+    markAllRead: "Mark all as read",
+    from: "from",
+    viewAll: "View all",
+  },
   settings: {
     title: "Settings",
     tabs: {
@@ -675,6 +683,13 @@ export const en = {
       incomingNotificationsToggle: "Notify on incoming transfers",
       incomingNotificationsHelp:
         "Toast when funds arrive. Detection runs on the active wallet and network only.",
+      systemNotificationsToggle: "System notifications",
+      systemNotificationsHelp:
+        "Show a native notification when a transfer arrives while the tab is hidden. Requires browser permission.",
+      systemNotificationsDenied:
+        "Browser permission denied. In-app toasts remain active.",
+      systemNotificationsUnsupported:
+        "This browser does not support system notifications.",
       notificationsHelp:
         "Errors are always shown. Success/info toasts can be muted.",
       language: "Language",

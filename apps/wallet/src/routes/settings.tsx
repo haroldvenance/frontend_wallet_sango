@@ -29,6 +29,10 @@ import { SettingsModal } from "@/components/settings/settings-modal";
 import { BitcoinNetworkSelector } from "@/features/bitcoin/bitcoin-network-selector";
 import { EvmNetworkSelector } from "@/features/evm/evm-network-selector";
 import { useTranslation } from "@/i18n/use-translation";
+import {
+  getNotificationSupport,
+  requestNotificationPermission,
+} from "@/lib/web-notifications";
 import { EXPLORER_URL } from "@/lib/config";
 import {
   AUTO_LOCK_OPTIONS_MS,
@@ -79,6 +83,15 @@ export function SettingsRoute() {
   const setIncomingNotificationsEnabled = usePreferencesStore(
     (s) => s.setIncomingNotificationsEnabled,
   );
+  const systemNotificationsEnabled = usePreferencesStore(
+    (s) => s.systemNotificationsEnabled,
+  );
+  const setSystemNotificationsEnabled = usePreferencesStore(
+    (s) => s.setSystemNotificationsEnabled,
+  );
+  const [notificationSupport, setNotificationSupport] = useState(() =>
+    getNotificationSupport(),
+  );
   const fiatCurrency = usePreferencesStore((s) => s.fiatCurrency);
   const setFiatCurrency = usePreferencesStore((s) => s.setFiatCurrency);
   const showFiat = usePreferencesStore((s) => s.showFiat);
@@ -126,6 +139,32 @@ export function SettingsRoute() {
 
   function onPasswordClick() {
     navigate("/settings/change-password");
+  }
+
+  async function onSystemNotificationsChange(next: boolean) {
+    if (!next) {
+      setSystemNotificationsEnabled(false);
+      return;
+    }
+    // Demande la permission au premier ON (user gesture).
+    if (notificationSupport === "default") {
+      const result = await requestNotificationPermission();
+      setNotificationSupport(result);
+      if (result !== "granted") {
+        toast.error(t.settings.items.systemNotificationsDenied);
+        setSystemNotificationsEnabled(false);
+        return;
+      }
+    }
+    if (notificationSupport === "denied" || notificationSupport === "unsupported") {
+      toast.error(
+        notificationSupport === "unsupported"
+          ? t.settings.items.systemNotificationsUnsupported
+          : t.settings.items.systemNotificationsDenied,
+      );
+      return;
+    }
+    setSystemNotificationsEnabled(true);
   }
 
   const localeLabel =
@@ -265,6 +304,13 @@ export function SettingsRoute() {
           help={t.settings.items.incomingNotificationsHelp}
           value={incomingNotificationsEnabled}
           onChange={setIncomingNotificationsEnabled}
+        />
+        <SettingRowToggle
+          icon={<BellRing className="size-4" />}
+          label={t.settings.items.systemNotificationsToggle}
+          help={t.settings.items.systemNotificationsHelp}
+          value={systemNotificationsEnabled}
+          onChange={(v) => void onSystemNotificationsChange(v)}
         />
       </SettingsSection>
 

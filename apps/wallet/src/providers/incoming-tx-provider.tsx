@@ -7,8 +7,12 @@ import {
 import { useTranslation } from "@/i18n/use-translation";
 import { truncateMiddle } from "@/lib/format";
 import { notify } from "@/lib/notify";
+import { useIncomingNotificationStore } from "@/stores/incoming-notification-store";
 import { useIncomingTxStore } from "@/stores/incoming-tx-store";
+import { usePreferencesStore } from "@/stores/preferences-store";
 import { useWalletStore } from "@/stores/wallet-store";
+
+import { showIncomingNotification } from "@/lib/web-notifications";
 
 /**
  * **Phase 12-C** — Détecte les tx entrantes et notifie.
@@ -49,6 +53,7 @@ function IncomingTxWatcher() {
   const { txs } = useAggregatedHistory(WATCH_LIMIT);
   const seenKeys = useIncomingTxStore((s) => s.seenKeys);
   const markSeen = useIncomingTxStore((s) => s.markSeen);
+  const addNotifications = useIncomingNotificationStore((s) => s.add);
 
   useEffect(() => {
     if (txs.length === 0) return;
@@ -83,9 +88,48 @@ function IncomingTxWatcher() {
 
       if (isBootstrap) continue;
 
-      for (const hash of newKeys) {
-        const tx = incoming.find((x) => x.txHash === hash);
-        if (!tx) continue;
+      // Prépare les entrées affichables (badge, dropdown, notif
+      // système) — exclut les tx déjà présentes au bootstrap car
+      // on est déjà sorti du `if (isBootstrap) continue` ci-dessus.
+      const newTxs = newKeys
+        .map((hash) => incoming.find((x) => x.txHash === hash))
+        .filter((tx): tx is NonNullable<typeof tx> => tx !== undefined);
+
+      const badgeEntries = newTxs.map((tx) => ({
+        key: `${tx.networkId}:${tx.txHash}`,
+        networkId: tx.networkId,
+        txHash: tx.txHash,
+        symbol: tx.symbol,
+        amount: tx.amount,
+        counterparty: tx.counterparty,
+        status: tx.status,
+        detectedAt: Date.now(),
+        read: false,
+      }));
+      addNotifications(badgeEntries);
+
+      // Notification système — seulement si toggle ON, permission
+      // `granted`, onglet caché, et toggle `incomingNotificationsEnabled`
+      // activé (même canal sémantique que le toast).
+      const prefs = usePreferencesStore.getState();
+      if (
+        prefs.systemNotificationsEnabled &&
+        prefs.incomingNotificationsEnabled
+      ) {
+        for (const tx of newTxs) {
+          showIncomingNotification({
+            title: `+${formatAmount(tx.amount)} ${tx.symbol}`,
+            body: buildDescription(
+              tx.counterparty,
+              tx.status === "pending" ? t.incomingTx.pending : null,
+            ),
+            tag: `sango-${tx.networkId}-${tx.txHash}`,
+          });
+        }
+      }
+
+      // Toast in-app.
+      for (const tx of newTxs) {
         notify.incoming(
           t.incomingTx.title
             .replace("{amount}", formatAmount(tx.amount))
@@ -99,7 +143,7 @@ function IncomingTxWatcher() {
         );
       }
     }
-  }, [txs, seenKeys, markSeen, t]);
+  }, [txs, seenKeys, markSeen, addNotifications, t]);
 
   return null;
 }

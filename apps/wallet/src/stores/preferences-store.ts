@@ -58,6 +58,14 @@ interface PreferencesState {
   incomingNotificationsEnabled: boolean;
   setIncomingNotificationsEnabled: (v: boolean) => void;
 
+  /**
+   * **Phase 12-D-A** — Notifications système (Web Notification API).
+   * Défaut `false` — la permission navigateur n'est jamais demandée
+   * sans action explicite de l'utilisateur.
+   */
+  systemNotificationsEnabled: boolean;
+  setSystemNotificationsEnabled: (v: boolean) => void;
+
   /** Rappel de sauvegarde masqué par l'utilisateur. */
   backupReminderDismissed: boolean;
   setBackupReminderDismissed: (v: boolean) => void;
@@ -81,6 +89,10 @@ export const usePreferencesStore = create<PreferencesState>()(
       incomingNotificationsEnabled: true,
       setIncomingNotificationsEnabled: (v) =>
         set({ incomingNotificationsEnabled: v }),
+
+      systemNotificationsEnabled: false,
+      setSystemNotificationsEnabled: (v) =>
+        set({ systemNotificationsEnabled: v }),
 
       backupReminderDismissed: false,
       setBackupReminderDismissed: (v) =>

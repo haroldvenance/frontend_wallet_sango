@@ -640,6 +640,14 @@ export const fr: TranslationSchema = {
     pending: "en attente",
   },
 
+  notificationBell: {
+    ariaLabel: "Notifications",
+    title: "Notifications",
+    empty: "Aucune reception pour le moment.",
+    markAllRead: "Tout marquer comme lu",
+    from: "de",
+    viewAll: "Voir tout",
+  },
   settings: {
     title: "Paramètres",
     tabs: {
@@ -682,6 +690,13 @@ export const fr: TranslationSchema = {
       incomingNotificationsToggle: "Notifier les receptions",
       incomingNotificationsHelp:
         "Toast a l'arrivee de fonds. La detection ne couvre que le portefeuille et le reseau actifs.",
+      systemNotificationsToggle: "Notifications systeme",
+      systemNotificationsHelp:
+        "Affiche une notification native a l'arrivee d'un transfert quand l'onglet est cache. Necessite la permission du navigateur.",
+      systemNotificationsDenied:
+        "Permission refusee par le navigateur. Les toasts in-app restent actifs.",
+      systemNotificationsUnsupported:
+        "Ce navigateur ne supporte pas les notifications systeme.",
       notificationsHelp:
         "Les erreurs sont toujours affichées. Les toasts de succès peuvent être désactivés.",
       language: "Langue",

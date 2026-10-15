@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 
 import { LocaleToggle } from "@/components/settings/locale-toggle";
+import { NotificationBell } from "@/components/layout/notification-bell";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { useChainInfo } from "@/hooks/use-chain-info";
@@ -158,6 +159,7 @@ export function AppShell({ children }: AppShellProps) {
                   </>
                 )}
               </div>
+              <NotificationBell />
               <LocaleToggle />
               <ThemeToggle />
               <NavLink
