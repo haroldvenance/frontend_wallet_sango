@@ -14,11 +14,18 @@ import { createJSONStorage, persist } from "zustand/middleware";
  * `seenKeys`.
  */
 const MAX_ENTRIES = 100;
-const PERSIST_KEY = "sango.incoming-notification.v1";
+/**
+ * **Phase 12-D-B** — `source` discrimine la famille blockchain, pour
+ * grouper les entrées par section dans le dropdown.
+ */
+export type NotificationSource = "evm" | "bitcoin" | "sango";
+
+const PERSIST_KEY = "sango.incoming-notification.v2";
 const isClient = typeof window !== "undefined";
 
 export interface IncomingNotification {
   readonly key: string;
+  readonly source: NotificationSource;
   readonly networkId: string;
   readonly txHash: string;
   readonly symbol: string;

@@ -647,6 +647,7 @@ export const fr: TranslationSchema = {
     markAllRead: "Tout marquer comme lu",
     from: "de",
     viewAll: "Voir tout",
+    sources: { evm: "EVM", bitcoin: "Bitcoin", sango: "Sango" },
   },
   settings: {
     title: "Paramètres",

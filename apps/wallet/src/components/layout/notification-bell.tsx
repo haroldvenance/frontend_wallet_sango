@@ -8,6 +8,7 @@ import { truncateMiddle } from "@/lib/format";
 import {
   selectUnreadCount,
   useIncomingNotificationStore,
+  type NotificationSource,
 } from "@/stores/incoming-notification-store";
 
 /**
@@ -53,6 +54,20 @@ export function NotificationBell() {
 
   const sorted = [...entries].sort((a, b) => b.detectedAt - a.detectedAt);
   const recent = sorted.slice(0, DROPDOWN_ITEMS);
+
+  // **Phase 12-D-B** — groupe par famille (EVM / Bitcoin / Sango).
+  // L'ordre est figé pour un rendu stable.
+  const SOURCE_ORDER: readonly NotificationSource[] = [
+    "evm",
+    "bitcoin",
+    "sango",
+  ];
+  const grouped = new Map<NotificationSource, typeof recent>();
+  for (const e of recent) {
+    const bucket = grouped.get(e.source);
+    if (bucket) bucket.push(e);
+    else grouped.set(e.source, [e]);
+  }
 
   return (
     <div ref={rootRef} className="relative">
@@ -104,35 +119,51 @@ export function NotificationBell() {
               {t.notificationBell.empty}
             </p>
           ) : (
-            <ul className="max-h-80 overflow-y-auto">
-              {recent.map((e) => (
-                <li
-                  key={e.key}
-                  className={[
-                    "flex items-start gap-3 border-b px-4 py-3 last:border-b-0",
-                    e.read ? "opacity-60" : "",
-                  ].join(" ")}
-                >
-                  <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
-                    <ArrowDownLeft className="size-3.5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium">
-                      +{formatTokenAmount(e.amount)} {e.symbol}
+            <div className="max-h-80 overflow-y-auto">
+              {SOURCE_ORDER.map((src) => {
+                const items = grouped.get(src);
+                if (!items || items.length === 0) return null;
+                return (
+                  <section
+                    key={src}
+                    data-testid={`notification-section-${src}`}
+                  >
+                    <p className="border-b bg-muted/30 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      {t.notificationBell.sources[src]}
                     </p>
-                    {e.counterparty && (
-                      <p className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground">
-                        {t.notificationBell.from}{" "}
-                        {truncateMiddle(e.counterparty, 6, 4)}
-                      </p>
-                    )}
-                  </div>
-                  {!e.read && (
-                    <span className="mt-1 size-1.5 shrink-0 rounded-full bg-primary" />
-                  )}
-                </li>
-              ))}
-            </ul>
+                    <ul>
+                      {items.map((e) => (
+                        <li
+                          key={e.key}
+                          className={[
+                            "flex items-start gap-3 border-b px-4 py-3 last:border-b-0",
+                            e.read ? "opacity-60" : "",
+                          ].join(" ")}
+                        >
+                          <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
+                            <ArrowDownLeft className="size-3.5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium">
+                              +{formatTokenAmount(e.amount)} {e.symbol}
+                            </p>
+                            {e.counterparty && (
+                              <p className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground">
+                                {t.notificationBell.from}{" "}
+                                {truncateMiddle(e.counterparty, 6, 4)}
+                              </p>
+                            )}
+                          </div>
+                          {!e.read && (
+                            <span className="mt-1 size-1.5 shrink-0 rounded-full bg-primary" />
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                );
+              })}
+            </div>
           )}
 
           <button

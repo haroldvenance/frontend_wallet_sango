@@ -21,6 +21,7 @@ const { tStable } = vi.hoisted(() => ({
       markAllRead: "Tout marquer comme lu",
       from: "de",
       viewAll: "Voir tout",
+      sources: { evm: "EVM", bitcoin: "Bitcoin", sango: "Sango" },
     },
   },
 }));
@@ -35,9 +36,14 @@ import {
 
 import { NotificationBell } from "./notification-bell";
 
-function entry(key: string, read = false): IncomingNotification {
+function entry(
+  key: string,
+  read = false,
+  source: "evm" | "bitcoin" | "sango" = "evm",
+): IncomingNotification {
   return {
     key,
+    source,
     networkId: "ethereum-mainnet",
     txHash: key,
     symbol: "ETH",
@@ -114,5 +120,29 @@ describe("NotificationBell", () => {
     renderBell();
     fireEvent.click(screen.getByTestId("notification-bell"));
     expect(screen.getByText("Aucune reception")).toBeTruthy();
+  });
+
+  it("groupe les entrées par famille (EVM + Bitcoin)", () => {
+    useIncomingNotificationStore.setState({
+      entries: [
+        entry("e1", false, "evm"),
+        entry("b1", false, "bitcoin"),
+        entry("e2", false, "evm"),
+      ],
+    });
+    renderBell();
+    fireEvent.click(screen.getByTestId("notification-bell"));
+    expect(screen.getByTestId("notification-section-evm")).toBeTruthy();
+    expect(screen.getByTestId("notification-section-bitcoin")).toBeTruthy();
+  });
+
+  it("cache une section vide (Sango sans entrée)", () => {
+    useIncomingNotificationStore.setState({
+      entries: [entry("e1", false, "evm")],
+    });
+    renderBell();
+    fireEvent.click(screen.getByTestId("notification-bell"));
+    expect(screen.queryByTestId("notification-section-sango")).toBeNull();
+    expect(screen.queryByTestId("notification-section-bitcoin")).toBeNull();
   });
 });

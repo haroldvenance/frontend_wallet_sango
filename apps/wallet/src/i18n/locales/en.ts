@@ -640,6 +640,7 @@ export const en = {
     markAllRead: "Mark all as read",
     from: "from",
     viewAll: "View all",
+    sources: { evm: "EVM", bitcoin: "Bitcoin", sango: "Sango" },
   },
   settings: {
     title: "Settings",

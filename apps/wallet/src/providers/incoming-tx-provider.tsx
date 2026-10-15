@@ -97,6 +97,7 @@ function IncomingTxWatcher() {
 
       const badgeEntries = newTxs.map((tx) => ({
         key: `${tx.networkId}:${tx.txHash}`,
+        source: tx.source,
         networkId: tx.networkId,
         txHash: tx.txHash,
         symbol: tx.symbol,

@@ -9,6 +9,7 @@ import {
 function entry(key: string, read = false): IncomingNotification {
   return {
     key,
+    source: "evm",
     networkId: "ethereum-mainnet",
     txHash: key,
     symbol: "ETH",
