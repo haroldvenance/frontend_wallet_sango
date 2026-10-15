@@ -4,7 +4,7 @@ import {
   useQueryClient,
   type UseMutationResult,
 } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 import { useWalletSession } from "@/providers/wallet-session-context";
 import { useWalletStore } from "@/stores/wallet-store";
@@ -81,7 +81,7 @@ export function useSendBitcoin(): UseMutationResult<
         account,
       );
 
-      toast.info("Transaction Bitcoin envoyée", {
+      notify.info("Transaction Bitcoin envoyée", {
         description: (
           <span className="font-mono text-[11px]">
             {txId.slice(0, 10)}…{txId.slice(-8)}
@@ -95,7 +95,7 @@ export function useSendBitcoin(): UseMutationResult<
       return { txId };
     },
     onError: (err) => {
-      toast.error("Échec de la transaction", { description: err.message });
+      notify.error("Échec de la transaction", { description: err.message });
     },
   });
 }

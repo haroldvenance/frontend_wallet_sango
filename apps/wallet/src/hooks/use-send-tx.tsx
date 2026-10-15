@@ -4,7 +4,7 @@ import {
   useQueryClient,
   type UseMutationResult,
 } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 import { ExplorerLink } from "@/components/branding/explorer-link";
 import { useIsSangoWallet } from "@/hooks/use-is-sango-wallet";
@@ -71,7 +71,7 @@ export function useSendTx(): UseMutationResult<SendResult, Error, SendArgs> {
       );
       const txHash = txHashStr as TxHashHex;
 
-      toast.info("Transaction envoyée", {
+      notify.info("Transaction envoyée", {
         description: (
           <span className="inline-flex items-center gap-2">
             <span className="font-mono text-[11px]">
@@ -92,7 +92,7 @@ export function useSendTx(): UseMutationResult<SendResult, Error, SendArgs> {
 
       switch (result.status) {
         case "included":
-          toast.success("Transaction incluse", {
+          notify.success("Transaction incluse", {
             description: (
               <span className="inline-flex items-center gap-2">
                 <span className="font-mono text-[11px]">
@@ -105,14 +105,14 @@ export function useSendTx(): UseMutationResult<SendResult, Error, SendArgs> {
           });
           break;
         case "rejected":
-          toast.error("Transaction rejetée", { description: result.error });
+          notify.error("Transaction rejetée", { description: result.error });
           break;
         case "dropped":
-          toast.error("Transaction perdue", { description: result.error });
+          notify.error("Transaction perdue", { description: result.error });
           break;
         case "pending":
         default:
-          toast.warning("Transaction en attente", {
+          notify.warning("Transaction en attente", {
             description: "Pas encore incluse après 15 s",
           });
       }
@@ -123,7 +123,7 @@ export function useSendTx(): UseMutationResult<SendResult, Error, SendArgs> {
       void qc.invalidateQueries({ queryKey: ["account"] });
     },
     onError: (err) => {
-      toast.error("Échec de la transaction", { description: err.message });
+      notify.error("Échec de la transaction", { description: err.message });
     },
   });
 }

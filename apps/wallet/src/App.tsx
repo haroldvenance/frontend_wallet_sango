@@ -14,6 +14,9 @@ const HistoryRoute = lazy(() => import("@/routes/history").then(m => ({ default:
 const ReceiveRoute = lazy(() =>
   import("@/routes/receive").then((m) => ({ default: m.ReceiveRoute })),
 );
+const LegalRoute = lazy(() =>
+  import("@/routes/legal").then((m) => ({ default: m.LegalRoute })),
+);
 const AssetDetailLegacyRedirect = lazy(() =>
   import("@/routes/asset-detail-legacy-redirect").then((m) => ({
     default: m.AssetDetailLegacyRedirect,
@@ -95,6 +98,7 @@ export default function App() {
             <Route path="/history-evm" element={<Navigate to="/history" replace />} />
             <Route path="/approvals" element={<ApprovalsRoute />} />
             <Route path="/settings" element={<SettingsRoute />} />
+            <Route path="/legal/:doc" element={<LegalRoute />} />
             <Route path="/settings/recovery-phrase" element={<SettingsRecoveryPhraseRoute />} />
             <Route path="/history/:hash" element={<HistoryDetailRoute />} />
         </Route>

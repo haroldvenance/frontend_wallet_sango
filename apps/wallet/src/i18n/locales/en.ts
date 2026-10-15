@@ -652,8 +652,12 @@ export const en = {
     sections: {
       security: "Security",
       networks: "Networks",
+      notifications: "Notifications",
+      sango: "Sango network",
       preferences: "Preferences",
+      advanced: "Advanced",
       support: "Support",
+      danger: "Danger zone",
     },
     items: {
       recoveryPhrase: "Recovery phrase",
@@ -662,9 +666,40 @@ export const en = {
       autoLockShort: "15 min",
       defaultNetwork: "Default network",
       approvals: "Approvals",
+      notificationsToggle: "Show success notifications",
+      notificationsHelp:
+        "Errors are always shown. Success/info toasts can be muted.",
       language: "Language",
       theme: "Theme",
-      about: "Help & about",
+      fiatCurrency: "Fiat currency",
+      fiatCurrencyHelp:
+        "Indicative conversion shown next to amounts. Not a market price.",
+      validators: "Validators",
+      sangoExplorer: "Sango explorer",
+      rpcEndpoint: "RPC endpoint",
+      rpcEndpointHelp: "Only for the Sango devnet.",
+      about: "About",
+      aboutVersion: "Version",
+      aboutBuild: "Build",
+      terms: "Terms of service",
+      privacy: "Privacy policy",
+      resetAll: "Erase all local data",
+      resetAllHelp:
+        "Removes every wallet from the keyring. Without your recovery phrase, funds become unrecoverable.",
+      resetConfirmTitle: "Erase all local data?",
+      resetConfirmInput: "Type RESET to confirm",
+      resetConfirmButton: "Erase permanently",
+      resetCancel: "Cancel",
+    },
+    legal: {
+      back: "Back to settings",
+      termsTitle: "Terms of service",
+      termsBody:
+        "This wallet is provided as-is, without warranty. You are solely responsible for the security of your password, recovery phrase and keyfiles.",
+      privacyTitle: "Privacy policy",
+      privacyBody:
+        "This application does not collect or transmit personal data. All information (keyring, preferences) stays on your device.",
+      wip: "This page will be finalized before public launch.",
     },
     languageValues: {
       fr: "Français",
@@ -673,6 +708,11 @@ export const en = {
     themeValues: {
       light: "Light",
       dark: "Dark",
+    },
+    fiatValues: {
+      EUR: "EUR (€)",
+      USD: "USD ($)",
+      XAF: "XAF (FCFA)",
     },
     logout: "Log out",
     version: "v0.3",

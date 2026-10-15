@@ -1,4 +1,4 @@
-import { fiatFromBaseUnits, formatEur, formatXaf, FIAT_LABEL } from "@/lib/fiat";
+import { fiatFromBaseUnits, formatFiat, FIAT_LABEL } from "@/lib/fiat";
 import { usePreferencesStore } from "@/stores/preferences-store";
 
 interface Props {
@@ -16,25 +16,25 @@ interface Props {
  */
 export function FiatLine({ baseUnits, variant = "full", className = "" }: Props) {
   const showFiat = usePreferencesStore((s) => s.showFiat);
+  const currency = usePreferencesStore((s) => s.fiatCurrency);
   if (!showFiat) return null;
 
   const fiat = fiatFromBaseUnits(baseUnits);
   if (!fiat) return null;
 
-  const eur = formatEur(fiat.eur);
-  const xaf = formatXaf(fiat.xaf);
+  const formatted = formatFiat(fiat, currency);
 
   if (variant === "compact") {
     return (
       <span className={["text-muted-foreground", className].join(" ")}>
-        ({eur})
+        ({formatted})
       </span>
     );
   }
 
   return (
     <span className={["text-muted-foreground", className].join(" ")}>
-      {FIAT_LABEL} {eur} · {xaf}
+      {FIAT_LABEL} {formatted}
     </span>
   );
 }

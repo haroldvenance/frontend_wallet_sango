@@ -4,7 +4,7 @@ import {
   useQueryClient,
   type UseMutationResult,
 } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 import { ExplorerLinkEvm } from "@/features/evm/explorer-link-evm";
 import { useWalletSession } from "@/providers/wallet-session-context";
@@ -100,7 +100,7 @@ export function useApproveEvm(): UseMutationResult<
         account,
       )) as Hash;
 
-      toast.info("Approbation envoyée", {
+      notify.info("Approbation envoyée", {
         description: (
           <span className="inline-flex items-center gap-2">
             <span className="font-mono text-[11px]">
@@ -123,7 +123,7 @@ export function useApproveEvm(): UseMutationResult<
       return { txHash };
     },
     onError: (err) => {
-      toast.error("Échec de l'approbation", {
+      notify.error("Échec de l'approbation", {
         description: err.message,
       });
     },

@@ -80,3 +80,51 @@ describe("SettingsRoute — Phase 5.7", () => {
     expect(screen.getByText(/Approbations/i)).toBeTruthy();
   });
 });
+
+describe("SettingsRoute — Phase 11 (refonte)", () => {
+  it("affiche la section Notifications (toggle)", () => {
+    renderPage();
+    expect(screen.getAllByText(/Notifications/i).length).toBeGreaterThan(0);
+  });
+
+  it("affiche la Zone de danger", () => {
+    renderPage();
+    expect(screen.getByTestId("danger-zone-trigger")).toBeTruthy();
+  });
+
+  it("cache la section SANGO pour un wallet EVM", () => {
+    useWalletStore.setState({
+      family: "evm",
+      networkId: "ethereum-mainnet",
+    });
+    renderPage();
+    expect(screen.queryByText(/Réseau Sango/i)).toBeNull();
+  });
+
+  it("affiche la section SANGO pour un wallet SANGO", () => {
+    useWalletStore.setState({
+      family: "sango",
+      networkId: "sango-devnet",
+    });
+    renderPage();
+    expect(screen.getByText(/Réseau Sango/i)).toBeTruthy();
+  });
+
+  it("cache Approbations pour un wallet SANGO", () => {
+    useWalletStore.setState({ family: "sango", networkId: "sango-devnet" });
+    renderPage();
+    expect(screen.queryByText(/Approbations/i)).toBeNull();
+  });
+
+  it("affiche Approbations pour un wallet EVM", () => {
+    useWalletStore.setState({ family: "evm", networkId: "ethereum-mainnet" });
+    renderPage();
+    expect(screen.getByText(/Approbations/i)).toBeTruthy();
+  });
+
+  it("affiche les liens Terms et Privacy", () => {
+    renderPage();
+    expect(screen.getByText(/Conditions d'utilisation/i)).toBeTruthy();
+    expect(screen.getByText(/Politique de confidentialité/i)).toBeTruthy();
+  });
+});

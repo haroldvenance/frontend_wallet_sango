@@ -55,6 +55,44 @@ export function fiatFromBaseUnits(
   return { eur, xaf };
 }
 
+/**
+ * **Phase 11** — Taux EUR → USD indicatif, utilisé **uniquement** pour
+ * l'affichage fiat approximatif quand l'utilisateur sélectionne USD.
+ * Ne fait pas partie du protocole, ne doit jamais servir au consensus.
+ */
+export const EUR_TO_USD = 1.08;
+
+/** Formate un montant USD (2 décimales, locale EN). */
+export function formatUsd(v: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+  }).format(v);
+}
+
+/** Devise supportée par l'affichage fiat. */
+export type FiatCurrency = "EUR" | "USD" | "XAF";
+
+/**
+ * **Phase 11** — Formate une `FiatValue` (calculée en EUR/XAF) dans la
+ * devise demandée. USD est dérivé de EUR via `EUR_TO_USD` (indicatif).
+ */
+export function formatFiat(
+  value: FiatValue,
+  currency: FiatCurrency,
+): string {
+  switch (currency) {
+    case "EUR":
+      return formatEur(value.eur);
+    case "XAF":
+      return formatXaf(value.xaf);
+    case "USD":
+      return formatUsd(value.eur * EUR_TO_USD);
+  }
+}
+
 /** Formate un montant EUR (2 décimales, locale FR). */
 export function formatEur(v: number): string {
   return new Intl.NumberFormat("fr-FR", {

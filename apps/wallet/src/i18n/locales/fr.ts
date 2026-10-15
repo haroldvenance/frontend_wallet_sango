@@ -659,8 +659,12 @@ export const fr: TranslationSchema = {
     sections: {
       security: "Sécurité",
       networks: "Réseaux",
+      notifications: "Notifications",
+      sango: "Réseau Sango",
       preferences: "Préférences",
+      advanced: "Avancé",
       support: "Support",
+      danger: "Zone de danger",
     },
     items: {
       recoveryPhrase: "Phrase de récupération",
@@ -669,9 +673,40 @@ export const fr: TranslationSchema = {
       autoLockShort: "15 min",
       defaultNetwork: "Réseau par défaut",
       approvals: "Approbations",
+      notificationsToggle: "Afficher les notifications de succès",
+      notificationsHelp:
+        "Les erreurs sont toujours affichées. Les toasts de succès peuvent être désactivés.",
       language: "Langue",
       theme: "Thème",
-      about: "Aide & à propos",
+      fiatCurrency: "Devise d'affichage",
+      fiatCurrencyHelp:
+        "Estimation indicative affichée à côté des montants. Pas un prix de marché.",
+      validators: "Validateurs",
+      sangoExplorer: "Explorateur Sango",
+      rpcEndpoint: "Endpoint RPC",
+      rpcEndpointHelp: "Uniquement pour le devnet Sango.",
+      about: "À propos",
+      aboutVersion: "Version",
+      aboutBuild: "Build",
+      terms: "Conditions d'utilisation",
+      privacy: "Politique de confidentialité",
+      resetAll: "Effacer toutes les données locales",
+      resetAllHelp:
+        "Retire chaque portefeuille du keyring. Sans ta phrase de récupération, les fonds deviennent irrécupérables.",
+      resetConfirmTitle: "Effacer toutes les données ?",
+      resetConfirmInput: "Tape RESET pour confirmer",
+      resetConfirmButton: "Effacer définitivement",
+      resetCancel: "Annuler",
+    },
+    legal: {
+      back: "Retour aux paramètres",
+      termsTitle: "Conditions d'utilisation",
+      termsBody:
+        "Ce portefeuille est fourni tel quel, sans garantie. Tu es seul responsable de la sécurité de ton mot de passe, de ta phrase de récupération et de tes keyfiles.",
+      privacyTitle: "Politique de confidentialité",
+      privacyBody:
+        "Cette application ne collecte ni ne transmet aucune donnée personnelle. Toutes les informations (keyring, préférences) restent sur ton appareil.",
+      wip: "Cette page sera finalisée avant le lancement public.",
     },
     languageValues: {
       fr: "Français",
@@ -680,6 +715,11 @@ export const fr: TranslationSchema = {
     themeValues: {
       light: "Clair",
       dark: "Sombre",
+    },
+    fiatValues: {
+      EUR: "EUR (€)",
+      USD: "USD ($)",
+      XAF: "XAF (FCFA)",
     },
     logout: "Déconnexion",
     version: "v0.3",
