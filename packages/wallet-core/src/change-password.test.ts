@@ -59,58 +59,62 @@ async function readAll() {
   return list;
 }
 
-describe("changeKeyringPassword — Phase 11.2", () => {
+describe("changeKeyringPassword — Phase 11.2 (per-entry)", () => {
   beforeEach(clearKeyring);
   afterEach(clearKeyring);
 
-  it("happy path : ré-encrypte toutes les entries, préserve les metadata", async () => {
+  it("happy path : ne ré-encrypte que l'entrée ciblée (V2)", async () => {
     await seedKeyring();
     const before = await readAll();
 
     const result = await changeKeyringPassword({
       currentPassword: OLD_PWD,
       newPassword: NEW_PWD,
+      targetEntryId: "0x02",
     });
     expect(result.status).toBe("ok");
 
     const after = await readAll();
-    expect(after).toHaveLength(before.length);
+    expect(after).toHaveLength(2);
 
-    // Metadata préservées.
-    const byId = new Map(after.map((e) => [e.id, e]));
-    expect(byId.get("0x01")?.label).toBe("V1");
-    expect(byId.get("0x01")?.format).toBe("sango-legacy");
-    expect(byId.get("0x02")?.label).toBe("V2");
-    expect(byId.get("0x02")?.networkId).toBe("ethereum-sepolia");
+    const v1After = after.find((e) => e.id === "0x01")!;
+    const v2After = after.find((e) => e.id === "0x02")!;
+    const v1Before = before.find((e) => e.id === "0x01")!;
+    const v2Before = before.find((e) => e.id === "0x02")!;
 
-    // Chaque entry déchiffrable avec le NOUVEAU mot de passe.
-    for (const entry of after) {
-      if (entry.stored.version === 1) {
-        const { secret } = await decryptWalletSecret(entry.stored, NEW_PWD);
-        expect(secret.length).toBe(32);
-        expect(Array.from(secret)).toEqual(Array.from(new Uint8Array(32).fill(0xab)));
-      } else if (entry.stored.version === 2) {
-        const { seed } = await decryptBip39Secret(entry.stored, NEW_PWD);
-        expect(seed.length).toBe(64);
-        expect(Array.from(seed)).toEqual(Array.from(new Uint8Array(64).fill(0xcd)));
-      }
-    }
+    // V1 (non ciblé) : intact.
+    expect(Array.from(v1After.stored.ciphertext)).toEqual(
+      Array.from(v1Before.stored.ciphertext),
+    );
+    expect(v1After.stored.version).toBe(1);
+    await expect(
+      decryptWalletSecret(v1After.stored as never, OLD_PWD),
+    ).resolves.toBeDefined();
 
-    // Salt + IV régénérés (par hygiène AES-GCM).
-    for (const entry of after) {
-      const ref = before.find((b) => b.id === entry.id)!;
-      expect(Array.from(entry.stored.salt)).not.toEqual(Array.from(ref.stored.salt));
-      expect(Array.from(entry.stored.iv)).not.toEqual(Array.from(ref.stored.iv));
-    }
+    // V2 (ciblé) : ré-encrypté avec le nouveau pwd.
+    const { seed } = await decryptBip39Secret(v2After.stored as never, NEW_PWD);
+    expect(Array.from(seed)).toEqual(Array.from(new Uint8Array(64).fill(0xcd)));
+
+    // Salt + IV régénérés sur la V2 ciblée, pas sur la V1.
+    expect(Array.from(v2After.stored.salt)).not.toEqual(
+      Array.from(v2Before.stored.salt),
+    );
+    expect(Array.from(v2After.stored.iv)).not.toEqual(
+      Array.from(v2Before.stored.iv),
+    );
+    expect(Array.from(v1After.stored.salt)).toEqual(
+      Array.from(v1Before.stored.salt),
+    );
   });
 
-  it("mauvais mot de passe courant : aucune écriture, ancien keyring intact", async () => {
+  it("mauvais mot de passe : aucune écriture, keyring intact", async () => {
     await seedKeyring();
     const before = await readAll();
 
     const result = await changeKeyringPassword({
       currentPassword: "WRONG-PASSWORD",
       newPassword: NEW_PWD,
+      targetEntryId: "0x02",
     });
     expect(result.status).toBe("error");
     if (result.status === "error") {
@@ -118,26 +122,24 @@ describe("changeKeyringPassword — Phase 11.2", () => {
     }
 
     const after = await readAll();
-    expect(after).toHaveLength(before.length);
-    // Ciphertexts identiques → rien n'a bougé.
     for (let i = 0; i < after.length; i++) {
       const b = before.find((x) => x.id === after[i]!.id)!;
       expect(Array.from(after[i]!.stored.ciphertext)).toEqual(
         Array.from(b.stored.ciphertext),
       );
     }
+  });
 
-    // L'ancien mot de passe marche toujours.
-    for (const entry of after) {
-      if (entry.stored.version === 1) {
-        await expect(
-          decryptWalletSecret(entry.stored, OLD_PWD),
-        ).resolves.toBeDefined();
-      } else if (entry.stored.version === 2) {
-        await expect(
-          decryptBip39Secret(entry.stored, OLD_PWD),
-        ).resolves.toBeDefined();
-      }
+  it("entry cible introuvable → entry-not-found", async () => {
+    await seedKeyring();
+    const result = await changeKeyringPassword({
+      currentPassword: OLD_PWD,
+      newPassword: NEW_PWD,
+      targetEntryId: "0x-does-not-exist",
+    });
+    expect(result.status).toBe("error");
+    if (result.status === "error") {
+      expect(result.reason).toBe("entry-not-found");
     }
   });
 
@@ -146,6 +148,7 @@ describe("changeKeyringPassword — Phase 11.2", () => {
     const result = await changeKeyringPassword({
       currentPassword: OLD_PWD,
       newPassword: OLD_PWD,
+      targetEntryId: "0x02",
     });
     expect(result.status).toBe("error");
     if (result.status === "error") {
@@ -158,21 +161,11 @@ describe("changeKeyringPassword — Phase 11.2", () => {
     const result = await changeKeyringPassword({
       currentPassword: OLD_PWD,
       newPassword: "short",
+      targetEntryId: "0x02",
     });
     expect(result.status).toBe("error");
     if (result.status === "error") {
       expect(result.reason).toBe("invalid-new-password");
-    }
-  });
-
-  it("rejette un keyring vide", async () => {
-    const result = await changeKeyringPassword({
-      currentPassword: OLD_PWD,
-      newPassword: NEW_PWD,
-    });
-    expect(result.status).toBe("error");
-    if (result.status === "error") {
-      expect(result.reason).toBe("empty-keyring");
     }
   });
 });

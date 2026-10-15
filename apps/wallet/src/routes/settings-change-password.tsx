@@ -2,7 +2,7 @@ import {
   changeKeyringPassword,
   type ChangeKeyringPasswordError,
 } from "@sango/wallet-core";
-import { AlertTriangle, ArrowLeft, CheckCircle2, KeyRound, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, Eye, EyeOff, KeyRound, ShieldCheck } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -31,6 +31,10 @@ export function SettingsChangePasswordRoute() {
   const t = useTranslation();
   const navigate = useNavigate();
   const lock = useWalletStore((s) => s.lock);
+  const activeId = useWalletStore((s) => s.activeId);
+  const activeLabel = useWalletStore((s) =>
+    s.activeId ? (s.wallets[s.activeId]?.label ?? null) : null,
+  );
 
   const [phase, setPhase] = useState<Phase>("form");
   const [busy, setBusy] = useState(false);
@@ -42,8 +46,8 @@ export function SettingsChangePasswordRoute() {
 
   function errorMessage(reason: ChangeKeyringPasswordError): string {
     switch (reason) {
-      case "empty-keyring":
-        return t.settings.password.errors.emptyKeyring;
+      case "entry-not-found":
+        return t.settings.password.errors.entryNotFound;
       case "wrong-current-password":
         return t.settings.password.errors.wrongCurrent;
       case "invalid-new-password":
@@ -76,12 +80,18 @@ export function SettingsChangePasswordRoute() {
       return;
     }
 
+    if (!activeId) {
+      setError(t.settings.password.errors.entryNotFound);
+      return;
+    }
+
     setBusy(true);
     let result;
     try {
       result = await changeKeyringPassword({
         currentPassword: current,
         newPassword: next,
+        targetEntryId: activeId,
       });
     } finally {
       setBusy(false);
@@ -134,6 +144,17 @@ export function SettingsChangePasswordRoute() {
           <p className="mt-1 text-xs text-muted-foreground">
             {t.settings.password.changeIntro}
           </p>
+          {activeLabel && (
+            <p
+              data-testid="cp-target-wallet"
+              className="mt-2 rounded-lg bg-muted/40 px-2 py-1 text-[11px] text-muted-foreground"
+            >
+              {t.settings.password.changeTarget.replace(
+                "{label}",
+                activeLabel,
+              )}
+            </p>
+          )}
         </div>
       </header>
 
@@ -143,7 +164,7 @@ export function SettingsChangePasswordRoute() {
           label={t.settings.password.currentLabel}
           value={current}
           onChange={setCurrent}
-          autoComplete="current-password"
+          autoComplete="new-password"
         />
         <Field
           testId="cp-new"
@@ -191,18 +212,38 @@ function Field(props: {
   readonly onChange: (v: string) => void;
   readonly autoComplete: string;
 }) {
+  const t = useTranslation();
+  const [visible, setVisible] = useState(false);
   return (
     <label className="block">
       <span className="mb-1.5 block text-xs font-medium">{props.label}</span>
-      <input
-        type="password"
-        data-testid={props.testId}
-        value={props.value}
-        onChange={(e) => props.onChange(e.target.value)}
-        autoComplete={props.autoComplete}
-        spellCheck={false}
-        className="flex h-11 w-full rounded-xl border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-      />
+      <div className="relative">
+        <input
+          type={visible ? "text" : "password"}
+          data-testid={props.testId}
+          value={props.value}
+          onChange={(e) => props.onChange(e.target.value)}
+          autoComplete={props.autoComplete}
+          spellCheck={false}
+          className="flex h-11 w-full rounded-xl border bg-background pl-3 pr-11 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+        />
+        <button
+          type="button"
+          data-testid={`${props.testId}-toggle`}
+          onClick={() => setVisible((v) => !v)}
+          aria-label={
+            visible ? t.settings.password.hide : t.settings.password.show
+          }
+          className="absolute right-1 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          tabIndex={-1}
+        >
+          {visible ? (
+            <EyeOff className="size-4" />
+          ) : (
+            <Eye className="size-4" />
+          )}
+        </button>
+      </div>
     </label>
   );
 }

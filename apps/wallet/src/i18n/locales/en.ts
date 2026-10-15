@@ -730,7 +730,8 @@ export const en = {
     password: {
       changeTitle: "Change password",
       changeIntro:
-        "Enter your current password, then choose a new one. Every wallet in the keyring will be re-encrypted.",
+        "Enter your current password, then choose a new one. Only this wallet will be re-encrypted.",
+      changeTarget: 'Applies to: "{label}".',
       currentLabel: "Current password",
       newLabel: "New password",
       confirmLabel: "Confirm new password",
@@ -739,14 +740,16 @@ export const en = {
       back: "Back to settings",
       successTitle: "Password changed",
       successBody:
-        "Your new password now encrypts every wallet in the keyring. It will be required to unlock the wallet.",
+        "Your new password now encrypts this wallet. It will be required to unlock it.",
       successAcknowledge: "Got it, lock and continue",
+      show: "Show password",
+      hide: "Hide password",
       errors: {
         tooShort: "New password must be at least 8 characters.",
         mismatch: "The two new passwords do not match.",
         sameAsCurrent: "New password must differ from the current one.",
         wrongCurrent: "Current password is incorrect.",
-        emptyKeyring: "No wallet found in the keyring.",
+        entryNotFound: "Wallet not found in the keyring.",
         generic:
           "Could not change the password. Your old password is still valid.",
       },

@@ -737,7 +737,8 @@ export const fr: TranslationSchema = {
     password: {
       changeTitle: "Changer le mot de passe",
       changeIntro:
-        "Saisis ton mot de passe actuel, puis choisis-en un nouveau. Chaque portefeuille du keyring sera ré-encrypté.",
+        "Saisis ton mot de passe actuel, puis choisis-en un nouveau. Seul ce portefeuille sera ré-encrypté.",
+      changeTarget: "S'applique à : « {label} ».",
       currentLabel: "Mot de passe actuel",
       newLabel: "Nouveau mot de passe",
       confirmLabel: "Confirmer le nouveau mot de passe",
@@ -746,15 +747,17 @@ export const fr: TranslationSchema = {
       back: "Retour aux paramètres",
       successTitle: "Mot de passe changé",
       successBody:
-        "Ton nouveau mot de passe chiffre désormais chaque portefeuille du keyring. Il sera requis pour déverrouiller le portefeuille.",
+        "Ton nouveau mot de passe chiffre désormais ce portefeuille. Il sera requis pour le déverrouiller.",
       successAcknowledge: "Compris, verrouiller et continuer",
+      show: "Afficher le mot de passe",
+      hide: "Masquer le mot de passe",
       errors: {
         tooShort: "Le nouveau mot de passe doit faire au moins 8 caractères.",
         mismatch: "Les deux nouveaux mots de passe ne correspondent pas.",
         sameAsCurrent:
           "Le nouveau mot de passe doit être différent de l'actuel.",
         wrongCurrent: "Le mot de passe actuel est incorrect.",
-        emptyKeyring: "Aucun portefeuille trouvé dans le keyring.",
+        entryNotFound: "Portefeuille introuvable dans le keyring.",
         generic:
           "Impossible de changer le mot de passe. Ton ancien mot de passe reste valide.",
       },

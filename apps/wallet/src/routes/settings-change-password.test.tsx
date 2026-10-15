@@ -28,11 +28,19 @@ beforeEach(() => {
   mockChange.mockReset();
   mockNavigate.mockReset();
   useWalletStore.setState({
-    wallets: {},
+    wallets: {
+      "0xabc": {
+        wallet: {} as never,
+        format: "bip39",
+        networkId: "ethereum-sepolia",
+        label: "Test Wallet",
+        createdAt: 1,
+      },
+    },
     wallet: null,
-    activeId: null,
-    walletAccounts: {},
-    walletNetworks: {},
+    activeId: "0xabc",
+    walletAccounts: { "0xabc": { highestIndex: 0, activeIndex: 0 } },
+    walletNetworks: { "0xabc": "ethereum-sepolia" },
     format: "bip39",
     status: "unlocked",
     networkId: "ethereum-sepolia",
