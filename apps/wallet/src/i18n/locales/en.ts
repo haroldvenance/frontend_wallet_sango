@@ -563,6 +563,8 @@ export const en = {
     empty: "No transactions yet",
     emptyFiltered: "No transactions for this filter",
     loadMore: "Load more",
+    retry: "Retry",
+    errorTitle: "Could not load transactions",
     pending: "Pending",
     from: "from",
     to: "to",

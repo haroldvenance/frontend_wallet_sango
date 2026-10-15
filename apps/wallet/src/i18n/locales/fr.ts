@@ -569,6 +569,8 @@ export const fr: TranslationSchema = {
     empty: "Aucune transaction pour le moment",
     emptyFiltered: "Aucune transaction pour ce filtre",
     loadMore: "Charger plus",
+    retry: "Réessayer",
+    errorTitle: "Impossible de charger les transactions",
     pending: "En attente",
     from: "de",
     to: "a",

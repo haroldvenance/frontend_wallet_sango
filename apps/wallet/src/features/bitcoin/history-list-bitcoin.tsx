@@ -1,73 +1,130 @@
 import type { HistoryItem } from "@sango/wallet-chains";
-import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Clock } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowLeftRight,
+  ArrowUpRight,
+  Clock,
+} from "lucide-react";
+import { useMemo, useState } from "react";
 
 import { ActivitySection } from "@/components/ui/activity-section";
+import { HistoryError } from "@/components/ui/history-error";
+import {
+  HistoryFilterChips,
+  type HistoryFilter,
+} from "@/components/ui/history-filter-chips";
+import { HistorySkeleton } from "@/components/ui/history-skeleton";
 import { useBitcoinAddress } from "@/hooks/use-bitcoin-address";
 import { useBitcoinHistory } from "@/hooks/use-bitcoin-history";
+import { useTranslation } from "@/i18n/use-translation";
 import { formatBitcoin } from "@/lib/bitcoin";
 import { truncateMiddle } from "@/lib/format";
 
 import { ExplorerLinkBitcoin } from "./explorer-link-bitcoin";
 
 /**
- * Historique Bitcoin — Patch A.2 (mockup-faithful).
+ * Historique Bitcoin — parité avec SANGO (Phase 13-B).
  *
- * **D7·A** — 3 directions : Reçue / Envoyée / Interne (delta = 0).
- * **D8·B** — `counterparty` résolu par le provider (premier ≠ nous).
- * **D9·A** — tx pending sans date (affiche "En attente").
- * **D10·A** — 20 items, pas de pagination.
+ * **Ajouts** : filtres (tout/envoyé/reçu), skeletons, erreur + retry.
+ * Distinct de l'état vide.
  *
- * Pas de filtre, pas de fiat, pas de "Voir tout".
+ * **Hors scope** : pagination (limit 20). Reporté Session 2.
  */
+type Direction = "in" | "out" | "neutral";
+
+interface Row {
+  readonly item: HistoryItem;
+  readonly direction: Direction;
+}
+
 export function HistoryListBitcoin() {
+  const t = useTranslation();
   const { data, isLoading, isError, error, refetch, isFetching } =
     useBitcoinHistory(20);
   const addressInfo = useBitcoinAddress();
   const myAddress = addressInfo?.address ?? "";
 
+  const [filter, setFilter] = useState<HistoryFilter>("all");
+
+  const allRows: Row[] = useMemo(() => {
+    if (!data?.items) return [];
+    return data.items.map<Row>((item) => {
+      const direction: Direction =
+        item.from === myAddress && item.to !== myAddress
+          ? "out"
+          : item.to === myAddress && item.from !== myAddress
+            ? "in"
+            : "neutral";
+      return { item, direction };
+    });
+  }, [data, myAddress]);
+
+  const rows = useMemo(() => {
+    if (filter === "all") return allRows;
+    if (filter === "sent") return allRows.filter((r) => r.direction === "out");
+    if (filter === "received")
+      return allRows.filter((r) => r.direction === "in");
+    return allRows;
+  }, [allRows, filter]);
+
+  const hasAny = allRows.length > 0;
+
+  const filterLabels: Record<HistoryFilter, string> = {
+    all: t.history.filter.all,
+    sent: t.history.filter.sent,
+    received: t.history.filter.received,
+  };
+
   return (
-    <ActivitySection
-      onRefresh={() => void refetch()}
-      isRefreshing={isFetching}
-    >
-      {isLoading && (
-        <div className="p-6 text-center text-sm text-muted-foreground">
-          Chargement…
-        </div>
+    <div>
+      {hasAny && !isLoading && !isError && (
+        <HistoryFilterChips
+          value={filter}
+          onChange={setFilter}
+          labels={filterLabels}
+        />
       )}
 
-      {isError && (
-        <div className="p-6 text-center text-xs text-amber-600 dark:text-amber-400">
-          {error.message}
-        </div>
-      )}
+      <ActivitySection
+        onRefresh={() => void refetch()}
+        isRefreshing={isFetching}
+      >
+        {isLoading && <HistorySkeleton rows={5} />}
 
-      {!isLoading && !isError && (!data || data.items.length === 0) && (
-        <div className="p-6 text-center text-sm text-muted-foreground">
-          Aucune transaction pour ce compte.
-        </div>
-      )}
+        {isError && (
+          <HistoryError
+            message={error.message}
+            onRetry={() => void refetch()}
+          />
+        )}
 
-      {data &&
-        data.items.length > 0 &&
-        data.items.map((item) => (
-          <HistoryRow key={item.txHash} item={item} myAddress={myAddress} />
+        {!isLoading && !isError && !hasAny && (
+          <div className="p-6 text-center text-sm text-muted-foreground">
+            {t.history.empty}
+          </div>
+        )}
+
+        {!isLoading && !isError && hasAny && rows.length === 0 && (
+          <div className="p-6 text-center text-sm text-muted-foreground">
+            {t.history.emptyFiltered}
+          </div>
+        )}
+
+        {rows.map((row) => (
+          <HistoryRow key={row.item.txHash} row={row} />
         ))}
-    </ActivitySection>
+      </ActivitySection>
+    </div>
   );
 }
 
 // ── Ligne ───────────────────────────────────────────────────
 
-interface RowProps {
-  readonly item: HistoryItem;
-  readonly myAddress: string;
-}
-
-function HistoryRow({ item, myAddress }: RowProps) {
-  const isSent = item.from === myAddress && item.to !== myAddress;
-  const isReceived = item.to === myAddress && item.from !== myAddress;
-  const isInternal = item.from === myAddress && item.to === myAddress;
+function HistoryRow({ row }: { readonly row: Row }) {
+  const { item, direction } = row;
+  const isSent = direction === "out";
+  const isReceived = direction === "in";
+  const isInternal = direction === "neutral";
   const isPending = item.status === "pending";
 
   const directionLabel = isSent
@@ -105,7 +162,6 @@ function HistoryRow({ item, myAddress }: RowProps) {
       })
     : "—";
 
-  // D7·A — delta = 0 → pas de signe, pas de montant significatif.
   const amountStr = isInternal ? "0" : formatBitcoin(item.amount);
   const sign = isSent ? "-" : isReceived ? "+" : "";
 
@@ -153,6 +209,7 @@ function HistoryRow({ item, myAddress }: RowProps) {
         <div className="mt-0.5">
           <ExplorerLinkBitcoin
             hash={item.txHash}
+            networkId={item.networkId}
             className="text-[10px] text-muted-foreground hover:text-primary"
           />
         </div>

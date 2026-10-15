@@ -1,30 +1,31 @@
 import { Bip39Wallet } from "@sango/wallet-core";
 import type { HistoryItem } from "@sango/wallet-chains";
 import { ArrowDownLeft, ArrowUpRight, Clock } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { ActivitySection } from "@/components/ui/activity-section";
+import { HistoryError } from "@/components/ui/history-error";
+import {
+  HistoryFilterChips,
+  type HistoryFilter,
+} from "@/components/ui/history-filter-chips";
+import { HistorySkeleton } from "@/components/ui/history-skeleton";
 import { ExplorerLinkEvm } from "@/features/evm/explorer-link-evm";
 import { useEvmHistory } from "@/hooks/use-evm-history";
+import { useTranslation } from "@/i18n/use-translation";
 import { formatNativeShort } from "@/lib/eth";
 import { useWalletStore } from "@/stores/wallet-store";
 
 /**
- * Historique EVM — volontairement minimal (E1.5).
+ * Historique EVM — parité avec SANGO (Phase 13-B).
  *
- * Affiche les dernières transactions touchant l'adresse du wallet
- * (envoyées + reçues, D-INDEXER-4). La direction est calculée en
- * comparant `from`/`to` avec l'adresse du wallet.
+ * **Ajouts** : filtres (tout/envoyé/reçu), skeletons de chargement,
+ * état d'erreur explicite avec retry. Distinct de l'état vide.
  *
- * Pas de pagination en E1.5 — 20 items max.
- * Pas de filtre.
- * Pas de sous-détail (gas, fees) — pourra venir en 6.d+.
+ * **Hors scope** : pagination (limit 20), détail tx interne
+ * (explorateur externe via `ExplorerLinkEvm`). Reportés Session 2.
  */
-/**
- * Etherscan free tier : Ethereum mainnet + Sepolia uniquement.
- * Les L2 (Base, Arbitrum) nécessitent un plan payant.
- * On affiche un message court au lieu de l'erreur brute.
- */
+
 function friendlyError(msg: string): string {
   if (msg.includes("Free API access is not supported")) {
     return "Historique non disponible sur ce réseau avec une clé Etherscan gratuite (L2 en plan payant).";
@@ -38,10 +39,20 @@ function friendlyError(msg: string): string {
   return msg;
 }
 
+type Direction = "in" | "out" | "neutral";
+
+interface Row {
+  readonly item: HistoryItem;
+  readonly direction: Direction;
+}
+
 export function HistoryListEvm() {
+  const t = useTranslation();
   const wallet = useWalletStore((s) => s.wallet);
   const { data, isLoading, isError, error, refetch, isFetching } =
     useEvmHistory(20);
+
+  const [filter, setFilter] = useState<HistoryFilter>("all");
 
   const myAddress = useMemo(() => {
     if (wallet instanceof Bip39Wallet) {
@@ -50,48 +61,86 @@ export function HistoryListEvm() {
     return "";
   }, [wallet]);
 
+  const allRows: Row[] = useMemo(() => {
+    if (!data?.items) return [];
+    return data.items.map<Row>((item) => {
+      const from = item.from.toLowerCase();
+      const to = item.to.toLowerCase();
+      const direction: Direction =
+        from === myAddress && to !== myAddress
+          ? "out"
+          : to === myAddress && from !== myAddress
+            ? "in"
+            : "neutral";
+      return { item, direction };
+    });
+  }, [data, myAddress]);
+
+  const rows = useMemo(() => {
+    if (filter === "all") return allRows;
+    if (filter === "sent") return allRows.filter((r) => r.direction === "out");
+    if (filter === "received")
+      return allRows.filter((r) => r.direction === "in");
+    return allRows;
+  }, [allRows, filter]);
+
+  const hasAny = allRows.length > 0;
+
+  const filterLabels: Record<HistoryFilter, string> = {
+    all: t.history.filter.all,
+    sent: t.history.filter.sent,
+    received: t.history.filter.received,
+  };
+
   return (
-    <ActivitySection
-      onRefresh={() => void refetch()}
-      isRefreshing={isFetching}
-    >
-      {isLoading && (
-        <div className="p-6 text-center text-sm text-muted-foreground">
-          Chargement…
-        </div>
+    <div>
+      {hasAny && !isLoading && !isError && (
+        <HistoryFilterChips
+          value={filter}
+          onChange={setFilter}
+          labels={filterLabels}
+        />
       )}
 
-      {isError && (
-        <div className="p-6 text-center text-xs text-amber-600 dark:text-amber-400">
-          {friendlyError(error.message)}
-        </div>
-      )}
+      <ActivitySection
+        onRefresh={() => void refetch()}
+        isRefreshing={isFetching}
+      >
+        {isLoading && <HistorySkeleton rows={5} />}
 
-      {!isLoading && !isError && (!data || data.items.length === 0) && (
-        <div className="p-6 text-center text-sm text-muted-foreground">
-          Aucune transaction pour ce compte.
-        </div>
-      )}
+        {isError && (
+          <HistoryError
+            message={friendlyError(error.message)}
+            onRetry={() => void refetch()}
+          />
+        )}
 
-      {data &&
-        data.items.length > 0 &&
-        data.items.map((item) => (
-          <HistoryRow key={item.txHash} item={item} myAddress={myAddress} />
+        {!isLoading && !isError && !hasAny && (
+          <div className="p-6 text-center text-sm text-muted-foreground">
+            {t.history.empty}
+          </div>
+        )}
+
+        {!isLoading && !isError && hasAny && rows.length === 0 && (
+          <div className="p-6 text-center text-sm text-muted-foreground">
+            {t.history.emptyFiltered}
+          </div>
+        )}
+
+        {rows.map((row) => (
+          <HistoryRow key={row.item.txHash} row={row} />
         ))}
-    </ActivitySection>
+      </ActivitySection>
+    </div>
   );
 }
 
 // ── Ligne ───────────────────────────────────────────────────
 
-interface RowProps {
-  readonly item: HistoryItem;
-  readonly myAddress: string;
-}
-
-function HistoryRow({ item, myAddress }: RowProps) {
-  const isSent = item.from.toLowerCase() === myAddress;
-  const isReceived = item.to.toLowerCase() === myAddress;
+function HistoryRow({ row }: { readonly row: Row }) {
+  const { item, direction } = row;
+  const isSent = direction === "out";
+  const isReceived = direction === "in";
   const isPending = item.status === "pending";
   const isFailed = item.status === "failed";
 
@@ -120,10 +169,7 @@ function HistoryRow({ item, myAddress }: RowProps) {
     : "—";
 
   return (
-    <div
-      id={`tx-${item.txHash}`}
-      className="flex items-center gap-3 border-b px-4 py-3 last:border-b-0"
-    >
+    <div className="flex items-center gap-3 border-b px-4 py-3 last:border-b-0">
       <div
         className={`flex size-8 shrink-0 items-center justify-center rounded-full ${iconCls}`}
       >
@@ -172,6 +218,7 @@ function HistoryRow({ item, myAddress }: RowProps) {
         <div className="mt-0.5">
           <ExplorerLinkEvm
             hash={item.txHash}
+            networkId={item.networkId}
             className="text-[10px] text-muted-foreground hover:text-primary"
           />
         </div>

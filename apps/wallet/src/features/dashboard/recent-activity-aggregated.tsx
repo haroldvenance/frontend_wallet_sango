@@ -6,6 +6,11 @@ import {
   XCircle,
 } from "lucide-react";
 
+import {
+  bitcoinNetworkById,
+  evmNetworkById,
+} from "@sango/wallet-chains";
+
 import { NetworkLogo } from "@/components/branding/network-logo";
 import { ActivitySection } from "@/components/ui/activity-section";
 import { ExplorerLinkBitcoin } from "@/features/bitcoin/explorer-link-bitcoin";
@@ -24,10 +29,20 @@ import { truncateMiddle } from "@/lib/format";
  * `HistoryListBitcoin` dans le dashboard. Agrège 4 EVM mainnets +
  * Bitcoin + Sango, trie par statut/timestamp, dédup.
  */
+function humanNetworkName(id: string): string {
+  return (
+    evmNetworkById(id)?.name ??
+    bitcoinNetworkById(id)?.name ??
+    id
+  );
+}
+
 export function RecentActivityAggregated() {
   const t = useTranslation();
   const { txs, loading, isFetching, sourceErrors, refetch } =
     useAggregatedHistory(10);
+
+  const humanErrors = sourceErrors.map(humanNetworkName);
 
   return (
     <ActivitySection
@@ -52,7 +67,7 @@ export function RecentActivityAggregated() {
         <div className="p-6 text-center text-xs text-amber-600 dark:text-amber-400">
           {t.activity.sourcesUnavailable.replace(
             "{networks}",
-            sourceErrors.join(", "),
+            humanErrors.join(", "),
           )}
         </div>
       )}
@@ -65,7 +80,7 @@ export function RecentActivityAggregated() {
         <div className="border-t px-4 py-2 text-[10px] text-amber-600 dark:text-amber-400">
           {t.activity.sourcesUnavailable.replace(
             "{networks}",
-            sourceErrors.join(", "),
+            humanErrors.join(", "),
           )}
         </div>
       )}
