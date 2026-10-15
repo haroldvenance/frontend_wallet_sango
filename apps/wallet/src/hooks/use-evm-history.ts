@@ -4,6 +4,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 
 import { networkQueryKey } from "@/lib/network-query";
 import { useWalletSession } from "@/providers/wallet-session-context";
+import { useEvmRpcStore } from "@/stores/evm-rpc-store";
 import { useWalletStore } from "@/stores/wallet-store";
 import { useNetworkQueryContext } from "./use-network-query-context";
 
@@ -29,6 +30,8 @@ export function useEvmHistory(
   const session = useWalletSession();
   const { status, format } = useWalletStore();
   const ctx = useNetworkQueryContext();
+  // **Phase 12-A** — custom endpoint par networkId (query key).
+  const evmCustomEndpoints = useEvmRpcStore((s) => s.customEndpoints);
 
   const effectiveNetworkId = networkId ?? ctx.networkId;
   // Construit un `AccountRef` indépendant du réseau actif si
@@ -42,7 +45,10 @@ export function useEvmHistory(
   // Endpoint contextuel — pour un networkId explicite, on prend le
   // premier endpoint par défaut du `Network`.
   const network = evmNetworkById(effectiveNetworkId);
-  const endpoint = network?.defaultRpcEndpoints[0] ?? ctx.endpoint;
+  const endpoint =
+    evmCustomEndpoints[effectiveNetworkId] ??
+    network?.defaultRpcEndpoints[0] ??
+    ctx.endpoint;
 
   const enabled =
     format === "bip39" && status === "unlocked" && Boolean(session);

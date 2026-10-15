@@ -762,6 +762,21 @@ export const fr: TranslationSchema = {
           "Impossible de changer le mot de passe. Ton ancien mot de passe reste valide.",
       },
     },
+    evmRpc: {
+      configure: "Endpoint personnalisé…",
+      configured: "Endpoint personnalisé : {url}",
+      placeholder: "https://rpc.exemple.com",
+      help: "Test de connexion (eth_chainId). Le RPC doit répondre avec chain ID {chainId}.",
+      testAndSave: "Tester et sauver",
+      testing: "Test en cours…",
+      saved: "Endpoint personnalisé actif",
+      reset: "Retour au RPC par défaut",
+      resetLabel: "Revenir au preset",
+      errors: {
+        invalidUrl: "L'URL doit commencer par http:// ou https://",
+        probeFailed: "Échec de la vérification",
+      },
+    },
     recoveryPhrase: {
       title: "Phrase de récupération",
       intro:

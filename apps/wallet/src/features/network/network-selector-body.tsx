@@ -24,6 +24,11 @@ interface NetworkSelectorBodyProps {
   readonly currentName: string;
   readonly onSelect: (next: string) => void;
   readonly warning?: ReactNode;
+  /**
+   * **Phase 12-A** — slot rendu en dernier (sous `warning`). Utilisé
+   * par le wrapper EVM pour monter le panneau RPC custom.
+   */
+  readonly footer?: ReactNode;
 }
 
 export function NetworkSelectorBody(props: NetworkSelectorBodyProps) {
@@ -35,6 +40,7 @@ export function NetworkSelectorBody(props: NetworkSelectorBodyProps) {
     currentName,
     onSelect,
     warning,
+    footer,
   } = props;
 
   return (
@@ -93,6 +99,7 @@ export function NetworkSelectorBody(props: NetworkSelectorBodyProps) {
       </p>
 
       {warning}
+      {footer}
     </div>
   );
 }

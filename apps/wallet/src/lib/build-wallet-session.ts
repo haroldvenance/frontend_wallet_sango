@@ -38,6 +38,7 @@ import {
 } from "@sango/wallet-providers";
 
 import { ETHERSCAN_API_KEY } from "@/lib/config";
+import { resolveEvmRpcEndpoints } from "@/lib/resolve-evm-rpc";
 
 /**
  * Construit une `WalletSession` pour un wallet donné.
@@ -57,6 +58,7 @@ import { ETHERSCAN_API_KEY } from "@/lib/config";
 export function buildWalletSession(
   wallet: AnyWallet,
   endpoint: string,
+  evmCustomEndpoints: Readonly<Record<string, string>> = {},
 ): WalletSession {
   const signer = signerFromAnyWallet(wallet);
   const chainRegistry = createChainRegistry();
@@ -70,9 +72,15 @@ export function buildWalletSession(
   // ── EVM ──────────────────────────────────────────────────
   for (const network of ALL_EVM_NETWORKS) {
     const pool = createRpcPool();
+    // **Phase 12-A** — résolution custom > preset. Custom = UN
+    // endpoint, pas de fallback silencieux.
     pool.register(
       network.id,
-      network.defaultRpcEndpoints.map((url, i) => ({ url, priority: i })),
+      resolveEvmRpcEndpoints(
+        network.id,
+        network.defaultRpcEndpoints,
+        evmCustomEndpoints,
+      ),
     );
     const evmRpc = new EvmRpcUsingPool(pool, network.id);
     const chainId = Number.parseInt(network.chainId, 16);

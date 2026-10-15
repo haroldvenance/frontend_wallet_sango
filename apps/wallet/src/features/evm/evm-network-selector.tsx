@@ -3,6 +3,7 @@ import { ALL_EVM_NETWORKS, evmNetworkById } from "@sango/wallet-chains";
 import { NetworkSelectorBody } from "@/features/network/network-selector-body";
 import { useChainNetworkSelector } from "@/features/network/use-chain-network-selector";
 
+import { EvmCustomRpcPanel } from "./evm-custom-rpc-panel";
 import { MainnetWarning } from "./mainnet-warning";
 
 /**
@@ -50,6 +51,7 @@ export function EvmNetworkSelector(props: EvmNetworkSelectorProps = {}) {
       warning={
         <MainnetWarning networkId={sel.currentId} className="mt-2" />
       }
+      footer={<EvmCustomRpcPanel networkId={sel.currentId} />}
     />
   );
 }

@@ -7,6 +7,7 @@ import {
 import type { AccountRef, ChainFamily } from "@sango/wallet-chains";
 
 import { useNetworkOverride } from "@/providers/network-override-context";
+import { useEvmRpcStore } from "@/stores/evm-rpc-store";
 import { useSdkStore } from "@/stores/sdk-store";
 import {
   selectActiveAccountIndex,
@@ -72,6 +73,7 @@ export interface NetworkQueryContext {
 export function useNetworkQueryContext(): NetworkQueryContext {
   const override = useNetworkOverride();
   const sangoEndpoint = useSdkStore((s) => s.endpoint);
+  const evmCustomEndpoints = useEvmRpcStore((s) => s.customEndpoints);
   const storeFamily = useWalletStore((s) => s.family);
   const storeNetworkId = useWalletStore((s) => s.networkId);
   // Phase 2.3 (D-Phase2-1) — index de compte actif, lu via sélecteur.
@@ -86,7 +88,12 @@ export function useNetworkQueryContext(): NetworkQueryContext {
 
   return useMemo(() => {
     const nativeAsset = resolveNativeAsset(family, networkId);
-    const endpoint = resolveEndpoint(family, sangoEndpoint, networkId);
+    const endpoint = resolveEndpoint(
+      family,
+      sangoEndpoint,
+      networkId,
+      evmCustomEndpoints,
+    );
     return {
       endpoint,
       networkId,
@@ -98,7 +105,7 @@ export function useNetworkQueryContext(): NetworkQueryContext {
         networkId,
       },
     };
-  }, [sangoEndpoint, family, networkId, accountIndex]);
+  }, [sangoEndpoint, family, networkId, accountIndex, evmCustomEndpoints]);
 }
 
 /**
@@ -116,12 +123,16 @@ function resolveEndpoint(
   family: ChainFamily,
   sangoEndpoint: string,
   networkId: string,
+  evmCustomEndpoints: Readonly<Record<string, string>>,
 ): string {
   if (family === "sango") return sangoEndpoint;
   if (family === "bitcoin") {
     const network = bitcoinNetworkById(networkId);
     return network?.defaultRpcEndpoints[0] ?? "";
   }
+  // **Phase 12-A** — EVM : custom > preset.
+  const custom = evmCustomEndpoints[networkId];
+  if (custom) return custom;
   const network = evmNetworkById(networkId);
   return network?.defaultRpcEndpoints[0] ?? "";
 }

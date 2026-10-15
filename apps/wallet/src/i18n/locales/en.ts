@@ -754,6 +754,21 @@ export const en = {
           "Could not change the password. Your old password is still valid.",
       },
     },
+    evmRpc: {
+      configure: "Custom endpoint…",
+      configured: "Custom endpoint: {url}",
+      placeholder: "https://rpc.example.com",
+      help: "Connection test (eth_chainId). The RPC must reply with chain ID {chainId}.",
+      testAndSave: "Test & save",
+      testing: "Testing…",
+      saved: "Custom endpoint active",
+      reset: "Back to default RPC",
+      resetLabel: "Reset to preset",
+      errors: {
+        invalidUrl: "URL must start with http:// or https://",
+        probeFailed: "Verification failed",
+      },
+    },
     recoveryPhrase: {
       title: "Recovery phrase",
       intro:
