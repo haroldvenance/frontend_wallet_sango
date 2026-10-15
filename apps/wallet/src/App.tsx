@@ -33,6 +33,7 @@ const SettingsChangePasswordRoute = lazy(() =>
   import("@/routes/settings-change-password").then((m) => ({ default: m.SettingsChangePasswordRoute })),
 );
 const SettingsRecoveryPhraseRoute = lazy(() => import("@/routes/settings-recovery-phrase").then(m => ({ default: m.SettingsRecoveryPhraseRoute })));
+const SettingsVerifyKeyfileRoute = lazy(() => import("@/routes/settings-verify-keyfile").then(m => ({ default: m.SettingsVerifyKeyfileRoute })));
 const ImportUnifiedRoute = lazy(() =>
   import("@/routes/import").then((m) => ({ default: m.ImportUnified })),
 );
@@ -107,6 +108,7 @@ export default function App() {
             <Route path="/settings" element={<SettingsRoute />} />
             <Route path="/legal/:doc" element={<LegalRoute />} />
             <Route path="/settings/recovery-phrase" element={<SettingsRecoveryPhraseRoute />} />
+            <Route path="/settings/recovery-phrase/verify-keyfile" element={<SettingsVerifyKeyfileRoute />} />
             <Route path="/settings/change-password" element={<SettingsChangePasswordRoute />} />
             <Route path="/history/:hash" element={<HistoryDetailRoute />} />
         </Route>

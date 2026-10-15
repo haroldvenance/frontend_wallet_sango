@@ -804,18 +804,45 @@ export const fr: TranslationSchema = {
     recoveryPhrase: {
       title: "Phrase de récupération",
       intro:
-        "Pour la sécurité de ton wallet, la phrase de récupération n'est jamais stockée sur ton appareil ni sur nos serveurs.",
-      explanation:
-        "Elle t'a été affichée une seule fois au moment de la création. Si tu ne l'as pas notée, il est impossible de la retrouver — c'est une garantie : personne (pas même Sango) ne peut la lire.",
-      backupTitle: "Sauvegarder ton wallet",
-      backupDescription:
-        "Le seul backup possible est le keyfile chiffré. Conserve-le en lieu sûr avec ton mot de passe — sans les deux, le wallet est irrécupérable.",
+        "Ta phrase de récupération t'a été affichée une seule fois, à la création de ton wallet. Cette application ne la stocke pas — elle ne peut pas être affichée à nouveau. C'est une garantie : même Sango ne peut pas la lire.",
+      keyfileTitle: "Sauvegarder mon wallet",
+      keyfileBody:
+        "Le keyfile chiffré contient le seed dérivé de ta phrase. Il restaure ton wallet (mêmes adresses EVM, Bitcoin et Sango) avec ton mot de passe.",
+      keyfileWarning:
+        "Le keyfile ne remplace pas ta phrase. Sans elle, tu ne pourras pas importer ton wallet dans une autre application (MetaMask, Trust Wallet, Ledger).",
       exportButton: "Exporter le keyfile",
+      verifyTitle: "Vérifier mon keyfile",
+      verifyBody:
+        "Teste que ton fichier de sauvegarde est valide et déchiffrable avec ton mot de passe.",
+      verifyButton: "Vérifier un keyfile",
       backButton: "Retour aux paramètres",
       formatSango:
         "Ton wallet utilise un seed Ed25519 (32 bytes). Le keyfile contient ce seed chiffré.",
       formatBip39:
         "Ton wallet utilise une phrase BIP-39 (12 mots). Le keyfile contient le seed dérivé chiffré.",
+    },
+    verifyKeyfile: {
+      title: "Vérifier un keyfile",
+      subtitle:
+        "Sélectionne ton fichier de sauvegarde, puis saisis le mot de passe utilisé à l'export.",
+      back: "Retour à la phrase de récupération",
+      selectFile: "Choisir un keyfile",
+      readingFile: "Lecture du fichier…",
+      fileReady: "Fichier chargé",
+      invalidFile: "Fichier invalide",
+      fieldAddress: "Adresse du keyfile",
+      fieldNetwork: "Réseau",
+      fieldExportedAt: "Exporté le",
+      passwordLabel: "Mot de passe utilisé à l'export",
+      submit: "Vérifier",
+      verifying: "Vérification…",
+      wrongPassword: "Mauvais mot de passe ou fichier corrompu.",
+      derivedAddress: "Adresse dérivée",
+      matchesActive: "Ce keyfile correspond à ton wallet actif.",
+      differentWallet:
+        "Ce keyfile est valide, mais il correspond à un autre wallet.",
+      noActiveWallet: "Aucun wallet actif pour comparer.",
+      changeFile: "Choisir un autre fichier",
     },
   },
   fiat: {

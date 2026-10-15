@@ -796,18 +796,45 @@ export const en = {
     recoveryPhrase: {
       title: "Recovery phrase",
       intro:
-        "For your wallet's security, the recovery phrase is never stored on your device nor on our servers.",
-      explanation:
-        "It was shown to you only once when you created the wallet. If you didn't write it down, it cannot be recovered — this is a guarantee: nobody (not even Sango) can read it.",
-      backupTitle: "Back up your wallet",
-      backupDescription:
-        "The only backup available is the encrypted keyfile. Keep it safe together with your password — without both, the wallet is unrecoverable.",
+        "Your recovery phrase was shown to you once, when the wallet was created. This app does not store it — it cannot be shown again. This is a guarantee: even Sango cannot read it.",
+      keyfileTitle: "Back up this wallet",
+      keyfileBody:
+        "The encrypted keyfile contains the seed derived from your phrase. It restores your wallet (same EVM, Bitcoin and Sango addresses) with your password.",
+      keyfileWarning:
+        "The keyfile does not replace your phrase. Without the phrase, you will not be able to import this wallet into another app (MetaMask, Trust Wallet, Ledger).",
       exportButton: "Export keyfile",
+      verifyTitle: "Verify my keyfile",
+      verifyBody:
+        "Check that your backup file is valid and can be decrypted with your password.",
+      verifyButton: "Verify a keyfile",
       backButton: "Back to settings",
       formatSango:
         "Your wallet uses a 32-byte Ed25519 seed. The keyfile contains this seed, encrypted.",
       formatBip39:
         "Your wallet uses a 12-word BIP-39 phrase. The keyfile contains the derived seed, encrypted.",
+    },
+    verifyKeyfile: {
+      title: "Verify a keyfile",
+      subtitle:
+        "Select your backup file, then enter the password used at export time.",
+      back: "Back to recovery phrase",
+      selectFile: "Select a keyfile",
+      readingFile: "Reading file…",
+      fileReady: "File loaded",
+      invalidFile: "Invalid file",
+      fieldAddress: "Keyfile address",
+      fieldNetwork: "Network",
+      fieldExportedAt: "Exported on",
+      passwordLabel: "Password used at export time",
+      submit: "Verify",
+      verifying: "Verifying…",
+      wrongPassword: "Wrong password or corrupted file.",
+      derivedAddress: "Derived address",
+      matchesActive: "This keyfile matches your active wallet.",
+      differentWallet:
+        "This keyfile is valid, but it corresponds to a different wallet.",
+      noActiveWallet: "No active wallet to compare against.",
+      changeFile: "Choose another file",
     },
   },
   fiat: {
