@@ -559,6 +559,19 @@ export const en = {
     viewInExplorer: "View in explorer",
 
   history: {
+    direction: {
+      sent: "Sent",
+      received: "Received",
+      internal: "Internal",
+    },
+    statusFailed: "failed",
+    relative: {
+      justNow: "just now",
+      seconds: "{n}s ago",
+      minutes: "{n}min ago",
+      hours: "{n}h ago",
+      days: "{n}d ago",
+    },
     title: "History",
     subtitle: "Transactions sent by your wallet",
     backToDashboard: "Back to dashboard",

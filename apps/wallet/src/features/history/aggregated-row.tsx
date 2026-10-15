@@ -10,32 +10,35 @@ import { NetworkLogo } from "@/components/branding/network-logo";
 import { ExplorerLinkBitcoin } from "@/features/bitcoin/explorer-link-bitcoin";
 import { ExplorerLinkEvm } from "@/features/evm/explorer-link-evm";
 import type { AggregatedTx } from "@/hooks/use-aggregated-history";
+import { useTranslation } from "@/i18n/use-translation";
+import { classifyRelativeTime } from "@/lib/format-relative-time";
 import { truncateMiddle } from "@/lib/format";
 
 /**
  * **Phase 13-C** — Row cross-chain partagée entre le dashboard
  * (`RecentActivityAggregated`) et l'historique unifié
- * (`UnifiedHistoryRoute`).
+ * (`UnifiedHistoryList`).
  *
- * **Extraction pure** : aucune logique modifiée par rapport à la
- * version inline du dashboard. Ajout d'un `id="tx-<hash>"` pour que
- * le deep-link des notifications (Phase 12-E) fonctionne aussi
- * depuis la route unifiée.
+ * **Phase 13-D** — i18n complète (direction, statuts) + dates
+ * relatives ("il y a 2 min", "à l'instant", date absolue au-delà
+ * de 7 jours).
  *
- * **Hors scope** : traduire les libellés "Envoyée/Reçue/Interne"
- * (strings hardcodées en V1 — à internationaliser Phase 13-D).
+ * `id="tx-<hash>"` permet au deep-link notifications (Phase 12-E)
+ * de scroller + highlight la row.
  */
 export function AggregatedRow({ tx }: { readonly tx: AggregatedTx }) {
+  const t = useTranslation();
+
   const isSent = tx.direction === "out";
   const isReceived = tx.direction === "in";
   const isPending = tx.status === "pending";
   const isFailed = tx.status === "failed";
 
   const directionLabel = isSent
-    ? "Envoyée"
+    ? t.history.direction.sent
     : isReceived
-      ? "Reçue"
-      : "Interne";
+      ? t.history.direction.received
+      : t.history.direction.internal;
 
   const iconCls = isFailed
     ? "bg-destructive/10 text-destructive"
@@ -57,16 +60,7 @@ export function AggregatedRow({ tx }: { readonly tx: AggregatedTx }) {
           ? ArrowDownLeft
           : ArrowLeftRight;
 
-  const date = tx.timestamp
-    ? new Date(tx.timestamp * 1000).toLocaleString("fr-FR", {
-        day: "2-digit",
-        month: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : tx.blockHeight !== null
-      ? `#${tx.blockHeight}`
-      : "—";
+  const date = formatDate(tx, t);
 
   const amountStr =
     tx.amount === null ? "—" : formatAmount(tx.amount, tx.symbol);
@@ -96,12 +90,12 @@ export function AggregatedRow({ tx }: { readonly tx: AggregatedTx }) {
           </span>
           {isPending && (
             <span className="rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-500">
-              en attente
+              {t.history.pending}
             </span>
           )}
           {isFailed && (
             <span className="rounded-full bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium text-destructive">
-              échouée
+              {t.history.statusFailed}
             </span>
           )}
         </div>
@@ -166,6 +160,37 @@ export function AggregatedRow({ tx }: { readonly tx: AggregatedTx }) {
       </div>
     </div>
   );
+}
+
+// ── Helpers ─────────────────────────────────────────────────
+
+function formatDate(
+  tx: AggregatedTx,
+  t: ReturnType<typeof useTranslation>,
+): string {
+  if (tx.timestamp === null) {
+    return tx.blockHeight !== null ? `#${tx.blockHeight}` : "—";
+  }
+  const rt = classifyRelativeTime(tx.timestamp);
+  switch (rt.kind) {
+    case "now":
+      return t.history.relative.justNow;
+    case "seconds":
+      return t.history.relative.seconds.replace("{n}", String(rt.value));
+    case "minutes":
+      return t.history.relative.minutes.replace("{n}", String(rt.value));
+    case "hours":
+      return t.history.relative.hours.replace("{n}", String(rt.value));
+    case "days":
+      return t.history.relative.days.replace("{n}", String(rt.value));
+    case "absolute":
+      return new Date(rt.seconds * 1000).toLocaleString("fr-FR", {
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+  }
 }
 
 export function formatAmount(v: number, symbol: string): string {

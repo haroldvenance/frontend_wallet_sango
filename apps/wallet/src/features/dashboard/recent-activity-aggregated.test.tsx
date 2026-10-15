@@ -13,6 +13,37 @@ vi.mock("sonner", () => ({
   toast: { info: vi.fn(), success: vi.fn(), error: vi.fn(), warning: vi.fn() },
 }));
 
+// Mock i18n — évite une dépendance au locale-store et aux fichiers
+// de traduction réels. Les strings attendues matchent les regex du
+// test (case-sensitive).
+vi.mock("@/i18n/use-translation", () => ({
+  useTranslation: () => ({
+    common: { loading: "Chargement…" },
+    activity: {
+      title: "Activité récente",
+      subtitle: "Toutes chaînes confondues",
+      empty: "Aucune transaction",
+      sourcesUnavailable: "Sources en attente : {networks}",
+    },
+    history: {
+      pending: "en attente",
+      statusFailed: "échouée",
+      direction: {
+        sent: "Envoyée",
+        received: "Reçue",
+        internal: "Interne",
+      },
+      relative: {
+        justNow: "à l'instant",
+        seconds: "il y a {n}s",
+        minutes: "il y a {n}min",
+        hours: "il y a {n}h",
+        days: "il y a {n}j",
+      },
+    },
+  }),
+}));
+
 import { RecentActivityAggregated } from "./recent-activity-aggregated";
 
 afterEach(() => {

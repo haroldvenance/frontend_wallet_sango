@@ -565,6 +565,19 @@ export const fr: TranslationSchema = {
     viewInExplorer: "Voir dans l'explorateur",
 
   history: {
+    direction: {
+      sent: "Envoyée",
+      received: "Reçue",
+      internal: "Interne",
+    },
+    statusFailed: "échouée",
+    relative: {
+      justNow: "à l'instant",
+      seconds: "il y a {n}s",
+      minutes: "il y a {n}min",
+      hours: "il y a {n}h",
+      days: "il y a {n}j",
+    },
     title: "Historique",
     subtitle: "Transactions emises par ton wallet",
     backToDashboard: "Retour au tableau de bord",
