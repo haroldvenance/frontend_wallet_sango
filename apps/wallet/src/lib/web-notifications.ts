@@ -35,6 +35,30 @@ export interface ShowIncomingArgs {
   readonly title: string;
   readonly body: string;
   readonly tag?: string;
+  /**
+   * **Phase 12-E** — Hash de la tx (pour deep-link au clic).
+   * Si fourni, un clic navigue vers `/history?tx=<hash>`.
+   */
+  readonly txHash?: string;
+}
+
+/**
+ * **Phase 12-E** — Bridge SPA navigation.
+ *
+ * `web-notifications.ts` est une lib pure, sans contexte React. Un
+ * composant (`NotificationNavigationBridge`) enregistre son `navigate`
+ * ici au mount. Au clic sur une notif système, on délègue.
+ *
+ * Sans bridge actif (ex: notif pendant l'écran de welcome), le clic
+ * ne fait que ramener le focus — comportement 12-D-A préservé.
+ */
+type NotificationNavigator = (path: string) => void;
+let _navigator: NotificationNavigator | null = null;
+
+export function setNotificationNavigator(
+  fn: NotificationNavigator | null,
+): void {
+  _navigator = fn;
 }
 
 /**
@@ -69,6 +93,15 @@ export function showIncomingNotification(args: ShowIncomingArgs): boolean {
         /* ignore */
       }
       n.close();
+      if (_navigator && args.txHash) {
+        try {
+          _navigator(
+            `/history?tx=${encodeURIComponent(args.txHash)}`,
+          );
+        } catch {
+          /* navigation peut échouer si le router est démonté */
+        }
+      }
     };
     return true;
   } catch {

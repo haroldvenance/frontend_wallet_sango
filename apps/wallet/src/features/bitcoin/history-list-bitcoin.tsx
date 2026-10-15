@@ -110,7 +110,10 @@ function HistoryRow({ item, myAddress }: RowProps) {
   const sign = isSent ? "-" : isReceived ? "+" : "";
 
   return (
-    <div className="flex items-center gap-3 border-b px-4 py-3 last:border-b-0">
+    <div
+      id={`tx-${item.txHash}`}
+      className="flex items-center gap-3 border-b px-4 py-3 last:border-b-0"
+    >
       <div
         className={`flex size-8 shrink-0 items-center justify-center rounded-full ${iconCls}`}
       >

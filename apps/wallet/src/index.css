@@ -173,3 +173,14 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
+
+/* Phase 12-E — Highlight temporaire d'une row de tx (deep-link
+   depuis notification système). Ring primary + fond subtil. La
+   transition adoucit le retrait de la classe après 2.5s. */
+.highlight-tx {
+  box-shadow: 0 0 0 2px var(--ring);
+  background-color: color-mix(in oklab, var(--primary) 10%, transparent);
+  transition:
+    box-shadow 0.4s ease-out,
+    background-color 0.4s ease-out;
+}

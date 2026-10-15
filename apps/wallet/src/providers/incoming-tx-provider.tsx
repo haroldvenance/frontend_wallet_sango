@@ -125,6 +125,7 @@ function IncomingTxWatcher() {
               tx.status === "pending" ? t.incomingTx.pending : null,
             ),
             tag: `sango-${tx.networkId}-${tx.txHash}`,
+            txHash: tx.txHash,
           });
         }
       }

@@ -5,6 +5,7 @@ import { UnlockOverlay } from "@/components/auth/unlock-overlay";
 import { AppShell } from "@/components/layout/app-shell";
 import { useAutoLock } from "@/hooks/use-auto-lock";
 import { useSdkWalletSync } from "@/hooks/use-sdk-wallet-sync";
+import { NotificationNavigationBridge } from "@/lib/notification-navigation-bridge";
 import { IncomingTxProvider } from "@/providers/incoming-tx-provider";
 import { UnifiedDashboard } from "@/features/dashboard/unified-dashboard";
 const CreateUnifiedRoute = lazy(() =>
@@ -74,6 +75,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <NotificationNavigationBridge />
       <LockGate />
       <IncomingTxProvider>
         <Suspense fallback={<RouteFallback />}>

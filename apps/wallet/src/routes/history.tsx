@@ -1,4 +1,5 @@
 import { BitcoinComingSoon } from "@/components/branding/bitcoin-coming-soon";
+import { useHighlightTx } from "@/hooks/use-highlight-tx";
 import { useWalletStore } from "@/stores/wallet-store";
 
 import { HistoryEvmRoute } from "./history-evm";
@@ -15,6 +16,8 @@ import { SangoHistoryRoute } from "./history-sango";
  *   family === "bitcoin" → <BitcoinComingSoon /> (E2.1.b.6.2)
  */
 export function HistoryRoute() {
+  // **Phase 12-E** — deep-link depuis notif système (?tx=<hash>).
+  useHighlightTx();
   const family = useWalletStore((s) => s.family);
   if (family === "bitcoin") return <BitcoinComingSoon feature="Historique" />;
   if (family === "evm") return <HistoryEvmRoute />;
