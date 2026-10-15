@@ -565,6 +565,7 @@ export const fr: TranslationSchema = {
     viewInExplorer: "Voir dans l'explorateur",
 
   history: {
+    fee: "Frais : {value}",
     direction: {
       sent: "Envoyée",
       received: "Reçue",

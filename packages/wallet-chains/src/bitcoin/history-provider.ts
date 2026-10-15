@@ -116,6 +116,13 @@ function mapTx(
     to,
     assetRef,
     amount,
+    // **Phase 13-E** — Esplora expose `fee` en satoshis (number).
+    // On le convertit en `bigint` pour aligner avec l'unité de
+    // `HistoryItem.amount` (base units du natif).
+    fee:
+      typeof tx.fee === "number" && tx.fee >= 0
+        ? BigInt(Math.round(tx.fee))
+        : undefined,
   };
 }
 

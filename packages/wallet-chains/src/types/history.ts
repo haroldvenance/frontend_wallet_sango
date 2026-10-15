@@ -13,6 +13,15 @@ export interface HistoryItem {
   readonly to: string;
   readonly assetRef: AssetRef;
   readonly amount: bigint;
+  /**
+   * **Phase 13-E** — Frais effectifs en base units de l'asset
+   * natif (wei pour EVM, satoshis pour Bitcoin).
+   *
+   * **Absent** si l'indexeur/provider ne les expose pas :
+   *   - SANGO : backend sans `gasUsed` (receipt absent)
+   *   - EVM : si Etherscan omet `gasUsed` ou `gasPrice` (rare)
+   */
+  readonly fee?: bigint;
 }
 
 export interface TxHistory {

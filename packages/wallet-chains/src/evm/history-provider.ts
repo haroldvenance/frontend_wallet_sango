@@ -82,5 +82,24 @@ function toHistoryItem(
     to: tx.to ?? "0x" + "0".repeat(40),
     assetRef,
     amount: BigInt(tx.value),
+    // **Phase 13-E** — frais = gasUsed × gasPrice (wei).
+    fee: computeFee(tx.gasUsed, tx.gasPrice),
   };
+}
+
+/**
+ * **Phase 13-E** — Calcule les frais effectifs (wei) à partir de
+ * `gasUsed × gasPrice`. Retourne `undefined` si les valeurs ne sont
+ * pas exploitables — mieux vaut ne rien afficher qu'une valeur fausse.
+ */
+function computeFee(
+  gasUsed: string | undefined,
+  gasPrice: string | undefined,
+): bigint | undefined {
+  if (!gasUsed || !gasPrice) return undefined;
+  try {
+    return BigInt(gasUsed) * BigInt(gasPrice);
+  } catch {
+    return undefined;
+  }
 }

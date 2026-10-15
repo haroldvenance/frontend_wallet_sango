@@ -47,6 +47,12 @@ export interface AggregatedTx {
   readonly direction: "in" | "out" | "neutral";
   readonly symbol: string;
   readonly amount: number | null;
+  /**
+   * **Phase 13-E** — Frais effectifs en unités "humaines" du natif
+   * (ETH pour EVM, BTC pour Bitcoin). `null` si non disponibles
+   * (SANGO actuel, ou indexeur sans données).
+   */
+  readonly fee: number | null;
   readonly counterparty: string | null;
   readonly contract: string | null;
 }
@@ -290,6 +296,13 @@ function mapEvmItem(
     direction,
     symbol,
     amount: toNumber(item.amount, decimals),
+    // **Phase 13-E** — `item.fee` (wei) → ETH humain (18 decimals).
+    // Native EVM uniquement. Les tx de tokens ERC-20 ne portent pas
+    // le fee du gas dans cet indexeur — on n'affiche rien.
+    fee:
+      item.fee !== undefined && item.assetRef.kind === "native"
+        ? toNumber(item.fee, 18)
+        : null,
     counterparty,
     contract,
   };
@@ -318,6 +331,7 @@ function mapBitcoinItem(
     direction,
     symbol: "BTC",
     amount: toNumber(item.amount, 8),
+    fee: item.fee !== undefined ? toNumber(item.fee, 8) : null,
     counterparty: counterparty || null,
     contract: null,
   };
@@ -352,6 +366,10 @@ function mapSangoTx(
     direction,
     symbol: "SANGO",
     amount: toNumber(value, 7),
+    // **Phase 13-E** — pas de frais SANGO : le backend ne fournit
+    // pas `gasUsed` (receipt non exposé dans TxDetail). Une borne
+    // `gasLimit × maxFee` serait trompeuse — on n'affiche rien.
+    fee: null,
     counterparty: counterparty || null,
     contract: null,
   };

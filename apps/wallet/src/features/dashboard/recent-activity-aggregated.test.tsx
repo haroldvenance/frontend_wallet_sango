@@ -26,6 +26,7 @@ vi.mock("@/i18n/use-translation", () => ({
       sourcesUnavailable: "Sources en attente : {networks}",
     },
     history: {
+      fee: "Frais : {value}",
       pending: "en attente",
       statusFailed: "échouée",
       direction: {
@@ -62,6 +63,7 @@ function makeTx(overrides: Partial<AggregatedTx> = {}): AggregatedTx {
     direction: "in",
     symbol: "ETH",
     amount: 0.5,
+    fee: null,
     counterparty: "0x1234567890abcdef1234567890abcdef12345678",
     contract: null,
     ...overrides,

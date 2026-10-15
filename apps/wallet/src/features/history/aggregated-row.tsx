@@ -67,6 +67,8 @@ export function AggregatedRow({ tx }: { readonly tx: AggregatedTx }) {
 
   const sign = isSent ? "-" : isReceived ? "+" : "";
 
+  const feeStr = formatFee(tx);
+
   return (
     <div
       id={`tx-${tx.txHash}`}
@@ -157,6 +159,11 @@ export function AggregatedRow({ tx }: { readonly tx: AggregatedTx }) {
             </span>
           )}
         </div>
+        {feeStr && (
+          <p className="mt-0.5 text-[10px] text-muted-foreground">
+            {t.history.fee.replace("{value}", feeStr)}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -191,6 +198,37 @@ function formatDate(
         minute: "2-digit",
       });
   }
+}
+
+/**
+ * **Phase 13-E** — Formate les frais effectifs pour l'affichage.
+ * Retourne `null` s'il n'y a rien à afficher (fee absent, nul, ou
+ * source non supportée).
+ *
+ * **EVM** : fee en ETH → `0,00042 ETH` (8 décimales max, trailing
+ * zeros strippés).
+ * **Bitcoin** : fee en BTC → `1 234 sats` (conversion vers sats,
+ * plus lisible pour les petits montants — standard UX Bitcoin).
+ * **SANGO** : pas de frais (backend sans `gasUsed`).
+ */
+export function formatFee(tx: AggregatedTx): string | null {
+  if (tx.fee === null || tx.fee === 0) return null;
+
+  if (tx.source === "bitcoin") {
+    const sats = Math.round(tx.fee * 1e8);
+    if (sats <= 0) return null;
+    return `${sats.toLocaleString("fr-FR")} sats`;
+  }
+
+  if (tx.source === "evm") {
+    const formatted = tx.fee.toLocaleString("fr-FR", {
+      maximumFractionDigits: 8,
+      minimumFractionDigits: 0,
+    });
+    return `${formatted} ${tx.symbol}`;
+  }
+
+  return null;
 }
 
 export function formatAmount(v: number, symbol: string): string {

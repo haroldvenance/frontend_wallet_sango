@@ -192,6 +192,9 @@ interface RawEtherscanTx {
   readonly value?: string;
   readonly isError?: string;
   readonly txreceipt_status?: string;
+  // **Phase 13-E** — champs frais (strings décimales).
+  readonly gasUsed?: string;
+  readonly gasPrice?: string;
 }
 
 function mapTx(raw: unknown): import("@sango/wallet-chains").EvmIndexerTx {
@@ -234,5 +237,8 @@ function mapTx(raw: unknown): import("@sango/wallet-chains").EvmIndexerTx {
     to,
     value,
     isError,
+    // **Phase 13-E** — frais effectifs.
+    gasUsed: typeof r.gasUsed === "string" ? r.gasUsed : undefined,
+    gasPrice: typeof r.gasPrice === "string" ? r.gasPrice : undefined,
   };
 }

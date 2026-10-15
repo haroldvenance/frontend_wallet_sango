@@ -559,6 +559,7 @@ export const en = {
     viewInExplorer: "View in explorer",
 
   history: {
+    fee: "Fee: {value}",
     direction: {
       sent: "Sent",
       received: "Received",

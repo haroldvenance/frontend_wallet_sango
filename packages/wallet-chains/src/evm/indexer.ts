@@ -33,6 +33,16 @@ export interface EvmIndexerTx {
   readonly value: string;
   /** Vrai si l'exécution a échoué (revert). */
   readonly isError: boolean;
+  /**
+   * **Phase 13-E** — Gas réellement consommé (string décimale).
+   * Optionnel : absent si l'indexeur ne l'expose pas.
+   */
+  readonly gasUsed?: string;
+  /**
+   * **Phase 13-E** — Prix effectif du gas en wei (string décimale).
+   * Post-EIP-1559 : correspond à `effectiveGasPrice`. Optionnel.
+   */
+  readonly gasPrice?: string;
 }
 
 export interface EvmIndexerPage {
