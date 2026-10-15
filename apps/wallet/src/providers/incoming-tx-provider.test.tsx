@@ -53,6 +53,7 @@ function tx(over: Partial<AggregatedTx> = {}): AggregatedTx {
     direction: "in",
     symbol: "ETH",
     amount: 1.5,
+    fee: null,
     counterparty: "0x1234567890abcdef",
     contract: null,
     ...over,
