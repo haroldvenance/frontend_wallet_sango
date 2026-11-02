@@ -1,28 +1,23 @@
-import {
-  ArrowDownToLine,
-  ArrowUpFromLine,
-  Repeat,
-  ShoppingCart,
-} from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import type { ReactNode } from "react";
 
 /**
- * Rangée d'actions universelles — présentationnelle.
+ * Rangée d'actions rapides.
  *
- * Quatre boutons, cohérents SANGO et EVM :
- *   - Acheter  : désactivé (E1.6+)
- *   - Échanger : désactivé (E1.6+)
- *   - Envoyer  : actif (route dispatchée par le wrapper)
- *   - Recevoir : actif (navigation gérée par le wrapper)
+ * Deux boutons seulement :
+ *   - Envoyer  → handler du wrapper (route dispatchée par famille)
+ *   - Recevoir → handler du wrapper
  *
- * Le wrapper fournit les handlers `onSend` et `onReceive`.
+ * "Acheter" et "Échanger" (bientôt disponibles) ont été retirés :
+ * des boutons inactifs en production nuisent à la clarté et au
+ * principe d'interface minimale. Ils seront réintroduits quand les
+ * fonctionnalités seront effectivement livrées.
  */
 export interface ActionsRowProps {
   readonly onSend: () => void;
   readonly onReceive: () => void;
-  /** Slot additionnel rendu à droite (ex. faucet button). */
+  /** Slot additionnel à droite (ex. bouton faucet, gaté DEV). */
   readonly trailing?: ReactNode;
-  /** Icône d'asset (pour l'effet hover). */
   readonly sendLabel?: string;
   readonly receiveLabel?: string;
 }
@@ -36,19 +31,7 @@ export function ActionsRow({
 }: ActionsRowProps) {
   return (
     <section>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <ActionButton
-          label="Acheter"
-          description="Bientôt disponible"
-          Icon={ShoppingCart}
-          disabled
-        />
-        <ActionButton
-          label="Échanger"
-          description="Bientôt disponible"
-          Icon={Repeat}
-          disabled
-        />
+      <div className="grid grid-cols-2 gap-3">
         <ActionButton
           label={sendLabel}
           Icon={ArrowUpFromLine}
@@ -68,48 +51,21 @@ export function ActionsRow({
 
 interface ActionButtonProps {
   readonly label: string;
-  readonly description?: string;
-  readonly Icon: typeof ShoppingCart;
-  readonly onClick?: () => void;
-  readonly disabled?: boolean;
+  readonly Icon: typeof ArrowUpFromLine;
+  readonly onClick: () => void;
 }
 
-function ActionButton({
-  label,
-  description,
-  Icon,
-  onClick,
-  disabled = false,
-}: ActionButtonProps) {
+function ActionButton({ label, Icon, onClick }: ActionButtonProps) {
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={disabled}
-      title={disabled ? description : undefined}
-      className={[
-        "group rounded-2xl border bg-card p-4 text-left transition-all",
-        disabled
-          ? "cursor-not-allowed opacity-50"
-          : "hover:-translate-y-0.5 hover:border-primary/30 hover:bg-accent/50 active:scale-[0.98]",
-      ].join(" ")}
+      className="group rounded-2xl border bg-card p-4 text-left transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-accent/50 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
     >
-      <div
-        className={[
-          "flex size-9 items-center justify-center rounded-xl transition-colors",
-          disabled
-            ? "bg-muted text-muted-foreground"
-            : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground",
-        ].join(" ")}
-      >
+      <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
         <Icon className="size-4" />
       </div>
       <p className="mt-4 text-sm font-medium">{label}</p>
-      {description && (
-        <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
-          {description}
-        </p>
-      )}
     </button>
   );
 }

@@ -1,59 +1,98 @@
 /**
- * Helpers de formatage pour l'UI.
+ * Helpers de formatage monétaire et d'affichage.
  *
- * Règle d'or : tous les montants circulent en **base units** (bigint ou
- * string décimale) dans le code, et ne sont convertis en SANGO qu'au
- * moment de l'affichage.
+ * Règle d'or :
+ *   1. Tous les montants circulent en BASE UNITS (bigint / string entière).
+ *      La conversion en unité lisible est réservée à l'affichage.
+ *   2. Jamais de `number` flottant pour un montant monétaire.
+ *   3. `formatSango` TRONQUE (n'arrondit pas) : la valeur affichée ne
+ *      surestime JAMAIS le solde réel. Le résultat ne doit JAMAIS être
+ *      réutilisé pour calculer, remplir un champ, ou alimenter un MAX.
+ *      Pour cela, utiliser directement `baseUnits` (bigint).
  */
 
-const BASE_UNITS_PER_SANGO = 10_000_000n;
-const SANGO_DECIMALS = 7;
+export const SANGO_DECIMALS = 7 as const;
+export const BASE_UNITS_PER_SANGO = 10_000_000n as const;
 
-/** Parse une string décimale (base units) en bigint. */
+/**
+ * Parse une string de base units en bigint.
+ * Rejette tout format non entier signé ("1.5", "1e7", "0x…").
+ */
 export function parseBaseUnits(s: string): bigint {
-  return BigInt(s);
+  const trimmed = s.trim();
+  if (!/^-?\d+$/.test(trimmed)) {
+    throw new Error("parseBaseUnits: integer string expected");
+  }
+  return BigInt(trimmed);
 }
 
 /**
- * Convertit des base units en chaîne SANGO lisible.
+ * Formate des base units SANGO en string lisible.
  *
- * Ex: 1234567890n → "123.4567890"
+ * ⚠️ TRONCATURE (pas d'arrondi) :
+ *    formatSango(12_390_000n, 2) → "1.23" (pas "1.24").
+ *    Choix délibéré : la valeur affichée ≤ valeur réelle.
+ *
+ * ⚠️ NE JAMAIS réutiliser la string retournée pour :
+ *    - calculer une transaction,
+ *    - remplir un champ d'envoi,
+ *    - alimenter un bouton MAX.
+ *    Utiliser `baseUnits` (bigint) à la place.
+ *
+ * @param baseUnits    Montant en base units (string entière ou bigint).
+ * @param maxDecimals  Décimales affichées, entier dans [0, SANGO_DECIMALS].
+ * @throws             Si `maxDecimals` hors bornes.
  */
-export function formatSango(baseUnits: string | bigint, decimals = 7): string {
-  const v = typeof baseUnits === "string" ? BigInt(baseUnits) : baseUnits;
+export function formatSango(
+  baseUnits: string | bigint,
+  maxDecimals: number = SANGO_DECIMALS,
+): string {
+  if (
+    !Number.isInteger(maxDecimals) ||
+    maxDecimals < 0 ||
+    maxDecimals > SANGO_DECIMALS
+  ) {
+    throw new Error(
+      `formatSango: maxDecimals must be an integer in [0, ${SANGO_DECIMALS}]`,
+    );
+  }
+
+  const v =
+    typeof baseUnits === "string" ? parseBaseUnits(baseUnits) : baseUnits;
   const neg = v < 0n;
   const abs = neg ? -v : v;
-  const BASE = 10_000_000n;
+  const whole = abs / BASE_UNITS_PER_SANGO;
+  const frac = abs % BASE_UNITS_PER_SANGO;
 
-  const whole = abs / BASE;
-  const frac = abs % BASE;
-
-  let out: string;
-  if (frac === 0n) {
-    out = whole.toString();
-  } else {
-    const fracStr = frac.toString().padStart(7, "0").slice(0, decimals).replace(/0+$/, "");
-    out = fracStr ? `${whole}.${fracStr}` : whole.toString();
+  if (frac === 0n || maxDecimals === 0) {
+    return neg ? `-${whole.toString()}` : whole.toString();
   }
+
+  const fracStr = frac
+    .toString()
+    .padStart(SANGO_DECIMALS, "0")
+    .slice(0, maxDecimals) // troncature explicite (voir JSDoc)
+    .replace(/0+$/, "");
+
+  const out = fracStr ? `${whole}.${fracStr}` : whole.toString();
   return neg ? `-${out}` : out;
 }
 
 /**
- * Parse une chaîne SANGO saisie par l'utilisateur en base units.
- *
- * Accepte "1", "1.5", "1.5000000", "0.0000001".
- * Lance une erreur si le format est invalide ou la précision trop fine.
+ * Parse une saisie utilisateur en base units SANGO.
+ * Rejette notation scientifique, symboles monétaires, espaces internes.
+ * Lève si la précision dépasse SANGO_DECIMALS.
  */
 export function parseSango(s: string): bigint {
   const trimmed = s.trim();
   if (!/^-?\d+(\.\d+)?$/.test(trimmed)) {
-    throw new Error("Invalid amount format");
+    throw new Error("parseSango: invalid amount format");
   }
   const negative = trimmed.startsWith("-");
   const raw = negative ? trimmed.slice(1) : trimmed;
   const [wholeStr, fracStr = ""] = raw.split(".");
   if (fracStr.length > SANGO_DECIMALS) {
-    throw new Error(`Too many decimals (max ${SANGO_DECIMALS})`);
+    throw new Error(`parseSango: too many decimals (max ${SANGO_DECIMALS})`);
   }
   const fracPadded = fracStr.padEnd(SANGO_DECIMALS, "0");
   const whole = BigInt(wholeStr || "0");
@@ -63,27 +102,21 @@ export function parseSango(s: string): bigint {
 }
 
 /**
- * Raccourcit une adresse hex pour l'affichage.
- *
- * Ex: "0x02291e07...aa01ab" avec chars=4 → "0x0229…01ab"
+ * Raccourcit une adresse (préfixe + suffixe significatifs).
+ * Préserve `0x` s'il est présent, ne l'invente jamais sinon.
  */
 export function shortenAddress(address: string, chars = 4): string {
-  if (address.length <= chars * 2 + 4) return address;
-  const prefix = address.startsWith("0x")
-    ? address.slice(2, 2 + chars)
-    : address.slice(0, chars);
-  const suffix = address.slice(-chars);
-  return `${address.startsWith("0x") ? "0x" : ""}${prefix}…${suffix}`;
+  const isHex = address.startsWith("0x");
+  const body = isHex ? address.slice(2) : address;
+  if (body.length <= chars * 2) return address;
+  const prefix = isHex ? `0x${body.slice(0, chars)}` : body.slice(0, chars);
+  const suffix = body.slice(-chars);
+  return `${prefix}…${suffix}`;
 }
 
 /**
- * Tronque une chaîne en `prefix…suffix` (Phase 4.2, D2·A).
- *
- * Utilisé pour l'affichage **uniforme** des adresses wallet
- * (`tsango1…`, `tb1q…`, `0x…`) — actuellement `10…4` partout.
- *
- * Si la chaîne est plus courte que `prefix + suffix + 1`, elle est
- * retournée telle quelle (pas de troncature inutile).
+ * Tronque une chaîne en `prefix…suffix`.
+ * Retourne la chaîne telle quelle si elle est déjà courte.
  */
 export function truncateMiddle(
   value: string,
@@ -94,10 +127,16 @@ export function truncateMiddle(
   return `${value.slice(0, prefix)}…${value.slice(-suffix)}`;
 }
 
-/** Raccourcit un hash de tx (même logique). */
-/** Raccourcit un hash de tx (même logique). */
+/**
+ * Raccourcit un hash de transaction.
+ * Préserve `0x` uniquement s'il était présent — un txid Bitcoin
+ * (sans `0x`) n'est jamais préfixé par `0x`.
+ */
 export function shortenHash(hash: string, chars = 6): string {
-  if (hash.length <= chars * 2 + 2) return hash;
-  const body = hash.startsWith("0x") ? hash.slice(2) : hash;
-  return `0x${body.slice(0, chars)}…${body.slice(-chars)}`;
+  const isHex = hash.startsWith("0x");
+  const body = isHex ? hash.slice(2) : hash;
+  if (body.length <= chars * 2) return hash;
+  const prefix = isHex ? `0x${body.slice(0, chars)}` : body.slice(0, chars);
+  const suffix = body.slice(-chars);
+  return `${prefix}…${suffix}`;
 }
