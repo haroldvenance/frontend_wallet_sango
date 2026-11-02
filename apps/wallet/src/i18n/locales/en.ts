@@ -15,6 +15,8 @@ export const en = {
       import: "Import with my phrase",
       connect: "Already have an account?",
       connectLink: "Connect",
+      selfCustody:
+        "Your keys stay encrypted on your device. Sango can never access them.",
     },
     unlock: {
       title: "Welcome back",
@@ -38,6 +40,8 @@ export const en = {
         "I understand Sango cannot recover my password.",
       submit: "Create my wallet",
       step: "Step {current} of {total}",
+      passwordTooWeak:
+        "Password is too weak. Add a capital, a digit or a symbol.",
       fallbackLabel: "My wallet",
       revealTitle: "Save your recovery phrase",
       revealSubtitle:
@@ -50,8 +54,15 @@ export const en = {
       revealConfirm: "Continue",
       save: "Saving…",
       createdAndSaved: "Wallet created and saved",
-      createError: "Creation error",
-      saveError: "Unable to save",
+      createError:
+        "Could not create the wallet. Please try again.",
+      saveError:
+        "Could not save the wallet. Please try again.",
+      copyWarning:
+        "Anyone with this phrase controls your wallet. Never share it.",
+      leaveWarning:
+        "Your recovery phrase has been shown but not yet saved. Leaving now will lose this wallet forever.",
+      sangoSubtitle: "Sango (devnet) — devnet address",
       successTitle: "Wallet created",
       successSubtitle:
         "Your multi-chain wallet is ready. Here are your receiving addresses.",
@@ -86,6 +97,18 @@ export const en = {
       legacyNotice:
         "To restore an old SANGO wallet (Ed25519 seed), use the",
       legacyLink: "legacy page",
+      legacyTitle: "Restore a legacy SANGO wallet",
+      legacySubtitle:
+        "Old format: Ed25519 seed (32 bytes, 64 hex chars, with or without 0x).",
+      legacySeedPlaceholder: "0x… or …",
+      legacyLabelPlaceholder: "Wallet name (optional)",
+      legacyPasswordPlaceholder: "Password (min 8 characters)",
+      legacySubmit: "Import",
+      legacyImporting: "Importing…",
+      legacyError: "Import failed",
+      legacyEmptySeed: "Seed is empty",
+      legacyPasswordTooShort: "Password: 8 characters minimum",
+      legacyImported: "Legacy SANGO wallet restored",
     },
   },
   nav: {
@@ -144,7 +167,8 @@ export const en = {
   },
   import: {
     title: "Import a wallet",
-    subtitle: "Paste your Ed25519 seed (32 bytes, 64 hex chars, with or without 0x).",
+    subtitle:
+      "Paste your Ed25519 seed (32 bytes, 64 hex chars, with or without 0x).",
     seedPlaceholder: "0x… or …",
     labelPlaceholder: "Wallet name (optional)",
     passwordPlaceholder: "Password (min 8 characters)",
@@ -156,7 +180,8 @@ export const en = {
   },
   unlock: {
     title: "Restore a wallet",
-    subtitle: "Enter the password of a wallet stored in the local keyring.",
+    subtitle:
+      "Enter the password of a wallet stored in the local keyring.",
     passwordPlaceholder: "Password",
     button: "Unlock",
     unlocking: "Unlocking…",
@@ -216,7 +241,6 @@ export const en = {
     chainId: "Chain ID",
     latestBlocks: "Latest blocks",
     blocksUnavailable: "EVM blocks unavailable",
-
   },
   balance: {
     totalBalance: "Total balance",
@@ -292,6 +316,7 @@ export const en = {
       copied: "Address copied",
       share: "Share",
       download: "Download QR",
+      copyError: "Copy failed",
     },
   },
   assetDetail: {
@@ -338,6 +363,7 @@ export const en = {
       share: "Share",
       download: "Download QR",
       close: "Close",
+      copyError: "Copy failed",
     },
   },
   chains: {
@@ -364,6 +390,7 @@ export const en = {
     assets: "assets",
     onChainVia: "On-chain via",
     sangoName: "SangoCoin",
+    availableBalance: "Available",
   },
   activity: {
     title: "Recent activity",
@@ -371,7 +398,8 @@ export const en = {
     empty: "No transactions",
     sourcesUnavailable: "Pending sources: {networks}",
     viewAll: "View all",
-    demoNote: "Demo activity — transaction history will come from Sango RPC.",
+    demoNote:
+      "Demo activity — transaction history will come from Sango RPC.",
     received: "Received SANGO",
     sent: "Sent SANGO",
     staked: "SANGO Staked",
@@ -395,6 +423,7 @@ export const en = {
     amountPositive: "Amount must be > 0",
     insufficientBalance: "Insufficient balance",
     maxLabel: "Max",
+    balanceDesc: "Balance: {value}",
     txSent: "Transaction sent",
     txIncluded: "Transaction included",
     txPending: "Transaction pending",
@@ -416,6 +445,51 @@ export const en = {
       empty: "No asset available",
       available: "Available",
       zero: "No balance",
+    },
+    evm: {
+      asset: "Asset",
+      recipientPlaceholder: "0x…",
+      amountPlaceholderToken: "1.00",
+      amountPlaceholderNative: "0.01",
+      invalidAddress: "Invalid address",
+      invalidAddressDesc:
+        "Expected format: 0x followed by 40 hexadecimal characters.",
+      invalidAmount: "Invalid amount",
+      amountPositive: "Amount must be greater than 0",
+      insufficientBalance: "Insufficient balance",
+      insufficientFee: "Insufficient ETH for fees",
+      feeEstimateDesc: "Estimated fees: {value} ETH",
+      feeEstimateLabel: "Estimated fees",
+      feeEstimating: "Estimating fees…",
+      txSent: "Transaction sent",
+    },
+    bitcoin: {
+      recipientPlaceholder: "bc1q…",
+      recipientPlaceholderTestnet: "tb1q…",
+      invalidAddress: "Invalid address",
+      invalidAddressDesc: "Expected format: {prefix}… (P2WPKH).",
+      invalidAmount: "Invalid amount",
+      amountPositive: "Amount must be greater than 0",
+      insufficientBalance: "Insufficient balance",
+      balanceDesc: "Balance: {value} BTC",
+      feeMissing: "Fee rate missing",
+      txSent: "Transaction sent",
+      viewExplorer: "View on mempool.space ↗",
+      amountLabel: "Amount (BTC)",
+      amountPlaceholder: "0.001",
+      priorityLabel: "Priority",
+      loading: "Loading…",
+      feeFast: "Fast",
+      feeNormal: "Normal",
+      feeSlow: "Slow",
+      feeCustom: "Custom",
+      satPerVb: "sat/vB",
+      feeEstimateLabel: "Estimated fee",
+      feeEstimateHint: "Final estimate depends on selected UTXOs.",
+      pending: "Sending…",
+    },
+    sango: {
+      subtitle: "Sango native chain",
     },
   },
   receive: {
@@ -514,7 +588,8 @@ export const en = {
     bondHint: "Adds SANGO to your self-stake. Minimum 100 000 SANGO total.",
     unbond: "Unbond",
     unbondTitle: "Withdraw from self-stake",
-    unbondHint: "Withdrawal triggers a 14-day wait. At least 100 000 SANGO must remain.",
+    unbondHint:
+      "Withdrawal triggers a 14-day wait. At least 100 000 SANGO must remain.",
     updateCommission: "Update commission",
     updateCommissionTitle: "Update commission",
     updateCommissionHint: "Takes effect after 7 days. Maximum 10 %.",
@@ -541,29 +616,13 @@ export const en = {
     alreadyBody:
       "Your address is already in the validator set. You can add self-stake via Bond from your dashboard.",
   },
-    backToList: "Back to history",
-    notFound: "Transaction not found",
-    included: "Included",
-    amount: "Amount",
-    hash: "Hash",
-    block: "Block",
-    mempool: "In mempool",
-    nonce: "Nonce",
-    sender: "Sender",
-    recipient: "Recipient",
-    gasLimit: "Gas limit",
-    maxFee: "Max fee",
-    priorityFee: "Priority fee",
-    feeEstimate: "Max estimated fee",
-    data: "Data",
-    viewInExplorer: "View in explorer",
-
   history: {
     fee: "Fee: {value}",
     direction: {
       sent: "Sent",
       received: "Received",
       internal: "Internal",
+      unknown: "Unknown",
     },
     statusFailed: "failed",
     relative: {
@@ -577,6 +636,17 @@ export const en = {
     subtitle: "Transactions sent by your wallet",
     backToDashboard: "Back to dashboard",
     subtitleAll: "All chains combined",
+    refresh: "Refresh",
+    advancedDetails: "Technical details",
+    asset: {
+      token: "Token",
+    },
+    evmErrors: {
+      rateLimited:
+        "Too many requests. Please try again in a few seconds.",
+      serviceUnavailable: "History service unavailable.",
+      generic: "Could not load transactions.",
+    },
     familyFilter: {
       all: "All",
       evm: "EVM",
@@ -640,15 +710,35 @@ export const en = {
     imported: "Keyfile imported",
     importFailed: "Import failed",
     footer: "The seed is NEVER stored in clear. Only the encrypted blob.",
+    close: "Close",
+    reloadToUnlock: "Reload the page to unlock",
+    importedLabel: "Imported",
+    importedBip39Label: "EVM imported",
+    incompatibleFormat: "Incompatible format",
+    incompatibleFormatDesc:
+      "This is a SANGO legacy keyfile (Ed25519). Import it via a SANGO wallet, not EVM.",
+    bip39Title: "BIP-39 keyfile",
+    bip39Subtitle:
+      "Proprietary sango-bip39-keyfile format — backup and restore of the EVM wallet. Only compatible with this app.",
+    bip39Warning:
+      "This keyfile contains the encrypted BIP-39 seed. The recovery phrase is never exported. Keep this file and its password separately.",
+    bip39ExportButton: "Export",
+    bip39ImportButton: "Import",
+    bip39ExportSuccess: "BIP-39 keyfile exported",
+    bip39ImportSuccess: "BIP-39 keyfile imported",
+    bip39ExportFailed: "Export failed",
+    bip39ImportFailed: "Import failed",
+    bip39NoWallet: "No active BIP-39 wallet to export",
   },
   preferences: {
     title: "Preferences",
-  fiat: {
+    fiat: {
       sectionTitle: "Fiat display",
       toggleLabel: "Show amounts in € and FCFA",
       toggleHelp:
         "Shows an indicative estimate next to SANGO amounts. Off by default.",
-      unavailable: "The indicative rate is not configured in this build.",
+      unavailable:
+        "The indicative rate is not configured in this build.",
       disclaimer:
         "Indicative, non-binding value. Not a market price.",
     },
@@ -657,7 +747,6 @@ export const en = {
     title: "Down +{amount} {symbol} received",
     pending: "pending",
   },
-
   notificationBell: {
     ariaLabel: "Notifications",
     title: "Notifications",
@@ -798,6 +887,8 @@ export const en = {
         mismatch: "The two new passwords do not match.",
         sameAsCurrent: "New password must differ from the current one.",
         wrongCurrent: "Current password is incorrect.",
+        tooWeak:
+          "New password is too weak. Add a capital, a digit or a symbol.",
         entryNotFound: "Wallet not found in the keyring.",
         generic:
           "Could not change the password. Your old password is still valid.",
@@ -833,6 +924,8 @@ export const en = {
         "Check that your backup file is valid and can be decrypted with your password.",
       verifyButton: "Verify a keyfile",
       backButton: "Back to settings",
+      footerWarning:
+        "Never share the keyfile or your password. Anyone who has them controls your wallet.",
       formatSango:
         "Your wallet uses a 32-byte Ed25519 seed. The keyfile contains this seed, encrypted.",
       formatBip39:
@@ -860,17 +953,44 @@ export const en = {
         "This keyfile is valid, but it corresponds to a different wallet.",
       noActiveWallet: "No active wallet to compare against.",
       changeFile: "Choose another file",
+      v1FileDetected:
+        "This file is a legacy SANGO keyfile (Ed25519). This page only verifies BIP-39 keyfiles (sango-bip39-keyfile).",
+      parseFailed: "Could not read this file.",
+      deriveMismatch:
+        "The file was decrypted, but the derived address does not match the file. It may be corrupted.",
+      securityHint:
+        "This page changes nothing. It only verifies that your keyfile is readable and that your password decrypts it.",
     },
+  },
+  approvals: {
+    title: "Manage an approval",
+    subtitle: "Check or modify the authorization granted to a contract to use your tokens.",
+    back: "Back to dashboard",
+    tokenLabel: "Token",
+    tokenPlaceholder: "Select a token",
+    spenderLabel: "Contract (spender)",
+    spenderInvalid: "Invalid address — expected: 0x followed by 40 hex characters.",
+    zeroSpender: "The zero address (0x000…000) cannot spend your tokens. Choose the address of the contract you interact with.",
+    currentAllowance: "Current allowance",
+    allowanceNone: "No authorization",
+    allowanceUnlimited: "Unlimited",
+    revoke: "Revoke",
+    exactAmount: "Exact amount",
+    approve: "Approve",
+    approveUnlimited: "Approve an unlimited amount",
+    noTokens: "No token configured on this network.",
   },
   fiat: {
     indicative: "≈",
-  },} as const;
+  },
+  passwordStrength: {
+    weak: "Weak password",
+    medium: "Medium password",
+    good: "Good password",
+    strong: "Strong password",
+  },
+} as const;
 
-/**
- * Transforme un objet de traductions en autorisant n'importe quelle chaîne
- * à la place des littéraux (`as const` fige les valeurs). Garde la structure
- * des clés intacte → `fr.ts` doit fournir exactement les mêmes clés.
- */
 type DeepStringify<T> = {
   [K in keyof T]: T[K] extends string ? string : DeepStringify<T[K]>;
 };

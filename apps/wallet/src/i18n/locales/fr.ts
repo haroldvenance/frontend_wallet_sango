@@ -17,6 +17,8 @@ export const fr: TranslationSchema = {
       import: "Importer avec ma phrase",
       connect: "Déjà un compte ?",
       connectLink: "Se connecter",
+      selfCustody:
+        "Tes clés restent chiffrées sur ton appareil. Sango ne peut jamais y accéder.",
     },
     unlock: {
       title: "Bon retour",
@@ -40,6 +42,8 @@ export const fr: TranslationSchema = {
         "Je comprends que Sango ne peut pas récupérer mon mot de passe.",
       submit: "Créer mon portefeuille",
       step: "Étape {current} sur {total}",
+      passwordTooWeak:
+        "Mot de passe trop faible. Ajoute une majuscule, un chiffre ou un symbole.",
       fallbackLabel: "Mon portefeuille",
       revealTitle: "Sauvegarde ta phrase de récupération",
       revealSubtitle:
@@ -52,8 +56,15 @@ export const fr: TranslationSchema = {
       revealConfirm: "Continuer",
       save: "Sauvegarde…",
       createdAndSaved: "Portefeuille créé et sauvegardé",
-      createError: "Erreur de création",
-      saveError: "Impossible de sauvegarder",
+      createError:
+        "Impossible de créer le portefeuille. Réessaie.",
+      saveError:
+        "Impossible de sauvegarder le portefeuille. Réessaie.",
+      copyWarning:
+        "Quiconque possède cette phrase contrôle ton portefeuille. Ne la partage jamais.",
+      leaveWarning:
+        "Ta phrase de récupération a été affichée mais pas encore sauvegardée. Quitter maintenant perdra ce portefeuille définitivement.",
+      sangoSubtitle: "Sango (devnet) — adresse de test",
       successTitle: "Portefeuille créé",
       successSubtitle:
         "Ton portefeuille multi-chaînes est prêt. Voici tes adresses de réception.",
@@ -88,6 +99,18 @@ export const fr: TranslationSchema = {
       legacyNotice:
         "Pour restaurer un ancien portefeuille SANGO (seed Ed25519), utilise la",
       legacyLink: "page legacy",
+      legacyTitle: "Restaurer un portefeuille SANGO (legacy)",
+      legacySubtitle:
+        "Ancien format : seed Ed25519 (32 bytes, 64 caractères hex, avec ou sans 0x).",
+      legacySeedPlaceholder: "0x… ou …",
+      legacyLabelPlaceholder: "Nom du portefeuille (optionnel)",
+      legacyPasswordPlaceholder: "Mot de passe (min 8 caractères)",
+      legacySubmit: "Importer",
+      legacyImporting: "Import…",
+      legacyError: "Import impossible",
+      legacyEmptySeed: "Le seed est vide",
+      legacyPasswordTooShort: "Mot de passe : 8 caractères minimum",
+      legacyImported: "Portefeuille SANGO legacy restauré",
     },
   },
   nav: {
@@ -220,7 +243,6 @@ export const fr: TranslationSchema = {
     chainId: "Chain ID",
     latestBlocks: "Derniers blocs",
     blocksUnavailable: "Blocs EVM indisponibles",
-
   },
   balance: {
     totalBalance: "Solde total",
@@ -297,6 +319,7 @@ export const fr: TranslationSchema = {
       copied: "Adresse copiée",
       share: "Partager",
       download: "Télécharger QR",
+      copyError: "Copie impossible",
     },
   },
   assetDetail: {
@@ -343,6 +366,7 @@ export const fr: TranslationSchema = {
       share: "Partager",
       download: "Télécharger le QR",
       close: "Fermer",
+      copyError: "Copie impossible",
     },
   },
   chains: {
@@ -369,6 +393,7 @@ export const fr: TranslationSchema = {
     assets: "actifs",
     onChainVia: "On-chain via",
     sangoName: "SangoCoin",
+    availableBalance: "Disponible",
   },
   activity: {
     title: "Activité récente",
@@ -401,6 +426,7 @@ export const fr: TranslationSchema = {
     amountPositive: "Montant > 0 requis",
     insufficientBalance: "Solde insuffisant",
     maxLabel: "Max",
+    balanceDesc: "Solde : {value}",
     txSent: "Transaction envoyée",
     txIncluded: "Transaction incluse",
     txPending: "Transaction en attente",
@@ -422,6 +448,52 @@ export const fr: TranslationSchema = {
       empty: "Aucun actif disponible",
       available: "Disponible",
       zero: "Aucun solde",
+    },
+    evm: {
+      asset: "Actif",
+      recipientPlaceholder: "0x…",
+      amountPlaceholderToken: "1.00",
+      amountPlaceholderNative: "0.01",
+      invalidAddress: "Adresse invalide",
+      invalidAddressDesc:
+        "Format attendu : 0x suivi de 40 caractères hexadécimaux.",
+      invalidAmount: "Montant invalide",
+      amountPositive: "Le montant doit être supérieur à 0",
+      insufficientBalance: "Solde insuffisant",
+      insufficientFee: "Solde ETH insuffisant pour les frais",
+      feeEstimateDesc: "Frais estimés : {value} ETH",
+      feeEstimateLabel: "Frais estimés",
+      feeEstimating: "Estimation des frais…",
+      txSent: "Transaction envoyée",
+    },
+    bitcoin: {
+      recipientPlaceholder: "bc1q…",
+      recipientPlaceholderTestnet: "tb1q…",
+      invalidAddress: "Adresse invalide",
+      invalidAddressDesc: "Format attendu : {prefix}… (P2WPKH).",
+      invalidAmount: "Montant invalide",
+      amountPositive: "Le montant doit être supérieur à 0",
+      insufficientBalance: "Solde insuffisant",
+      balanceDesc: "Solde : {value} BTC",
+      feeMissing: "Taux de frais manquant",
+      txSent: "Transaction envoyée",
+      viewExplorer: "Voir sur mempool.space ↗",
+      amountLabel: "Montant (BTC)",
+      amountPlaceholder: "0.001",
+      priorityLabel: "Priorité",
+      loading: "Chargement…",
+      feeFast: "Rapide",
+      feeNormal: "Normal",
+      feeSlow: "Lent",
+      feeCustom: "Personnalisé",
+      satPerVb: "sat/vB",
+      feeEstimateLabel: "Frais estimés",
+      feeEstimateHint:
+        "L'estimation finale dépend des UTXOs sélectionnés.",
+      pending: "Envoi…",
+    },
+    sango: {
+      subtitle: "Chaîne native Sango",
     },
   },
   receive: {
@@ -505,7 +577,8 @@ export const fr: TranslationSchema = {
     newCommissionLabel: "Nouvelle commission (%)",
     panelTitle: "Mon validateur",
     panelSubtitle: "Actions de gestion de ton validateur",
-    panelFooter: "Bond ajoute au self-stake. Unbond déclenche 14 jours d'attente.",
+    panelFooter:
+      "Bond ajoute au self-stake. Unbond déclenche 14 jours d'attente.",
     selfStake: "Self-stake",
     totalDelegated: "Délégué",
     commission: "Commission",
@@ -517,10 +590,12 @@ export const fr: TranslationSchema = {
     until: "jusqu'au",
     bond: "Bond",
     bondTitle: "Ajouter au self-stake",
-    bondHint: "Ajoute du SANGO à ton self-stake. Minimum 100 000 SANGO au total.",
+    bondHint:
+      "Ajoute du SANGO à ton self-stake. Minimum 100 000 SANGO au total.",
     unbond: "Unbond",
     unbondTitle: "Retirer du self-stake",
-    unbondHint: "Le retrait déclenche une période de 14 jours. Il doit rester 100 000 SANGO minimum.",
+    unbondHint:
+      "Le retrait déclenche une période de 14 jours. Il doit rester 100 000 SANGO minimum.",
     updateCommission: "Modifier commission",
     updateCommissionTitle: "Modifier la commission",
     updateCommissionHint: "Prend effet après 7 jours. Maximum 10 %.",
@@ -547,29 +622,13 @@ export const fr: TranslationSchema = {
     alreadyBody:
       "Ton adresse figure déjà dans la liste des validateurs. Tu peux ajouter du self-stake via Bond depuis ton tableau de bord.",
   },
-    backToList: "Retour a l'historique",
-    notFound: "Transaction introuvable",
-    included: "Incluse",
-    amount: "Montant",
-    hash: "Hash",
-    block: "Bloc",
-    mempool: "En mempool",
-    nonce: "Nonce",
-    sender: "Emetteur",
-    recipient: "Destinataire",
-    gasLimit: "Gas limit",
-    maxFee: "Max fee",
-    priorityFee: "Priority fee",
-    feeEstimate: "Frais max estimes",
-    data: "Data",
-    viewInExplorer: "Voir dans l'explorateur",
-
   history: {
     fee: "Frais : {value}",
     direction: {
       sent: "Envoyée",
       received: "Reçue",
       internal: "Interne",
+      unknown: "Inconnue",
     },
     statusFailed: "échouée",
     relative: {
@@ -583,6 +642,17 @@ export const fr: TranslationSchema = {
     subtitle: "Transactions emises par ton wallet",
     backToDashboard: "Retour au tableau de bord",
     subtitleAll: "Toutes chaînes confondues",
+    refresh: "Rafraîchir",
+    advancedDetails: "Détails techniques",
+    asset: {
+      token: "Token",
+    },
+    evmErrors: {
+      rateLimited:
+        "Trop de requêtes. Réessayez dans quelques secondes.",
+      serviceUnavailable: "Service d'historique indisponible.",
+      generic: "Impossible de charger les transactions.",
+    },
     familyFilter: {
       all: "Toutes",
       evm: "EVM",
@@ -645,11 +715,31 @@ export const fr: TranslationSchema = {
     import: "Importer un keyfile",
     imported: "Keyfile importe",
     importFailed: "Import echoue",
-    footer: "Le seed n'est JAMAIS ecrit en clair. Uniquement le blob chiffre.",
+    footer:
+      "Le seed n'est JAMAIS ecrit en clair. Uniquement le blob chiffre.",
+    close: "Fermer",
+    reloadToUnlock: "Recharge la page pour te déverrouiller",
+    importedLabel: "Importé",
+    importedBip39Label: "EVM importé",
+    incompatibleFormat: "Format incompatible",
+    incompatibleFormatDesc:
+      "Ce fichier est un keyfile SANGO legacy (Ed25519). Il doit être importé via un wallet SANGO (pas EVM).",
+    bip39Title: "Keyfile BIP-39",
+    bip39Subtitle:
+      "Format propriétaire sango-bip39-keyfile — sauvegarde et restauration du wallet EVM. Compatible avec ce wallet uniquement.",
+    bip39Warning:
+      "Ce keyfile contient le seed BIP-39 chiffré. La phrase de récupération n'est jamais exportée. Conserve ce fichier et son mot de passe séparément.",
+    bip39ExportButton: "Exporter",
+    bip39ImportButton: "Importer",
+    bip39ExportSuccess: "Keyfile BIP-39 exporté",
+    bip39ImportSuccess: "Keyfile BIP-39 importé",
+    bip39ExportFailed: "Export impossible",
+    bip39ImportFailed: "Import impossible",
+    bip39NoWallet: "Aucun wallet BIP-39 actif à exporter",
   },
   preferences: {
     title: "Préférences",
-  fiat: {
+    fiat: {
       sectionTitle: "Affichage fiat",
       toggleLabel: "Afficher les montants en € et FCFA",
       toggleHelp:
@@ -664,7 +754,6 @@ export const fr: TranslationSchema = {
     title: "Recu +{amount} {symbol}",
     pending: "en attente",
   },
-
   notificationBell: {
     ariaLabel: "Notifications",
     title: "Notifications",
@@ -801,11 +890,14 @@ export const fr: TranslationSchema = {
       show: "Afficher le mot de passe",
       hide: "Masquer le mot de passe",
       errors: {
-        tooShort: "Le nouveau mot de passe doit faire au moins 8 caractères.",
+        tooShort:
+          "Le nouveau mot de passe doit faire au moins 8 caractères.",
         mismatch: "Les deux nouveaux mots de passe ne correspondent pas.",
         sameAsCurrent:
           "Le nouveau mot de passe doit être différent de l'actuel.",
         wrongCurrent: "Le mot de passe actuel est incorrect.",
+        tooWeak:
+          "Le nouveau mot de passe est trop faible. Ajoute une majuscule, un chiffre ou un symbole.",
         entryNotFound: "Portefeuille introuvable dans le keyring.",
         generic:
           "Impossible de changer le mot de passe. Ton ancien mot de passe reste valide.",
@@ -841,6 +933,8 @@ export const fr: TranslationSchema = {
         "Teste que ton fichier de sauvegarde est valide et déchiffrable avec ton mot de passe.",
       verifyButton: "Vérifier un keyfile",
       backButton: "Retour aux paramètres",
+      footerWarning:
+        "Ne partage jamais le keyfile ni ton mot de passe. Quiconque les possède contrôle ton wallet.",
       formatSango:
         "Ton wallet utilise un seed Ed25519 (32 bytes). Le keyfile contient ce seed chiffré.",
       formatBip39:
@@ -868,8 +962,40 @@ export const fr: TranslationSchema = {
         "Ce keyfile est valide, mais il correspond à un autre wallet.",
       noActiveWallet: "Aucun wallet actif pour comparer.",
       changeFile: "Choisir un autre fichier",
+      v1FileDetected:
+        "Ce fichier est un keyfile SANGO legacy (Ed25519). Cette page ne vérifie que les keyfiles BIP-39 (sango-bip39-keyfile).",
+      parseFailed: "Impossible de lire ce fichier.",
+      deriveMismatch:
+        "Le fichier a été déchiffré mais l'adresse dérivée ne correspond pas à celle du fichier. Il est peut-être corrompu.",
+      securityHint:
+        "Cette page ne modifie rien. Elle teste uniquement que ton keyfile est lisible et que ton mot de passe le déchiffre.",
     },
+  },
+  approvals: {
+    title: "Gérer une approbation",
+    subtitle: "Vérifie ou modifie l'autorisation donnée à un contrat d'utiliser tes tokens.",
+    back: "Retour au tableau de bord",
+    tokenLabel: "Token",
+    tokenPlaceholder: "Sélectionner un token",
+    spenderLabel: "Contrat (spender)",
+    spenderInvalid: "Adresse invalide — format attendu : 0x suivi de 40 caractères hexadécimaux.",
+    zeroSpender: "L'adresse zéro (0x000…000) ne peut pas dépenser tes tokens. Choisis l'adresse du contrat avec lequel tu interagis.",
+    currentAllowance: "Autorisation actuelle",
+    allowanceNone: "Aucune autorisation",
+    allowanceUnlimited: "Illimité",
+    revoke: "Révoquer",
+    exactAmount: "Montant exact",
+    approve: "Approuver",
+    approveUnlimited: "Approuver un montant illimité",
+    noTokens: "Aucun token configuré sur ce réseau.",
   },
   fiat: {
     indicative: "≈",
-  },};
+  },
+  passwordStrength: {
+    weak: "Mot de passe faible",
+    medium: "Mot de passe moyen",
+    good: "Mot de passe bon",
+    strong: "Mot de passe fort",
+  },
+};
