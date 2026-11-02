@@ -7,37 +7,16 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { AuthShell } from "@/components/branding/auth-shell";
-import { PasswordStrength } from "@/components/branding/password-strength";
+import { PasswordStrength, scorePassword } from "@/components/branding/password-strength";
 import { useClipboard } from "@/hooks/use-clipboard";
 import { useTranslation } from "@/i18n/use-translation";
 import { useWalletStore } from "@/stores/wallet-store";
 
-/**
- * Flow de création unifié — Phase 5.3 (Trust Wallet model).
- *
- * **Une seule mnemonic BIP-39 → N chaînes.** Plus de pills réseau :
- * le portefeuille créé est une identité HD universelle qui dérive
- * SANGO (SLIP-0010 Ed25519), EVM (BIP-44 secp256k1) et Bitcoin
- * (BIP-84 secp256k1).
- *
- * **3 étapes** :
- *   1. form    → password + confirm + ack "no recovery"
- *   2. reveal  → 12 mots + warning + ack "j'ai noté"
- *   3. success → 3 adresses (EVM/BTC/SANGO) + "Accéder au portefeuille"
- *
- * **D-Phase5-3** :
- *   - D5.3-b·B — `networkId` initial = "ethereum-mainnet". Ce n'est
- *     **pas** la famille du wallet — c'est le réseau d'affichage
- *     initial. Le wallet reste multi-famille.
- *   - D5.3-c·A — mnemonic révélée avant persistance, éphémère.
- *   - D5.3-d·A — password + confirmation + ack "no recovery".
- *   - D5.3-e·A — label optionnel conservé.
- */
 const INITIAL_NETWORK_ID = "ethereum-mainnet";
 
 export function CreateUnified() {
@@ -55,19 +34,33 @@ export function CreateUnified() {
   const [ackNoted, setAckNoted] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  // Secrets temporaires (jamais persistés, jetés après persistance).
   const [mnemonic, setMnemonic] = useState<string | null>(null);
   const [wallet, setWallet] = useState<Bip39Wallet | null>(null);
-  // Adresses figées pour l'écran succès.
   const [addresses, setAddresses] = useState<{
     evm: string;
     btc: string;
     sango: string;
   } | null>(null);
 
+  // ⚠️ Garde : si l'utilisateur ferme/refresh pendant "reveal", le
+  // wallet n'est PAS persisté et la mnemonic n'a jamais été vérifiée.
+  useEffect(() => {
+    if (step !== "reveal") return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [step]);
+
   function validateForm(): boolean {
     if (password.length < 8) {
       toast.error(t.create.passwordTooShort);
+      return false;
+    }
+    if (scorePassword(password) < 2) {
+      toast.error(t.onboarding.create.passwordTooWeak);
       return false;
     }
     if (password !== confirm) {
@@ -89,10 +82,10 @@ export function CreateUnified() {
       setMnemonic(m);
       setWallet(w);
       setStep("reveal");
-    } catch (err) {
-      toast.error(t.create.createError, {
-        description: (err as Error).message,
-      });
+    } catch {
+      // Jamais `(err as Error).message` — peut fuiter le KDF, un offset
+      // PBKDF2, un message de @noble, etc.
+      toast.error(t.onboarding.create.createError);
     } finally {
       setBusy(false);
     }
@@ -110,8 +103,7 @@ export function CreateUnified() {
       const keyring = await Keyring.open();
 
       const id = wallet.defaultAddress.toLowerCase();
-      const trimmedLabel =
-        label.trim() || t.onboarding.create.fallbackLabel;
+      const trimmedLabel = label.trim() || t.onboarding.create.fallbackLabel;
       const createdAt = Date.now();
 
       await keyring.put({
@@ -124,8 +116,6 @@ export function CreateUnified() {
       });
       keyring.close();
 
-      // addWallet préserve les wallets existants (création depuis le
-      // dashboard d'un wallet existant).
       addWallet({
         id,
         wallet,
@@ -135,8 +125,6 @@ export function CreateUnified() {
         createdAt,
       });
 
-      // Dérive les 3 adresses AVANT de jeter les références sensibles.
-      // Le wallet est une identité HD unique projetée sur 3 chaînes.
       setAddresses({
         evm: wallet.getIdentity(0).addressHex,
         btc: wallet.getBitcoinIdentity("mainnet", 0, 0).address,
@@ -146,20 +134,16 @@ export function CreateUnified() {
       setMnemonic(null);
       toast.success(t.create.createdAndSaved);
       setStep("success");
-    } catch (err) {
-      toast.error(t.create.saveError, {
-        description: (err as Error).message,
-      });
+    } catch {
+      toast.error(t.onboarding.create.saveError);
     } finally {
+      setPassword("");
       setBusy(false);
     }
   }
 
   // ── Étape 3 : succès ────────────────────────────────────────
   if (step === "success" && addresses) {
-    // **D-Phase5-3.bis** — "EVM" au lieu de "Ethereum" : une même
-    // adresse 0x… est utilisable sur Ethereum, BNB Chain, Base,
-    // Arbitrum, etc. Le sous-titre le rappelle.
     const chains: Array<{
       key: "evm" | "bitcoin" | "sango";
       label: string;
@@ -181,7 +165,7 @@ export function CreateUnified() {
       {
         key: "sango",
         label: t.onboarding.create.chainLabels.sango,
-        subtitle: t.onboarding.create.chainLabels.sangoSubtitle,
+        subtitle: t.onboarding.create.sangoSubtitle,
         value: addresses.sango,
       },
     ];
@@ -222,8 +206,10 @@ export function CreateUnified() {
               </p>
               <button
                 type="button"
-                onClick={() => copy(c.value, t.onboarding.create.successCopy)}
-                className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-primary/40 bg-primary/5 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
+                onClick={() =>
+                  copy(c.value, t.onboarding.create.successCopy)
+                }
+                className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-primary/40 bg-primary/5 text-xs font-semibold text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
                 <Copy className="size-3.5" />
                 {t.onboarding.create.successCopy}
@@ -235,7 +221,7 @@ export function CreateUnified() {
         <button
           type="button"
           onClick={() => navigate("/")}
-          className="mt-6 inline-flex h-12 w-full items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+          className="mt-6 inline-flex h-12 w-full items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           {t.onboarding.create.successEnter}
         </button>
@@ -270,17 +256,27 @@ export function CreateUnified() {
           </div>
           <button
             type="button"
-            onClick={() => copy(mnemonic, t.onboarding.create.copyMnemonic)}
-            className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border bg-background py-2 text-xs font-medium transition-colors hover:bg-accent"
+            onClick={() =>
+              copy(mnemonic, t.onboarding.create.copyMnemonic)
+            }
+            className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border bg-background py-2 text-xs font-medium transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
             <Copy className="size-3.5" />
             {t.onboarding.create.copyMnemonic}
           </button>
+          <p className="mt-2 text-[10px] text-muted-foreground/80">
+            {t.onboarding.create.copyWarning}
+          </p>
         </div>
 
         <div className="mt-4 flex items-start gap-2 rounded-2xl border border-amber-500/40 bg-amber-500/5 p-3 text-[11px] text-amber-700 dark:text-amber-400">
           <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
           <span>{t.onboarding.create.revealWarning}</span>
+        </div>
+
+        <div className="mt-4 flex items-start gap-2 rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-[11px] text-destructive">
+          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+          <span>{t.onboarding.create.leaveWarning}</span>
         </div>
 
         <label className="mt-4 flex cursor-pointer items-start gap-2.5 rounded-xl border bg-muted/30 p-3">
@@ -307,7 +303,7 @@ export function CreateUnified() {
             type="button"
             onClick={onPersist}
             disabled={busy || !ackNoted}
-            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50"
           >
             <Check className="size-4" />
             {busy ? t.create.saving : t.onboarding.create.revealConfirm}
@@ -327,7 +323,6 @@ export function CreateUnified() {
       step={{ current: 1, total: 3 }}
     >
       <div className="mt-2 space-y-5">
-        {/* Password */}
         <div>
           <label
             htmlFor="create-password"
@@ -348,8 +343,12 @@ export function CreateUnified() {
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              aria-label={showPassword ? "Masquer" : "Afficher"}
+              aria-label={
+                showPassword
+                  ? t.settings.password.hide
+                  : t.settings.password.show
+              }
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
               {showPassword ? (
                 <EyeOff className="size-4" />
@@ -361,7 +360,6 @@ export function CreateUnified() {
           <PasswordStrength password={password} className="mt-2" />
         </div>
 
-        {/* Confirm */}
         <div>
           <label
             htmlFor="create-confirm"
@@ -379,7 +377,6 @@ export function CreateUnified() {
           />
         </div>
 
-        {/* Ack no recovery */}
         <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border bg-muted/30 p-3">
           <input
             type="checkbox"
@@ -392,12 +389,11 @@ export function CreateUnified() {
           </span>
         </label>
 
-        {/* Submit */}
         <button
           type="button"
           onClick={onGenerate}
           disabled={busy}
-          className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50"
         >
           {busy ? t.create.generating : t.onboarding.create.submit}
         </button>

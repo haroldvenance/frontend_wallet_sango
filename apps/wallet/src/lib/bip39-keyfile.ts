@@ -1,79 +1,31 @@
 import type { StoredWalletV2 } from "@sango/wallet-core";
 
-/**
- * Keyfile BIP-39 Sango — format propriétaire de backup/import.
- *
- * **D-E1.6-6** — Format séparé de `sango-wallet-keyfile` (V1 legacy
- * Ed25519). Les deux n'ont pas la même sémantique :
- *
- *   - `sango-wallet-keyfile` → seed Ed25519 32 bytes, dérivation
- *                              historique SANGO.
- *   - `sango-bip39-keyfile`  → seed BIP-39 64 bytes, dérivations HD
- *                              EVM (m/44'/60'/…).
- *
- * **Invariant D-HD-1** : le keyfile ne contient **jamais** de mnemonic,
- * même chiffrée. Seul le seed BIP-39 (chiffré AES-GCM-256 + PBKDF2)
- * est exporté. La mnemonic est uniquement une entrée de création/
- * import — elle n'est pas persistée.
- *
- * **Pas de compatibilité MetaMask** : `sango-bip39-keyfile` est un
- * format de sauvegarde/restauration pour ce wallet, pas un format
- * d'interopérabilité. Une future fonctionnalité « exporter la
- * mnemonic » serait conçue séparément avec des garanties de sécurité
- * fortes.
- *
- * **Métadonnées préservées** (non secrètes) :
- *   - `networkId` : identifiant canonique wallet-chains
- *     (`"ethereum-sepolia"`, `"ethereum-mainnet"`, `"base"`,
- *     `"arbitrum-one"`).
- *   - `addressHex` : adresse EVM par défaut (index BIP-44 0).
- *   - `kdf`, `iterations` : paramètres KDF.
- *   - `salt`, `iv` : paramètres cryptographiques.
- *   - `ciphertext` : seed BIP-39 chiffré (64 bytes + 16 bytes tag).
- */
 export interface Bip39KeyfileV1 {
   readonly format: "sango-bip39-keyfile";
   readonly version: 1;
-  /** ISO 8601 — date d'export (debug seulement). */
   readonly exportedAt: string;
-  /** Identifiant canonique du réseau (ex. "ethereum-sepolia"). */
   readonly networkId: string;
-  /** Adresse EVM par défaut (m/44'/60'/0'/0/0). */
   readonly addressHex: string;
   readonly kdf: "PBKDF2-SHA256";
   readonly iterations: number;
-  /** 16 bytes hex (sans préfixe 0x). */
   readonly salt: string;
-  /** 12 bytes hex (sans préfixe 0x). */
   readonly iv: string;
-  /** Seed 64 bytes chiffré AES-GCM (64 + 16 tag = 80 bytes hex). */
   readonly ciphertext: string;
 }
 
-/**
- * Sérialise un `StoredWalletV2` (issu du keyring) en JSON-safe.
- *
- * Le blob chiffré est **déjà** dans le keyring (produit par
- * `Bip39Wallet.exportEncrypted(password)`). L'export ne nécessite
- * donc pas de re-demander le password — le destinataire aura besoin
- * du password pour l'utiliser.
- *
- * `networkId` vient du `KeyringEntry` (pas de `StoredWalletV2` qui
- * contient un placeholder D-NET-2 non significatif).
- */
+const EXPECTED_CIPHERTEXT_LEN = 80; // seed 64 + tag 16
+const MIN_ITERATIONS = 1_000;        // compat format, PAS sécurité
+const MAX_ITERATIONS = 10_000_000;
+
 export function serializeBip39Keyfile(
   stored: StoredWalletV2,
   networkId: string,
 ): Bip39KeyfileV1 {
   if (stored.version !== 2) {
-    throw new Error(
-      `serializeBip39Keyfile: expected StoredWalletV2, got version ${stored.version}`,
-    );
+    throw new Error("serializeBip39Keyfile: expected StoredWalletV2");
   }
   if (stored.format !== "bip39") {
-    throw new Error(
-      `serializeBip39Keyfile: expected format "bip39", got "${stored.format}"`,
-    );
+    throw new Error("serializeBip39Keyfile: expected format 'bip39'");
   }
   return {
     format: "sango-bip39-keyfile",
@@ -89,78 +41,59 @@ export function serializeBip39Keyfile(
   };
 }
 
-/**
- * Désérialise un JSON exporté en `{ stored: StoredWalletV2, networkId }`.
- *
- * Lance si le format ou la version sont invalides, ou si un champ est
- * manquant / mal formé.
- *
- * ⚠️ Le `StoredWalletV2.network` (label SANGO) est fixé à `"testnet"`
- *    comme placeholder D-NET-2 — le `networkId` du keyfile est le
- *    seul identifiant qui compte pour la reconstruction.
- */
 export function deserializeBip39Keyfile(raw: unknown): {
   readonly stored: StoredWalletV2;
   readonly networkId: string;
 } {
   if (typeof raw !== "object" || raw === null) {
-    throw new Error("Fichier invalide (pas un objet JSON)");
+    throw new Error("Invalid file (not a JSON object)");
   }
   const o = raw as Record<string, unknown>;
 
   if (o.format !== "sango-bip39-keyfile") {
-    throw new Error(
-      `Format inconnu — attendu : sango-bip39-keyfile (reçu : ${String(o.format)})`,
-    );
+    throw new Error("Unknown format (expected sango-bip39-keyfile)");
   }
   if (o.version !== 1) {
-    throw new Error(`Version non supportée : ${String(o.version)}`);
+    throw new Error("Unsupported version");
   }
 
-  const networkId = o.networkId;
-  if (typeof networkId !== "string" || networkId.length === 0) {
-    throw new Error("Champ 'networkId' invalide");
+  if (typeof o.networkId !== "string" || o.networkId.length === 0) {
+    throw new Error("Invalid 'networkId'");
   }
 
-  const addressHex = o.addressHex;
-  if (typeof addressHex !== "string" || !/^0x[0-9a-fA-F]{40}$/.test(addressHex)) {
-    throw new Error("Champ 'addressHex' invalide (attendu 0x + 40 hex)");
+  if (typeof o.addressHex !== "string" || !/^0x[0-9a-fA-F]{40}$/.test(o.addressHex)) {
+    throw new Error("Invalid 'addressHex'");
   }
 
   if (o.kdf !== "PBKDF2-SHA256") {
-    throw new Error(`KDF non supporté : ${String(o.kdf)}`);
+    throw new Error("Unsupported KDF");
   }
 
   const iterations = o.iterations;
-  if (typeof iterations !== "number" || iterations <= 0) {
-    throw new Error("Champ 'iterations' invalide");
+  if (
+    typeof iterations !== "number" ||
+    !Number.isInteger(iterations) ||
+    iterations < MIN_ITERATIONS ||
+    iterations > MAX_ITERATIONS
+  ) {
+    throw new Error("Invalid 'iterations'");
   }
 
-  const salt = bytesFromHexField(o.salt, "salt");
-  const iv = bytesFromHexField(o.iv, "iv");
-  const ciphertext = bytesFromHexField(o.ciphertext, "ciphertext");
+  const salt = strictHexToBytes(o.salt, "salt");
+  const iv = strictHexToBytes(o.iv, "iv");
+  const ciphertext = strictHexToBytes(o.ciphertext, "ciphertext");
 
-  // Contrôles de longueur (alignés sur storage.ts).
-  if (salt.length !== 16) {
-    throw new Error(`Salt doit faire 16 bytes, reçu ${salt.length}`);
-  }
-  if (iv.length !== 12) {
-    throw new Error(`IV doit faire 12 bytes, reçu ${iv.length}`);
-  }
-  // AES-GCM ciphertext = seed (64) + tag (16) = 80 bytes.
-  if (ciphertext.length !== 80) {
-    throw new Error(
-      `Ciphertext doit faire 80 bytes (seed 64 + tag 16), reçu ${ciphertext.length}`,
-    );
+  if (salt.length !== 16) throw new Error("Salt must be 16 bytes");
+  if (iv.length !== 12) throw new Error("IV must be 12 bytes");
+  if (ciphertext.length !== EXPECTED_CIPHERTEXT_LEN) {
+    throw new Error(`Ciphertext must be ${EXPECTED_CIPHERTEXT_LEN} bytes`);
   }
 
-  // `StoredWalletV2.network` : placeholder D-NET-2 (label SANGO). Le
-  // vrai réseau est `networkId` (canonique wallet-chains).
   const stored: StoredWalletV2 = {
     version: 2,
     format: "bip39",
     network: "testnet",
-    addressHex,
+    addressHex: o.addressHex,
     salt,
     iv,
     ciphertext,
@@ -168,26 +101,49 @@ export function deserializeBip39Keyfile(raw: unknown): {
     iterations,
   };
 
-  return { stored, networkId };
+  return { stored, networkId: o.networkId };
 }
 
-// ── Helpers hex ────────────────────────────────────────────
+// ── Helpers hex stricts ────────────────────────────────────
 
 function bytesToHex(u: Uint8Array): string {
   return Array.from(u, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-function hexToBytes(hex: string): Uint8Array {
-  if (hex.length % 2 !== 0) throw new Error("hex impair");
-  const out = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < out.length; i += 1) {
-    out[i] = Number.parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+/**
+ * Accepte une string hex (même longueur, [0-9a-fA-F] stricts) OU un
+ * tableau d'entiers dans [0, 255].
+ * Refuse : NaN, hex impair, caractères non-hex, bytes hors plage.
+ */
+function strictHexToBytes(v: unknown, name: string): Uint8Array {
+  if (typeof v === "string") {
+    if (v.length % 2 !== 0) {
+      throw new Error(`Invalid '${name}': odd-length hex`);
+    }
+    if (!/^[0-9a-fA-F]*$/.test(v)) {
+      throw new Error(`Invalid '${name}': non-hex characters`);
+    }
+    const out = new Uint8Array(v.length / 2);
+    for (let i = 0; i < out.length; i += 1) {
+      out[i] = Number.parseInt(v.slice(i * 2, i * 2 + 2), 16);
+    }
+    return out;
   }
-  return out;
-}
-
-function bytesFromHexField(v: unknown, name: string): Uint8Array {
-  if (typeof v === "string") return hexToBytes(v);
-  if (Array.isArray(v)) return new Uint8Array(v as number[]);
-  throw new Error(`Champ '${name}' invalide`);
+  if (Array.isArray(v)) {
+    const out = new Uint8Array(v.length);
+    for (let i = 0; i < v.length; i += 1) {
+      const n = v[i];
+      if (
+        typeof n !== "number" ||
+        !Number.isInteger(n) ||
+        n < 0 ||
+        n > 255
+      ) {
+        throw new Error(`Invalid '${name}[${i}]': byte out of range`);
+      }
+      out[i] = n;
+    }
+    return out;
+  }
+  throw new Error(`Invalid '${name}'`);
 }

@@ -3,25 +3,6 @@ import type { WalletFormat } from "@sango/wallet-core";
 
 import type { AnyWallet } from "@/stores/wallet-store";
 
-/**
- * Déchiffre **toutes** les entrées du keyring avec un password
- * (Phase 3.1, D-Phase3-1).
- *
- * Sémantique "session keyring" : un `unlock(password)` réussit si **au
- * moins une** entrée se déchiffre. Les entrées qui échouent (password
- * différent, blob corrompu) sont **collectées** mais ne bloquent pas
- * la session. L'appelant décide si `decrypted.length === 0` équivaut
- * à un mauvais password.
- *
- * Le password n'est **jamais** conservé en mémoire par cette fonction.
- * Le résultat contient des instances `Wallet`/`Bip39Wallet`
- * déverrouillées (runtime-only, jamais persistées).
- *
- * ⚠️ Ne pas confondre "mauvais password" et "blob corrompu" : les deux
- * produisent une entrée dans `failed`, avec le message d'erreur. Un
- * futur patch pourra les distinguer si le format du blob le permet.
- */
-
 export interface DecryptedWallet {
   readonly id: string;
   readonly wallet: AnyWallet;
@@ -31,9 +12,15 @@ export interface DecryptedWallet {
   readonly createdAt: number;
 }
 
+/**
+ * Aucun message d'erreur brut n'est exposé. `errorCode` reste
+ * non-informatif — il ne distingue pas "mauvais mot de passe" de
+ * "blob corrompu" (le format ne le permet pas aujourd'hui, et
+ * distinguer ouvrirait une attaque par oracle).
+ */
 export interface DecryptFailure {
   readonly id: string;
-  readonly error: string;
+  readonly errorCode: "decryption-failed";
 }
 
 export interface DecryptAllResult {
@@ -73,11 +60,10 @@ export async function decryptAllWallets(
             createdAt: entry.createdAt,
           });
         }
-      } catch (e) {
-        failed.push({
-          id: entry.id,
-          error: (e as Error).message,
-        });
+      } catch {
+        // Message volontairement neutre : ne pas transmettre l'erreur
+        // crypto (peut révéler un offset, un padding, un tag mismatch).
+        failed.push({ id: entry.id, errorCode: "decryption-failed" });
       }
     }
 

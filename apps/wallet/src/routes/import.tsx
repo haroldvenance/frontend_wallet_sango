@@ -4,22 +4,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { AuthShell } from "@/components/branding/auth-shell";
+import { PasswordStrength } from "@/components/branding/password-strength";
 import { useTranslation } from "@/i18n/use-translation";
 import { useWalletStore } from "@/stores/wallet-store";
 
-/**
- * Import d'un portefeuille BIP-39 — Phase 5.3 (Trust Wallet model).
- *
- * Une seule mnemonic → N chaînes (SANGO + EVM + Bitcoin). Le wallet
- * importé est une identité HD universelle.
- *
- * **D-Phase5-3** :
- *   - D5.3-b·B — `networkId` initial = "ethereum-mainnet" (réseau
- *     d'affichage, pas de famille).
- *   - D5.3-e·A — label optionnel.
- *   - D5.3-i·A — un lien discret mène vers `/import-sango` pour
- *     restaurer un ancien wallet SANGO legacy (V1 Ed25519).
- */
 const INITIAL_NETWORK_ID = "ethereum-mainnet";
 
 export function ImportUnified() {
@@ -49,7 +37,6 @@ export function ImportUnified() {
     setBusy(true);
     try {
       const wallet = await Bip39Wallet.fromMnemonic(trimmed);
-      // Jette la référence locale à la mnemonic.
       setMnemonic("");
 
       const stored = await wallet.exportEncrypted(password);
@@ -69,7 +56,6 @@ export function ImportUnified() {
       });
       keyring.close();
 
-      // addWallet préserve les wallets existants.
       addWallet({
         id,
         wallet,
@@ -81,11 +67,11 @@ export function ImportUnified() {
 
       toast.success(t.onboarding.import.imported);
       navigate("/");
-    } catch (err) {
-      toast.error(t.onboarding.import.error, {
-        description: (err as Error).message,
-      });
+    } catch {
+      // Jamais `(err as Error).message`.
+      toast.error(t.onboarding.import.error);
     } finally {
+      setPassword("");
       setBusy(false);
     }
   }
@@ -120,13 +106,15 @@ export function ImportUnified() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder={t.onboarding.import.passwordPlaceholder}
+          autoComplete="new-password"
           className="flex h-10 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
+        <PasswordStrength password={password} />
         <button
           type="button"
           onClick={onImport}
           disabled={busy || !mnemonic.trim()}
-          className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-primary text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-primary text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50"
         >
           {busy ? t.onboarding.import.importing : t.onboarding.import.button}
         </button>
@@ -135,7 +123,7 @@ export function ImportUnified() {
           {t.onboarding.import.legacyNotice}{" "}
           <Link
             to="/import-sango"
-            className="font-medium text-primary hover:underline"
+            className="font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
             {t.onboarding.import.legacyLink}
           </Link>

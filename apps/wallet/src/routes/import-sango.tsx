@@ -3,13 +3,21 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-import { useSdkStore } from "@/stores/sdk-store";
-import { useWalletStore } from "@/stores/wallet-store";
 import { AuthShell } from "@/components/branding/auth-shell";
+import { PasswordStrength } from "@/components/branding/password-strength";
+import { useTranslation } from "@/i18n/use-translation";
+import { useWalletStore } from "@/stores/wallet-store";
+import { useSdkStore } from "@/stores/sdk-store";
 
-function hexToBytes(hex: string): Uint8Array {
+/** Convertit un hex strict (64 chars, [0-9a-fA-F]) en Uint8Array. */
+function hexToSeedBytes(hex: string): Uint8Array {
   const clean = hex.startsWith("0x") ? hex.slice(2) : hex;
-  if (clean.length !== 64) throw new Error("Seed must be 64 hex chars (32 bytes)");
+  if (clean.length !== 64) {
+    throw new Error("invalid-seed-length");
+  }
+  if (!/^[0-9a-fA-F]{64}$/.test(clean)) {
+    throw new Error("invalid-seed-chars");
+  }
   const bytes = new Uint8Array(32);
   for (let i = 0; i < 32; i += 1) {
     bytes[i] = Number.parseInt(clean.slice(i * 2, i * 2 + 2), 16);
@@ -19,6 +27,7 @@ function hexToBytes(hex: string): Uint8Array {
 
 export function ImportSangoWallet() {
   const navigate = useNavigate();
+  const t = useTranslation();
   const addWallet = useWalletStore((s) => s.addWallet);
   const { network } = useSdkStore();
 
@@ -28,81 +37,109 @@ export function ImportSangoWallet() {
   const [busy, setBusy] = useState(false);
 
   async function onImport() {
-    if (password.length < 8) return toast.error("Mot de passe : 8 caractères minimum");
+    const trimmed = seedHex.trim();
+    if (!trimmed) {
+      return toast.error(t.onboarding.import.legacyEmptySeed);
+    }
+    if (password.length < 8) {
+      return toast.error(t.onboarding.import.legacyPasswordTooShort);
+    }
+
     setBusy(true);
+    let seed: Uint8Array | null = null;
     try {
-      const seed = hexToBytes(seedHex.trim());
+      try {
+        seed = hexToSeedBytes(trimmed);
+      } catch {
+        // Message générique : ne pas exposer "invalid-seed-length" ni
+        // "invalid-seed-chars" (l'utilisateur sait ce qu'il a saisi).
+        toast.error(t.onboarding.import.legacyError);
+        return;
+      }
+
       const wallet = await Wallet.fromSeed(seed, network);
-      seed.fill(0);
 
       const stored = await wallet.exportEncrypted(password);
       const keyring = await Keyring.open();
       const id = wallet.identity.addressHex.toLowerCase();
+      const trimmedLabel =
+        label.trim() || t.onboarding.create.fallbackLabel;
+      const createdAt = Date.now();
+
       await keyring.put({
         id,
-        label: label.trim() || "Wallet importé",
+        label: trimmedLabel,
         format: "sango-legacy",
         networkId: "sango-devnet",
         stored,
-        createdAt: Date.now(),
+        createdAt,
       });
       keyring.close();
 
-      // Phase 4.1-fix — `addWallet` préserve les wallets existants.
       addWallet({
         id,
         wallet,
         format: "sango-legacy",
         networkId: "sango-devnet",
-        label: label.trim() || "Wallet importé",
-        createdAt: Date.now(),
+        label: trimmedLabel,
+        createdAt,
       });
-      toast.success("Portefeuille SANGO legacy restauré");
+
+      toast.success(t.onboarding.import.legacyImported);
       navigate("/");
-    } catch (err) {
-      toast.error("Erreur d'import", { description: (err as Error).message });
+    } catch {
+      toast.error(t.onboarding.import.legacyError);
     } finally {
+      // ⚠️ Zéroïsation garantie même si Wallet.fromSeed throw.
+      if (seed) seed.fill(0);
+      setPassword("");
       setBusy(false);
     }
   }
 
   return (
     <AuthShell
-      title="Restaurer un portefeuille SANGO (legacy)"
-      subtitle="Ancien format : seed Ed25519 (32 bytes, 64 caractères hex, avec ou sans 0x)."
+      title={t.onboarding.import.legacyTitle}
+      subtitle={t.onboarding.import.legacySubtitle}
       backTo="/import"
       logoSize={56}
     >
-
       <div className="mt-6 space-y-3">
         <textarea
           value={seedHex}
           onChange={(e) => setSeedHex(e.target.value)}
-          placeholder="0x… ou …"
+          placeholder={t.onboarding.import.legacySeedPlaceholder}
           rows={3}
+          spellCheck={false}
+          autoComplete="off"
+          autoCapitalize="none"
           className="w-full resize-none rounded-xl border border-input bg-background px-3 py-2 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
         <input
           type="text"
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          placeholder="Nom du wallet (optionnel)"
+          placeholder={t.onboarding.import.legacyLabelPlaceholder}
           className="flex h-10 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
         <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Mot de passe (min 8 caractères)"
+          placeholder={t.onboarding.import.legacyPasswordPlaceholder}
+          autoComplete="new-password"
           className="flex h-10 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
+        <PasswordStrength password={password} />
         <button
           type="button"
           onClick={onImport}
-          disabled={busy}
-          className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-primary text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+          disabled={busy || !seedHex.trim()}
+          className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-primary text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50"
         >
-          {busy ? "Import…" : "Importer"}
+          {busy
+            ? t.onboarding.import.legacyImporting
+            : t.onboarding.import.legacySubmit}
         </button>
       </div>
     </AuthShell>
