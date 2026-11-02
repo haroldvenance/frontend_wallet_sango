@@ -1,6 +1,6 @@
 import { Copy, Download, Share2 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
-import { useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { useTranslation } from "@/i18n/use-translation";
@@ -9,20 +9,9 @@ interface Props {
   readonly label: string;
   readonly networkLabel?: string;
   readonly address: string;
-  /** Identifiant du bloc pour les tests (`receive-card-evm`, etc.). */
   readonly testId: string;
 }
 
-/**
- * Card de réception pour une famille — Phase 7.
- *
- * Affiche un QR code (canvas, téléchargeable), l'adresse tronquée et
- * trois actions : Copier, Partager (Web Share API si dispo),
- * Télécharger le QR en PNG.
- *
- * **Invariant** : `address` est la source unique — QR et texte
- * proviennent du même paramètre. Pas de conversion entre familles.
- */
 export function ReceiveFamilyCard({
   label,
   networkLabel,
@@ -32,15 +21,26 @@ export function ReceiveFamilyCard({
   const t = useTranslation();
   const qrRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
+  const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const liveRegionId = useId();
+
+  useEffect(() => {
+    return () => {
+      if (copiedTimeoutRef.current) {
+        clearTimeout(copiedTimeoutRef.current);
+      }
+    };
+  }, []);
 
   async function onCopy() {
     try {
       await navigator.clipboard.writeText(address);
       setCopied(true);
+      if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
+      copiedTimeoutRef.current = setTimeout(() => setCopied(false), 1500);
       toast.success(t.receivePage.actions.copied);
-      setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast.error("Copie impossible");
+      toast.error(t.receivePage.actions.copyError);
     }
   }
 
@@ -65,17 +65,15 @@ export function ReceiveFamilyCard({
     const url = canvas.toDataURL("image/png");
     const link = document.createElement("a");
     link.href = url;
-    link.download = `qr-${testId}-${address.slice(0, 8)}.png`;
+    // Pas de fragment d'adresse dans le filename.
+    link.download = `qr-${testId}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   }
 
   return (
-    <section
-      data-testid={testId}
-      className="rounded-2xl border bg-card p-5"
-    >
+    <section data-testid={testId} className="rounded-2xl border bg-card p-5">
       <header>
         <p className="text-sm font-semibold">{label}</p>
         {networkLabel && (
@@ -86,17 +84,14 @@ export function ReceiveFamilyCard({
       </header>
 
       <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-        <div
-          ref={qrRef}
-          className="shrink-0 rounded-2xl border bg-white p-3"
-        >
+        <div ref={qrRef} className="shrink-0 rounded-2xl border bg-white p-3">
           <QRCodeCanvas
             value={address}
             size={140}
             level="M"
             bgColor="#ffffff"
             fgColor="#000000"
-            marginSize={0}
+            marginSize={4}
           />
         </div>
 
@@ -112,16 +107,17 @@ export function ReceiveFamilyCard({
           type="button"
           data-testid={`${testId}-copy`}
           onClick={onCopy}
-          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
+          aria-describedby={liveRegionId}
+          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           <Copy className="size-3.5" />
-          {copied ? "✓" : t.receivePage.actions.copy}
+          {t.receivePage.actions.copy}
         </button>
         <button
           type="button"
           data-testid={`${testId}-share`}
           onClick={onShare}
-          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border bg-background text-xs font-medium transition-colors hover:bg-accent"
+          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border bg-background text-xs font-medium transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           <Share2 className="size-3.5" />
           {t.receivePage.actions.share}
@@ -130,11 +126,15 @@ export function ReceiveFamilyCard({
           type="button"
           data-testid={`${testId}-download`}
           onClick={onDownload}
-          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border bg-background text-xs font-medium transition-colors hover:bg-accent"
+          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border bg-background text-xs font-medium transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           <Download className="size-3.5" />
           {t.receivePage.actions.download}
         </button>
+      </div>
+
+      <div id={liveRegionId} aria-live="polite" className="sr-only">
+        {copied ? t.receivePage.actions.copied : ""}
       </div>
     </section>
   );

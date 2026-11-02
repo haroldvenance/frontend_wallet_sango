@@ -1,72 +1,122 @@
 import {
-
-/**
- * Page détail transaction (transaction viewer).
- *
- * V0.3 — D-SESS-9 résolu : `use-transaction` passe désormais par
- * `WalletSession.getTransactionByHash(networkId, hash)`. L'API publique
- * reste `Tx` de `@sango/rpc` (via un adaptateur explicite) — cette
- * page n'a pas eu à changer.
- */
-
   ArrowLeft,
   CheckCircle2,
   Clock3,
   Copy,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { useTransaction } from "@/hooks/use-transactions";
 import { useTranslation } from "@/i18n/use-translation";
-import { formatSango } from "@/lib/format";
+import { formatSango, truncateMiddle } from "@/lib/format";
 import { EXPLORER_URL } from "@/lib/config";
 import { txKindLabel } from "@/lib/tx-classify";
 
-function shortHex(h: string, head = 10, tail = 8): string {
-  if (h.length <= head + tail + 2) return h;
-  return `${h.slice(0, 2 + head)}…${h.slice(-tail)}`;
+/**
+ * Retourne un bigint si `value` est un entier décimal valide, `null` sinon.
+ * Empêche le crash si le backend retourne "", "0x", "null", etc.
+ */
+function safeBigInt(value: unknown): bigint | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "string" && typeof value !== "number") return null;
+  try {
+    return BigInt(value);
+  } catch {
+    return null;
+  }
 }
 
-function CopyableHex({ value, label }: { value: string; label: string }) {
+/**
+ * Valide qu'un lien explorer est sûr à afficher.
+ * HTTPS strict, refuse loopback et IP privées.
+ */
+function isValidExplorerBase(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:") return false;
+    const host = parsed.hostname.toLowerCase();
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "0.0.0.0" ||
+      host === "::1" ||
+      host === "[::1]" ||
+      host.endsWith(".local")
+    ) {
+      return false;
+    }
+    if (/^10\./.test(host)) return false;
+    if (/^192\.168\./.test(host)) return false;
+    if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function CopyableValue({ value, label }: { value: string; label: string }) {
+  const t = useTranslation();
   const [copied, setCopied] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
   async function copy() {
     try {
       await navigator.clipboard.writeText(value);
       setCopied(true);
-      setTimeout(() => setCopied(false), 1200);
-    } catch { /* ignore */ }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => setCopied(false), 1200);
+    } catch {
+      /* silence */
+    }
   }
+
   return (
     <button
       type="button"
       onClick={copy}
-      className="inline-flex items-center gap-1.5 font-mono text-xs text-foreground hover:text-primary"
-      title={`Copier ${label}`}
+      aria-label={`${t.common.copy} ${label}`}
+      className="inline-flex items-center gap-1.5 font-mono text-xs text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
     >
-      {value}
+      <span className="break-all">{value}</span>
       {copied ? (
-        <span className="text-emerald-500 text-[10px]">copié</span>
+        <span className="text-[10px] text-emerald-500">{t.common.copied}</span>
       ) : (
-        <Copy className="size-3 text-muted-foreground" />
+        <Copy className="size-3 shrink-0 text-muted-foreground" />
       )}
     </button>
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="grid grid-cols-[140px_1fr] items-start gap-4 border-b py-3 last:border-b-0">
-      <dt className="text-xs uppercase tracking-wider text-muted-foreground">{label}</dt>
+      <dt className="text-xs uppercase tracking-wider text-muted-foreground">
+        {label}
+      </dt>
       <dd className="break-all text-sm">{children}</dd>
-</div>
+    </div>
   );
 }
 
 export function HistoryDetailRoute() {
   const t = useTranslation();
   const { hash } = useParams<{ hash: string }>();
-  const { data: tx, isLoading, isError, error } = useTransaction((hash ?? null) as `0x${string}` | null);
+  const { data: tx, isLoading, isError } = useTransaction(
+    (hash ?? null) as `0x${string}` | null,
+  );
 
   if (isLoading) {
     return (
@@ -81,29 +131,30 @@ export function HistoryDetailRoute() {
       <div className="mx-auto max-w-3xl">
         <Link
           to="/history"
-          className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+          className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           <ArrowLeft className="size-3" /> {t.history.backToList}
         </Link>
-        <div className="mt-6 rounded-2xl border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-          {isError ? error.message : t.history.notFound}
+        <div className="mt-6 rounded-2xl border bg-card p-6 text-center text-sm text-muted-foreground">
+          {t.history.notFound}
         </div>
       </div>
     );
   }
 
   const isPending = tx.blockHeight === null;
-  const value = BigInt(tx.value);
-  const maxFee = BigInt(tx.maxFee);
-  const priorityFee = BigInt(tx.priorityFee);
-  const gasLimit = BigInt(tx.gasLimit);
-  const feeEstimate = gasLimit * (maxFee + priorityFee);
+  const value = safeBigInt(tx.value);
+  const gasLimit = safeBigInt(tx.gasLimit);
+  const maxFee = safeBigInt(tx.maxFee);
+  const priorityFee = safeBigInt(tx.priorityFee);
+
+  const explorerUrlSafe = isValidExplorerBase(EXPLORER_URL);
 
   return (
     <div className="mx-auto max-w-3xl">
       <Link
         to="/history"
-        className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       >
         <ArrowLeft className="size-3" /> {t.history.backToList}
       </Link>
@@ -123,17 +174,16 @@ export function HistoryDetailRoute() {
         )}
       </div>
 
-      {value > 0n && (
+      {value !== null && value > 0n && (
         <div className="mt-4 rounded-2xl border bg-card p-5">
           <div className="text-xs uppercase tracking-wider text-muted-foreground">
             {t.history.amount}
           </div>
           <div className="mt-1 font-mono text-2xl font-semibold">
             {formatSango(value)}{" "}
-            <span className="text-base font-normal text-muted-foreground">SANGO</span>
-          </div>
-          <div className="mt-1 font-mono text-[11px] text-muted-foreground">
-            {value.toString()} base units
+            <span className="text-base font-normal text-muted-foreground">
+              SANGO
+            </span>
           </div>
         </div>
       )}
@@ -141,61 +191,65 @@ export function HistoryDetailRoute() {
       <div className="mt-4 rounded-2xl border bg-card p-5">
         <dl>
           <Row label={t.history.hash}>
-            <CopyableHex value={tx.hash} label="hash" />
+            <CopyableValue value={tx.hash} label="hash" />
           </Row>
           <Row label={t.history.block}>
             {isPending ? (
               <span className="text-muted-foreground">{t.history.mempool}</span>
             ) : (
-              <span>
-                #{tx.blockHeight}
-                {tx.blockHash && (
-                  <span className="ml-2 font-mono text-xs text-muted-foreground">
-                    {shortHex(tx.blockHash)}
-                  </span>
-                )}
-                {tx.txIndex !== null && (
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    (index {tx.txIndex})
-                  </span>
-                )}
-              </span>
+              <span>#{tx.blockHeight}</span>
             )}
           </Row>
-          <Row label={t.history.nonce}>{tx.nonce}</Row>
           <Row label={t.history.sender}>
-            <CopyableHex value={tx.sender} label="sender" />
+            <CopyableValue value={tx.sender} label="sender" />
           </Row>
           {tx.recipient && (
             <Row label={t.history.recipient}>
-              <CopyableHex value={tx.recipient} label="recipient" />
-            </Row>
-          )}
-          <Row label={t.history.gasLimit}>{gasLimit.toString()}</Row>
-          <Row label={t.history.maxFee}>{maxFee.toString()} base units/gas</Row>
-          <Row label={t.history.priorityFee}>{priorityFee.toString()} base units/gas</Row>
-          <Row label={t.history.feeEstimate}>
-            {formatSango(feeEstimate)}{" "}
-            <span className="text-xs text-muted-foreground">SANGO (max)</span>
-          </Row>
-          {tx.data && tx.data !== "0x" && (
-            <Row label={t.history.data}>
-              <span className="font-mono text-xs">{tx.data}</span>
+              <CopyableValue value={tx.recipient} label="recipient" />
             </Row>
           )}
         </dl>
       </div>
 
-      <div className="mt-4">
-        <a
-          href={`${EXPLORER_URL}/tx/${tx.hash}`}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex h-10 items-center gap-2 rounded-xl border bg-card px-4 text-sm font-medium hover:bg-accent"
-        >
-          Voir dans l&apos;explorateur
-        </a>
-      </div>
+      <details className="mt-4 rounded-2xl border bg-card p-5">
+        <summary className="cursor-pointer text-xs font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">
+          {t.history.advancedDetails}
+        </summary>
+        <dl className="mt-3">
+          <Row label={t.history.nonce}>{tx.nonce}</Row>
+          {gasLimit !== null && (
+            <Row label={t.history.gasLimit}>{gasLimit.toString()}</Row>
+          )}
+          {maxFee !== null && (
+            <Row label={t.history.maxFee}>{maxFee.toString()}</Row>
+          )}
+          {priorityFee !== null && (
+            <Row label={t.history.priorityFee}>
+              {priorityFee.toString()}
+            </Row>
+          )}
+          {tx.blockHash && (
+            <Row label={t.history.block}>
+              <span className="font-mono text-xs">
+                {truncateMiddle(tx.blockHash, 10, 8)}
+              </span>
+            </Row>
+          )}
+        </dl>
+      </details>
+
+      {explorerUrlSafe && (
+        <div className="mt-4">
+          <a
+            href={`${EXPLORER_URL.replace(/\/$/, "")}/tx/${encodeURIComponent(tx.hash)}`}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="inline-flex h-10 items-center gap-2 rounded-xl border bg-card px-4 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          >
+            {t.history.viewInExplorer}
+          </a>
+        </div>
+      )}
     </div>
   );
 }

@@ -5,18 +5,6 @@ import { useNavigate } from "react-router-dom";
 import { AssetLogo } from "@/components/branding/asset-logo";
 import { NetworkLogo } from "@/components/branding/network-logo";
 
-/**
- * Enveloppe visuelle commune aux 3 routes Send — Phase 10.2.
- *
- * Structure :
- *   - Header : bouton Retour + logo asset + titre + réseau + badge réseau.
- *   - `balanceCard` : carte "Solde disponible" premium (gradient + halos).
- *   - `children` : formulaire (champs spécifiques famille).
- *
- * **Périmètre** : présentation pure. Ne connaît ni le réseau ni la
- * famille — les routes consommatrices fournissent `assetId` et
- * `networkId` pour les logos.
- */
 interface SendShellProps {
   readonly assetId: string;
   readonly networkId: string;
@@ -44,12 +32,11 @@ export function SendShell({
           if (window.history.length > 1) navigate(-1);
           else navigate("/");
         }}
-        className="inline-flex items-center gap-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        className="inline-flex items-center gap-2 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       >
         <ArrowLeft className="size-3" /> Retour
       </button>
 
-      {/* Header — contexte visuel immédiat */}
       <header className="mt-6 flex items-center gap-4">
         <div className="relative shrink-0">
           <AssetLogo assetId={assetId} size={56} />
@@ -73,8 +60,6 @@ export function SendShell({
     </div>
   );
 }
-
-// ── Balance card (premium) ─────────────────────────────────
 
 interface SendBalanceCardProps {
   readonly assetId: string;
@@ -119,7 +104,6 @@ export function SendBalanceCard({
         )}
       </div>
 
-      {/* Logo fantôme à droite pour l'identité */}
       <div
         aria-hidden
         className="pointer-events-none absolute -bottom-4 -right-4 opacity-[0.06]"
@@ -129,8 +113,6 @@ export function SendBalanceCard({
     </section>
   );
 }
-
-// ── Field primitives ────────────────────────────────────────
 
 interface SendFieldProps {
   readonly label: string;
@@ -158,8 +140,6 @@ export function SendField({ label, children, hint, error }: SendFieldProps) {
   );
 }
 
-// ── Submit ──────────────────────────────────────────────────
-
 interface SendSubmitProps {
   readonly label: string;
   readonly pending: boolean;
@@ -181,12 +161,10 @@ export function SendSubmit({
     <button
       type="submit"
       disabled={pending || disabled}
-      className="inline-flex h-13 w-full items-center justify-center gap-2.5 rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/20 transition-all hover:opacity-90 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+      className="inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/20 transition-all hover:opacity-90 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
     >
       {icon}
-      {assetId && (
-        <AssetLogo assetId={assetId} size={20} />
-      )}
+      {assetId && <AssetLogo assetId={assetId} size={20} />}
       {pending ? pendingLabel : label}
     </button>
   );

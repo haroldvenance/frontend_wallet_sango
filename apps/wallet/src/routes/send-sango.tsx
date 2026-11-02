@@ -15,8 +15,20 @@ import { useSendTx } from "@/hooks/use-send-tx";
 import { useTranslation } from "@/i18n/use-translation";
 import { formatSango, parseSango } from "@/lib/format";
 
-const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
+const HEX_ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 
+/**
+ * Envoi SANGO.
+ *
+ * ⚠️ P1 connu : le formulaire n'accepte QUE l'adresse hex (`0x…`).
+ *    L'écran Receive expose du bech32m (`tsango1…`). Un utilisateur
+ *    qui copie-colle son adresse de réception ne peut pas envoyer
+ *    à lui-même. Solutions possibles :
+ *      (a) accepter bech32m et convertir via wallet-core,
+ *      (b) exposer l'hex sur l'écran Receive SANGO,
+ *      (c) masquer bech32m tant que le mainnet n'existe pas.
+ *    Décision produit requise avant release (cf. risques §F.1).
+ */
 export function SangoSendRoute() {
   const t = useTranslation();
   const { data: account, isLoading: accountLoading } = useAccount();
@@ -27,16 +39,15 @@ export function SangoSendRoute() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!ADDRESS_RE.test(to)) {
+    if (!HEX_ADDRESS_RE.test(to)) {
       return toast.error(t.send.invalidAddress);
     }
     let amountBaseUnits: bigint;
     try {
       amountBaseUnits = parseSango(amount);
-    } catch (err) {
-      return toast.error(t.send.invalidAmount, {
-        description: (err as Error).message,
-      });
+    } catch {
+      // On n'expose pas err.message (technique : "Too many decimals").
+      return toast.error(t.send.invalidAmount);
     }
     if (amountBaseUnits <= 0n) return toast.error(t.send.amountPositive);
 
@@ -52,7 +63,6 @@ export function SangoSendRoute() {
     await sendTx.mutateAsync({ to: to as AddressHex, amountBaseUnits });
   }
 
-  // **Phase 10.1** — loading → "…", sinon valeur (0 si absent).
   const balanceStr = account
     ? formatSango(account.balance)
     : accountLoading
@@ -63,8 +73,8 @@ export function SangoSendRoute() {
     <SendShell
       assetId="sango"
       networkId="sango-devnet"
-      title={`Envoyer SANGO`}
-      subtitle="Sango native chain"
+      title={`${t.send.button} SANGO`}
+      subtitle={t.send.sango.subtitle}
       balanceCard={
         <SendBalanceCard
           assetId="sango"
@@ -89,7 +99,8 @@ export function SangoSendRoute() {
         <SendField
           label={t.send.amount}
           hint={
-            amount && (() => {
+            amount &&
+            (() => {
               try {
                 return <FiatLine baseUnits={parseSango(amount).toString()} />;
               } catch {

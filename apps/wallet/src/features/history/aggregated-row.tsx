@@ -14,23 +14,15 @@ import { useTranslation } from "@/i18n/use-translation";
 import { classifyRelativeTime } from "@/lib/format-relative-time";
 import { truncateMiddle } from "@/lib/format";
 
-/**
- * **Phase 13-C** — Row cross-chain partagée entre le dashboard
- * (`RecentActivityAggregated`) et l'historique unifié
- * (`UnifiedHistoryList`).
- *
- * **Phase 13-D** — i18n complète (direction, statuts) + dates
- * relatives ("il y a 2 min", "à l'instant", date absolue au-delà
- * de 7 jours).
- *
- * `id="tx-<hash>"` permet au deep-link notifications (Phase 12-E)
- * de scroller + highlight la row.
- */
 export function AggregatedRow({ tx }: { readonly tx: AggregatedTx }) {
   const t = useTranslation();
 
   const isSent = tx.direction === "out";
   const isReceived = tx.direction === "in";
+  const isNeutral = tx.direction === "neutral";
+  // Tout ce qui n'est ni in/out/neutral est traité comme "unknown" —
+  // jamais affiché comme "Reçu".
+  const isUnknown = !isSent && !isReceived && !isNeutral;
   const isPending = tx.status === "pending";
   const isFailed = tx.status === "failed";
 
@@ -38,7 +30,9 @@ export function AggregatedRow({ tx }: { readonly tx: AggregatedTx }) {
     ? t.history.direction.sent
     : isReceived
       ? t.history.direction.received
-      : t.history.direction.internal;
+      : isUnknown
+        ? t.history.direction.unknown
+        : t.history.direction.internal;
 
   const iconCls = isFailed
     ? "bg-destructive/10 text-destructive"
@@ -61,12 +55,10 @@ export function AggregatedRow({ tx }: { readonly tx: AggregatedTx }) {
           : ArrowLeftRight;
 
   const date = formatDate(tx, t);
-
   const amountStr =
-    tx.amount === null ? "—" : formatAmount(tx.amount, tx.symbol);
-
+    tx.amount === null ? "—" : formatAmount(tx.amount, tx.symbol, tx.source);
+  // Affichage du signe : uniquement si la direction est fiable.
   const sign = isSent ? "-" : isReceived ? "+" : "";
-
   const feeStr = formatFee(tx);
 
   return (
@@ -169,8 +161,6 @@ export function AggregatedRow({ tx }: { readonly tx: AggregatedTx }) {
   );
 }
 
-// ── Helpers ─────────────────────────────────────────────────
-
 function formatDate(
   tx: AggregatedTx,
   t: ReturnType<typeof useTranslation>,
@@ -191,7 +181,7 @@ function formatDate(
     case "days":
       return t.history.relative.days.replace("{n}", String(rt.value));
     case "absolute":
-      return new Date(rt.seconds * 1000).toLocaleString("fr-FR", {
+      return new Date(rt.seconds * 1000).toLocaleString(undefined, {
         day: "2-digit",
         month: "2-digit",
         hour: "2-digit",
@@ -200,28 +190,17 @@ function formatDate(
   }
 }
 
-/**
- * **Phase 13-E** — Formate les frais effectifs pour l'affichage.
- * Retourne `null` s'il n'y a rien à afficher (fee absent, nul, ou
- * source non supportée).
- *
- * **EVM** : fee en ETH → `0,00042 ETH` (8 décimales max, trailing
- * zeros strippés).
- * **Bitcoin** : fee en BTC → `1 234 sats` (conversion vers sats,
- * plus lisible pour les petits montants — standard UX Bitcoin).
- * **SANGO** : pas de frais (backend sans `gasUsed`).
- */
 export function formatFee(tx: AggregatedTx): string | null {
   if (tx.fee === null || tx.fee === 0) return null;
 
   if (tx.source === "bitcoin") {
     const sats = Math.round(tx.fee * 1e8);
     if (sats <= 0) return null;
-    return `${sats.toLocaleString("fr-FR")} sats`;
+    return `${sats.toLocaleString(undefined)} sats`;
   }
 
   if (tx.source === "evm") {
-    const formatted = tx.fee.toLocaleString("fr-FR", {
+    const formatted = tx.fee.toLocaleString(undefined, {
       maximumFractionDigits: 8,
       minimumFractionDigits: 0,
     });
@@ -231,13 +210,21 @@ export function formatFee(tx: AggregatedTx): string | null {
   return null;
 }
 
-export function formatAmount(v: number, symbol: string): string {
+export function formatAmount(
+  v: number,
+  symbol: string,
+  source: AggregatedTx["source"],
+): string {
   if (v === 0) return "0";
-  if (Math.abs(v) < 0.0001) {
-    return v.toExponential(2);
+  const abs = Math.abs(v);
+
+  if (source === "bitcoin" && abs < 0.001) {
+    return Math.round(abs * 1e8).toLocaleString(undefined);
   }
-  const maxDecimals = symbol === "BTC" || Math.abs(v) < 1 ? 8 : 4;
-  return v.toLocaleString("en-US", {
+
+  const maxDecimals =
+    symbol === "BTC" ? 8 : abs < 1 ? 6 : abs < 100 ? 4 : 2;
+  return v.toLocaleString(undefined, {
     maximumFractionDigits: maxDecimals,
   });
 }

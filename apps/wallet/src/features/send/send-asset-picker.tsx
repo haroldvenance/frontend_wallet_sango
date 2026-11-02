@@ -1,8 +1,7 @@
+import { bitcoinNetworkById, evmNetworkById } from "@sango/wallet-chains";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-
-import { bitcoinNetworkById, evmNetworkById } from "@sango/wallet-chains";
 
 import { AssetLogo } from "@/components/branding/asset-logo";
 import { NetworkLogo } from "@/components/branding/network-logo";
@@ -16,27 +15,11 @@ import { formatBitcoin } from "@/lib/bitcoin";
 import { formatTokenAmount } from "@/lib/eth";
 import { formatSango } from "@/lib/format";
 
-/**
- * Picker d'actif pour `/send` — Phase 10 (D10-c·A, D10-d·A, D10-h·A).
- *
- * **Utilisé dans 2 cas** :
- *   1. L'utilisateur clique « Envoyer » depuis le dashboard → `/send`
- *      sans params → le picker s'affiche.
- *   2. L'utilisateur arrive avec des params invalides → même fallback.
- *
- * **Structure** : liste groupée par réseau (Ethereum, BNB, Bitcoin,
- * Sango…). Chaque groupe affiche son logo + nom, puis les actifs
- * supportés (avec solde). Clic → `/send?network={id}&asset={aid}`.
- *
- * **D10-d·A** — toutes les lignes affichent le solde, y compris 0,
- * pour que l'utilisateur voie ce qui est disponible.
- */
 export function SendAssetPicker() {
   const t = useTranslation();
   const navigate = useNavigate();
   const { assets, loading } = useAllWalletAssets();
 
-  // Groupe par networkId, ordre préservé par la liste triée.
   const groups = useMemo(() => {
     const map = new Map<string, WalletAsset[]>();
     for (const a of assets) {
@@ -56,7 +39,7 @@ export function SendAssetPicker() {
     <div className="mx-auto max-w-md px-4 py-6 sm:px-6">
       <Link
         to="/"
-        className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       >
         <ArrowLeft className="size-3" /> {t.send.shell.back}
       </Link>
@@ -101,7 +84,7 @@ export function SendAssetPicker() {
                     type="button"
                     data-testid={`send-picker-${a.networkId}-${getDisplayAssetId(a)}`}
                     onClick={() => onSelect(a)}
-                    className="flex w-full items-center gap-3 border-b p-3 text-left transition-colors last:border-b-0 hover:bg-accent/40"
+                    className="flex w-full items-center gap-3 border-b p-3 text-left transition-colors last:border-b-0 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                   >
                     <AssetLogo
                       assetId={getDisplayAssetId(a)}
@@ -117,9 +100,7 @@ export function SendAssetPicker() {
                       </p>
                     </div>
                     <div className="shrink-0 text-right">
-                      <p className="font-mono text-sm">
-                        {formatBalance(a)}
-                      </p>
+                      <p className="font-mono text-sm">{formatBalance(a)}</p>
                       <p className="mt-0.5 text-[10px] text-muted-foreground">
                         {a.symbol}
                       </p>
@@ -142,7 +123,9 @@ function resolveNetworkName(networkId: string): string {
   const btc = bitcoinNetworkById(networkId);
   if (btc) return btc.name;
   if (networkId.startsWith("sango-")) return "Sango";
-  return networkId;
+  // Réseau inconnu : on affiche un label générique plutôt qu'un ID brut
+  // potentiellement technique (`custom-network-xyz`).
+  return "Réseau";
 }
 
 function formatBalance(a: WalletAsset): string {

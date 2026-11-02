@@ -16,6 +16,7 @@ import { useBitcoinBalance } from "@/hooks/use-bitcoin-balance";
 import { useBitcoinFeeRates } from "@/hooks/use-bitcoin-fee-rates";
 import { useSendBitcoin } from "@/hooks/use-send-bitcoin";
 import { useNetworkQueryContext } from "@/hooks/use-network-query-context";
+import { useTranslation } from "@/i18n/use-translation";
 import {
   formatBitcoin,
   isValidBitcoinAddress,
@@ -24,21 +25,8 @@ import {
 
 type FeePriority = "fast" | "normal" | "slow" | "custom";
 
-/**
- * Envoi Bitcoin natif — E2.1.b.6.3.
- *
- * Formulaire : destinataire + montant (BTC) + priorité de frais
- * (Rapide/Normal/Lent/Personnalisé). Le `feeRate` résultant est
- * passé au builder via `useSendBitcoin`.
- *
- * L'estimation des frais affichée est une **approximation UI** :
- * `feeRate × 140 vB` (1 input, 2 outputs P2WPKH — cas standard).
- * L'estimation finale dépend du nombre d'UTXOs sélectionnés — c'est
- * le builder qui la calcule au moment du send.
- */
 export function SendBitcoinRoute() {
-  // **Phase 10 (D10-a)** — `networkId` provient du contexte
-  // (override-aware).
+  const t = useTranslation();
   const { networkId } = useNetworkQueryContext();
   const network = bitcoinNetworkById(networkId);
   const btcNetwork: BitcoinNetwork =
@@ -65,7 +53,6 @@ export function SendBitcoinRoute() {
     return feeRates.slow;
   }, [priority, customRate, feeRates]);
 
-  // Estimation rapide : 1 input, 2 outputs P2WPKH.
   const estimatedVsize = 140n;
   const estimatedFeeSats = effectiveRate
     ? effectiveRate * estimatedVsize
@@ -76,42 +63,51 @@ export function SendBitcoinRoute() {
     ? isValidBitcoinAddress(toTrimmed, btcNetwork)
     : false;
 
-  // **Phase 10.1** — loading → "…", erreur → "0", sinon valeur.
   const balanceDisplay = balance
     ? formatBitcoin(balance.amount)
     : balanceLoading
       ? "…"
       : "0";
 
+  const recipientPlaceholder =
+    btcNetwork === "mainnet"
+      ? t.send.bitcoin.recipientPlaceholder
+      : t.send.bitcoin.recipientPlaceholderTestnet;
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
 
     if (!toValid) {
-      return toast.error("Adresse invalide", {
-        description: `Format attendu : adresse P2WPKH ${btcNetwork === "mainnet" ? "bc1q…" : "tb1q…"}`,
+      return toast.error(t.send.bitcoin.invalidAddress, {
+        description: t.send.bitcoin.invalidAddressDesc.replace(
+          "{prefix}",
+          btcNetwork === "mainnet" ? "bc1q" : "tb1q",
+        ),
       });
     }
 
     let amountSats: bigint;
     try {
       amountSats = parseBitcoin(amountInput);
-    } catch (err) {
-      return toast.error("Montant invalide", {
-        description: (err as Error).message,
-      });
+    } catch {
+      // On n'affiche PAS err.message brut (peut varier avec lib/bitcoin).
+      return toast.error(t.send.bitcoin.invalidAmount);
     }
     if (amountSats <= 0n) {
-      return toast.error("Le montant doit être supérieur à 0");
+      return toast.error(t.send.bitcoin.amountPositive);
     }
 
     if (balance && amountSats > balance.amount) {
-      return toast.error("Solde insuffisant", {
-        description: `Solde : ${formatBitcoin(balance.amount)} BTC`,
+      return toast.error(t.send.bitcoin.insufficientBalance, {
+        description: t.send.bitcoin.balanceDesc.replace(
+          "{value}",
+          formatBitcoin(balance.amount),
+        ),
       });
     }
 
     if (effectiveRate === null) {
-      return toast.error("Taux de frais manquant");
+      return toast.error(t.send.bitcoin.feeMissing);
     }
 
     try {
@@ -125,7 +121,7 @@ export function SendBitcoinRoute() {
       setAmountInput("");
       setCustomRate("");
     } catch {
-      // toast déjà déclenché par onError du hook
+      /* toast déclenché par onError du hook */
     }
   }
 
@@ -133,21 +129,16 @@ export function SendBitcoinRoute() {
     <SendShell
       assetId="btc"
       networkId={networkId}
-      title="Envoyer BTC"
+      title={`${t.send.button} BTC`}
       subtitle={network?.name ?? networkId}
       balanceCard={
-        <SendBalanceCard
-          assetId="btc"
-          balance={balanceDisplay}
-          symbol="BTC"
-        />
+        <SendBalanceCard assetId="btc" balance={balanceDisplay} symbol="BTC" />
       }
     >
-
       {lastTxId && (
-        <div className="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-3 text-xs">
+        <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-3 text-xs">
           <p className="font-medium text-emerald-600 dark:text-emerald-400">
-            Transaction envoyée
+            {t.send.bitcoin.txSent}
           </p>
           <p className="mt-1 font-mono break-all text-muted-foreground">
             {lastTxId}
@@ -156,9 +147,9 @@ export function SendBitcoinRoute() {
             href={`https://mempool.space/${btcNetwork === "testnet" ? "testnet/" : ""}tx/${lastTxId}`}
             target="_blank"
             rel="noreferrer noopener"
-            className="mt-2 inline-block text-[11px] font-medium text-primary hover:underline"
+            className="mt-2 inline-block text-[11px] font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
-            Voir sur mempool.space ↗
+            {t.send.bitcoin.viewExplorer}
           </a>
         </div>
       )}
@@ -166,12 +157,12 @@ export function SendBitcoinRoute() {
       <MainnetWarning networkId={networkId} className="mt-4" />
 
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
-        <SendField label="Destinataire">
+        <SendField label={t.send.recipient}>
           <input
             type="text"
             value={to}
             onChange={(e) => setTo(e.target.value)}
-            placeholder={btcNetwork === "mainnet" ? "bc1q…" : "tb1q…"}
+            placeholder={recipientPlaceholder}
             spellCheck={false}
             autoCapitalize="none"
             autoComplete="off"
@@ -180,28 +171,30 @@ export function SendBitcoinRoute() {
         </SendField>
         {toTrimmed && !toValid && (
           <p className="text-[11px] text-destructive">
-            Adresse P2WPKH invalide pour ce réseau.
+            {t.send.bitcoin.invalidAddress}
           </p>
         )}
 
-        <SendField label="Montant (BTC)">
+        <SendField label={t.send.bitcoin.amountLabel}>
           <input
             type="text"
             inputMode="decimal"
             value={amountInput}
             onChange={(e) => setAmountInput(e.target.value)}
-            placeholder="0.001"
+            placeholder={t.send.bitcoin.amountPlaceholder}
             className="flex h-12 w-full rounded-xl border border-input bg-background px-3.5 text-sm outline-none transition-colors focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
           />
         </SendField>
 
         <fieldset className="rounded-xl border bg-card p-3">
           <legend className="px-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-            Priorité
+            {t.send.bitcoin.priorityLabel}
           </legend>
 
           {feeLoading ? (
-            <p className="text-xs text-muted-foreground">Chargement…</p>
+            <p className="text-xs text-muted-foreground">
+              {t.send.bitcoin.loading}
+            </p>
           ) : (
             <div className="space-y-1.5">
               {feeRates && (
@@ -210,21 +203,21 @@ export function SendBitcoinRoute() {
                     value="fast"
                     current={priority}
                     onChange={setPriority}
-                    label="Rapide"
+                    label={t.send.bitcoin.feeFast}
                     rate={feeRates.fast}
                   />
                   <FeeRadio
                     value="normal"
                     current={priority}
                     onChange={setPriority}
-                    label="Normal"
+                    label={t.send.bitcoin.feeNormal}
                     rate={feeRates.normal}
                   />
                   <FeeRadio
                     value="slow"
                     current={priority}
                     onChange={setPriority}
-                    label="Lent"
+                    label={t.send.bitcoin.feeSlow}
                     rate={feeRates.slow}
                   />
                 </>
@@ -238,7 +231,7 @@ export function SendBitcoinRoute() {
                   onChange={() => setPriority("custom")}
                 />
                 <label htmlFor="fee-custom" className="cursor-pointer">
-                  Personnalisé
+                  {t.send.bitcoin.feeCustom}
                 </label>
                 {priority === "custom" && (
                   <input
@@ -252,7 +245,7 @@ export function SendBitcoinRoute() {
                 )}
                 {priority === "custom" && (
                   <span className="text-[10px] text-muted-foreground">
-                    sat/vB
+                    {t.send.bitcoin.satPerVb}
                   </span>
                 )}
               </div>
@@ -263,21 +256,21 @@ export function SendBitcoinRoute() {
         {estimatedFeeSats !== null && (
           <div className="rounded-xl border bg-muted/30 p-3 text-[11px] text-muted-foreground">
             <div className="flex justify-between">
-              <span>Frais estimés</span>
+              <span>{t.send.bitcoin.feeEstimateLabel}</span>
               <span className="font-mono">
-                ≈ {estimatedFeeSats.toString()} sats
+                ≈ {formatBitcoin(estimatedFeeSats)} BTC
               </span>
             </div>
             <p className="mt-1 text-[10px]">
-              L&apos;estimation finale dépend des UTXOs sélectionnés.
+              {t.send.bitcoin.feeEstimateHint}
             </p>
           </div>
         )}
 
         <SendSubmit
-          label="Envoyer BTC"
+          label={`${t.send.button} BTC`}
           pending={send.isPending}
-          pendingLabel="Envoi…"
+          pendingLabel={t.send.bitcoin.pending}
           icon={<Send className="size-4" />}
           assetId="btc"
         />

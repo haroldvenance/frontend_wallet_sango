@@ -20,6 +20,8 @@ import { MainnetWarning } from "@/features/evm/mainnet-warning";
 import { useEvmAccount } from "@/hooks/use-evm-account";
 import { useEvmTokens } from "@/hooks/use-evm-tokens";
 import { useSendEvm } from "@/hooks/use-send-evm";
+import { useNetworkQueryContext } from "@/hooks/use-network-query-context";
+import { useTranslation } from "@/i18n/use-translation";
 import {
   formatNativeShort,
   formatStablecoinUsd,
@@ -28,31 +30,11 @@ import {
   parseEth,
   parseTokenAmount,
 } from "@/lib/eth";
-import { useNetworkQueryContext } from "@/hooks/use-network-query-context";
 import { useWalletSession } from "@/providers/wallet-session-context";
 
-/**
- * Envoi d'un actif EVM — ETH natif ou token ERC-20 (E1.6.a.5).
- *
- * Le sélecteur de token liste :
- *   - ETH (toujours présent, gas token)
- *   - USDC / USDT (si configurés pour le réseau courant)
- *
- * Selon le token sélectionné :
- *   - validation : solde du token (pas ETH)
- *   - frais     : en ETH dans tous les cas (gas token)
- *   - MAX       : solde du token (ou ETH − 0.0001 pour réserve de frais)
- *
- * **E2.3.a.3 (D-E2.3-3)** — un bandeau `MainnetWarning` s'affiche
- * au-dessus du formulaire si le réseau actif est un mainnet EVM.
- * Deuxième rappel après le sélecteur : c'est le point où une erreur
- * de réseau coûte réellement des fonds.
- */
 export function SendEvmRoute() {
+  const t = useTranslation();
   const session = useWalletSession();
-  // **Phase 10 (D10-a)** — `networkId`, `family`, `nativeAsset`
-  // proviennent du contexte (override-aware). Le store n'est plus lu
-  // directement ici.
   const { account, networkId, nativeAsset } = useNetworkQueryContext();
   const { data: evmAccount } = useEvmAccount();
   const { data: tokensWithBalance } = useEvmTokens();
@@ -61,74 +43,56 @@ export function SendEvmRoute() {
   const network = evmNetworkById(networkId);
   const networkName = network?.name ?? networkId;
 
-  // Prefill via query param `/send?asset=usdc` (D7-d·A).
   const [searchParams] = useSearchParams();
   const prefillAsset = searchParams.get("asset")?.toLowerCase() ?? null;
 
-  // Token sélectionné : `"eth"` (sentinelle native — nom figé, indépendant
-  // du réseau) ou contrat ERC-20 `0x…`.
   const [selected, setSelected] = useState<string>("eth");
-
-  // **Phase 10.2.2** — préfill via useEffect, car `?asset=usdt` (assetId
-  // humain) doit être résolu en contrat `0x…` une fois les tokens
-  // chargés. Le `useRef` garantit que l'application est one-shot (ne
-  // réécrase pas un choix manuel de l'utilisateur).
   const prefillAppliedRef = useRef(false);
+
   useEffect(() => {
     if (prefillAppliedRef.current) return;
     if (!prefillAsset) {
       prefillAppliedRef.current = true;
       return;
     }
-    if (!tokensWithBalance) return; // attend le chargement
-
-    // Natif ? On compare au `nativeAsset` du contexte (eth / bnb).
+    if (!tokensWithBalance) return;
     if (prefillAsset === nativeAsset) {
       setSelected("eth");
       prefillAppliedRef.current = true;
       return;
     }
-    // Token ? Match sur assetId (`usdt`) OU symbol lowercase (`usdt`).
     const match = tokensWithBalance.find(
-      (t) =>
-        t.token.assetId.toLowerCase() === prefillAsset ||
-        t.token.metadata.symbol.toLowerCase() === prefillAsset,
+      (tt) =>
+        tt.token.assetId.toLowerCase() === prefillAsset ||
+        tt.token.metadata.symbol.toLowerCase() === prefillAsset,
     );
-    if (match) {
-      setSelected(match.token.contract);
-    }
+    if (match) setSelected(match.token.contract);
     prefillAppliedRef.current = true;
   }, [prefillAsset, tokensWithBalance, nativeAsset]);
 
-  const selectedToken: Token | undefined = tokensWithBalance
-    ?.find((x) => x.token.contract === selected)
-    ?.token;
+  const selectedToken: Token | undefined = tokensWithBalance?.find(
+    (x) => x.token.contract === selected,
+  )?.token;
 
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
-  const [feeHint, setFeeHint] = useState<{
-    gasLimit: bigint;
-    maxFeePerGas: bigint;
-    totalWei: bigint;
-  } | null>(null);
+  const [totalFeeWei, setTotalFeeWei] = useState<bigint | null>(null);
   const [feeLoading, setFeeLoading] = useState(false);
   const [lastTxHash, setLastTxHash] = useState<string | null>(null);
 
-  // Le solde du token sélectionné (ETH si selected === "eth").
   const selectedBalance: bigint | null = (() => {
     if (selected === "eth") return evmAccount?.balance ?? null;
-    const entry = tokensWithBalance?.find((t) => t.token.contract === selected);
+    const entry = tokensWithBalance?.find((tt) => tt.token.contract === selected);
     return entry?.balance ?? null;
   })();
 
-  // Estimation des frais (natif ou ERC-20).
   useEffect(() => {
     if (!session || !to || !amount) {
-      setFeeHint(null);
+      setTotalFeeWei(null);
       return;
     }
     if (!isValidEvmAddress(to)) {
-      setFeeHint(null);
+      setTotalFeeWei(null);
       return;
     }
 
@@ -143,12 +107,10 @@ export function SendEvmRoute() {
         amountBaseUnits = parseEth(amount);
       }
     } catch {
-      setFeeHint(null);
+      setTotalFeeWei(null);
       return;
     }
 
-    // **Phase 10** — `assetId` natif résolu par le contexte
-    // (eth sur Ethereum/Base/Arbitrum, bnb sur BSC).
     const assetRef = selectedToken
       ? ({
           kind: "token",
@@ -174,16 +136,10 @@ export function SendEvmRoute() {
         account,
       )
       .then((est) => {
-        if (cancelled) return;
-        const b = est.breakdown ?? {};
-        setFeeHint({
-          gasLimit: (b.gasLimit as bigint) ?? 21_000n,
-          maxFeePerGas: (b.maxFeePerGas as bigint) ?? 0n,
-          totalWei: est.total,
-        });
+        if (!cancelled) setTotalFeeWei(est.total);
       })
       .catch(() => {
-        if (!cancelled) setFeeHint(null);
+        if (!cancelled) setTotalFeeWei(null);
       })
       .finally(() => {
         if (!cancelled) setFeeLoading(false);
@@ -198,8 +154,8 @@ export function SendEvmRoute() {
     e.preventDefault();
 
     if (!isValidEvmAddress(to)) {
-      return toast.error("Adresse invalide", {
-        description: "Format attendu : 0x suivi de 40 caractères hexadécimaux.",
+      return toast.error(t.send.evm.invalidAddress, {
+        description: t.send.evm.invalidAddressDesc,
       });
     }
 
@@ -213,31 +169,30 @@ export function SendEvmRoute() {
       } else {
         amountBaseUnits = parseEth(amount);
       }
-    } catch (err) {
-      return toast.error("Montant invalide", {
-        description: (err as Error).message,
-      });
+    } catch {
+      return toast.error(t.send.evm.invalidAmount);
     }
 
     if (amountBaseUnits <= 0n) {
-      return toast.error("Le montant doit être supérieur à 0");
+      return toast.error(t.send.evm.amountPositive);
     }
 
-    // Vérification du solde du token sélectionné.
     if (selectedBalance !== null && amountBaseUnits > selectedBalance) {
       const symbol = selectedToken?.metadata.symbol ?? "ETH";
       const displayed = selectedToken
         ? formatTokenAmount(selectedBalance, selectedToken.metadata.decimals)
         : formatNativeShort(selectedBalance);
-      return toast.error("Solde insuffisant", {
-        description: `Solde : ${displayed} ${symbol}`,
+      return toast.error(t.send.evm.insufficientBalance, {
+        description: `${t.send.balanceDesc.replace("{value}", displayed)} ${symbol}`,
       });
     }
 
-    // Vérification du solde ETH pour les frais (gas token).
-    if (evmAccount && feeHint && evmAccount.balance < feeHint.totalWei) {
-      return toast.error("Solde ETH insuffisant pour les frais", {
-        description: `Frais estimés : ${formatNativeShort(feeHint.totalWei)} ETH`,
+    if (evmAccount && totalFeeWei !== null && evmAccount.balance < totalFeeWei) {
+      return toast.error(t.send.evm.insufficientFee, {
+        description: t.send.evm.feeEstimateDesc.replace(
+          "{value}",
+          formatNativeShort(totalFeeWei),
+        ),
       });
     }
 
@@ -250,29 +205,22 @@ export function SendEvmRoute() {
       setLastTxHash(txHash);
       setTo("");
       setAmount("");
-      setFeeHint(null);
+      setTotalFeeWei(null);
     } catch {
-      // toast déjà déclenché par onError du hook
+      /* toast déclenché par onError */
     }
   }
 
-  // **Phase 10.1** — le symbole natif dépend du réseau (ETH sur
-  // Ethereum/Base/Arbitrum, BNB sur BSC). `nativeAsset` vient du
-  // contexte (override-aware).
   const nativeSymbol = (nativeAsset ?? "eth").toUpperCase();
   const symbol = selectedToken?.metadata.symbol ?? nativeSymbol;
 
-  // **Phase 10.3** — options du dropdown custom.
   const assetOptions: AssetSelectOption[] = [
     {
       id: "eth",
       assetId: nativeAsset ?? "eth",
       symbol: nativeSymbol,
       name: `${nativeSymbol} · natif`,
-      balance:
-        evmAccount
-          ? formatNativeShort(evmAccount.balance)
-          : "…",
+      balance: evmAccount ? formatNativeShort(evmAccount.balance) : "…",
       isNative: true,
     },
     ...(tokensWithBalance ?? []).map(({ token, balance }) => ({
@@ -288,7 +236,6 @@ export function SendEvmRoute() {
     })),
   ];
 
-  // Balance affichée : loading → "…", erreur → "0", sinon valeur.
   const balanceDisplay = (() => {
     if (selectedBalance !== null) {
       if (selectedToken) {
@@ -299,8 +246,6 @@ export function SendEvmRoute() {
       }
       return formatNativeShort(selectedBalance);
     }
-    // `selectedBalance === null` : soit en chargement, soit erreur.
-    // On affiche "…" pour distinguer du vrai zéro (UX).
     return "…";
   })();
 
@@ -308,29 +253,28 @@ export function SendEvmRoute() {
     <SendShell
       assetId={
         selected === "eth"
-          ? nativeAsset ?? "eth"
-          : selectedToken?.assetId ?? nativeAsset ?? "eth"
+          ? (nativeAsset ?? "eth")
+          : (selectedToken?.assetId ?? nativeAsset ?? "eth")
       }
       networkId={networkId}
-      title={`Envoyer ${symbol}`}
+      title={`${t.send.button} ${symbol}`}
       subtitle={networkName}
       balanceCard={
         <SendBalanceCard
           assetId={
             selected === "eth"
-              ? nativeAsset ?? "eth"
-              : selectedToken?.assetId ?? nativeAsset ?? "eth"
+              ? (nativeAsset ?? "eth")
+              : (selectedToken?.assetId ?? nativeAsset ?? "eth")
           }
           balance={balanceDisplay}
           symbol={symbol}
         />
       }
     >
-
       {lastTxHash && (
-        <div className="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-3 text-xs">
+        <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-3 text-xs">
           <p className="font-medium text-emerald-600 dark:text-emerald-400">
-            Transaction envoyée
+            {t.send.evm.txSent}
           </p>
           <p className="mt-1 font-mono break-all text-muted-foreground">
             {lastTxHash}
@@ -345,24 +289,26 @@ export function SendEvmRoute() {
 
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
         <div>
-          <span className="mb-1.5 block text-xs font-medium">Actif</span>
+          <span className="mb-1.5 block text-xs font-medium">
+            {t.send.evm.asset}
+          </span>
           <AssetSelect
             value={selected}
             onChange={(id) => {
               setSelected(id);
               setAmount("");
-              setFeeHint(null);
+              setTotalFeeWei(null);
             }}
             options={assetOptions}
           />
         </div>
 
-        <SendField label="Destinataire">
+        <SendField label={t.send.recipient}>
           <input
             type="text"
             value={to}
             onChange={(e) => setTo(e.target.value)}
-            placeholder="0x…"
+            placeholder={t.send.evm.recipientPlaceholder}
             spellCheck={false}
             autoCapitalize="none"
             autoComplete="off"
@@ -370,14 +316,18 @@ export function SendEvmRoute() {
           />
         </SendField>
 
-        <SendField label={`Montant (${symbol})`}>
+        <SendField label={`${t.send.amount} (${symbol})`}>
           <div className="relative">
             <input
               type="text"
               inputMode="decimal"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder={selectedToken ? "1.00" : "0.01"}
+              placeholder={
+                selectedToken
+                  ? t.send.evm.amountPlaceholderToken
+                  : t.send.evm.amountPlaceholderNative
+              }
               className="flex h-12 w-full rounded-xl border border-input bg-background px-3.5 pr-16 text-sm outline-none transition-colors focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
             />
             {selectedBalance !== null && selectedBalance > 0n && (
@@ -385,7 +335,6 @@ export function SendEvmRoute() {
                 type="button"
                 onClick={() => {
                   if (selectedToken) {
-                    // Token : MAX = solde complet
                     setAmount(
                       formatTokenAmount(
                         selectedBalance,
@@ -393,17 +342,17 @@ export function SendEvmRoute() {
                       ),
                     );
                   } else {
-                    // ETH : MAX = solde − 0.0001 ETH (réserve gas)
                     const reserve = 10n ** 14n; // 0.0001 ETH
-                    const max = selectedBalance > reserve
-                      ? selectedBalance - reserve
-                      : 0n;
+                    const max =
+                      selectedBalance > reserve
+                        ? selectedBalance - reserve
+                        : 0n;
                     setAmount(formatNativeShort(max));
                   }
                 }}
-                className="absolute right-2 top-1/2 mt-0.5 -translate-y-1/2 rounded-lg border bg-card px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-accent"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg border bg-card px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
-                MAX
+                {t.send.maxLabel}
               </button>
             )}
           </div>
@@ -424,34 +373,26 @@ export function SendEvmRoute() {
           </p>
         )}
 
-        {feeHint && (
+        {totalFeeWei !== null && (
           <div className="rounded-xl border bg-muted/30 p-3 text-[11px] text-muted-foreground">
-            <div className="flex justify-between">
-              <span>Gas estimé</span>
-              <span className="font-mono">{feeHint.gasLimit.toString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Max fee / gas</span>
+            <div className="flex justify-between font-medium text-foreground">
+              <span>{t.send.evm.feeEstimateLabel}</span>
               <span className="font-mono">
-                {formatNativeShort(feeHint.maxFeePerGas)} ETH
-              </span>
-            </div>
-            <div className="mt-1 flex justify-between border-t pt-1 font-medium text-foreground">
-              <span>Frais max</span>
-              <span className="font-mono">
-                {formatNativeShort(feeHint.totalWei)} ETH
+                {formatNativeShort(totalFeeWei)} ETH
               </span>
             </div>
           </div>
         )}
-        {feeLoading && !feeHint && (
-          <p className="text-[11px] text-muted-foreground">Estimation des frais…</p>
+        {feeLoading && totalFeeWei === null && (
+          <p className="text-[11px] text-muted-foreground">
+            {t.send.evm.feeEstimating}
+          </p>
         )}
 
         <SendSubmit
-          label={`Envoyer ${symbol}`}
+          label={`${t.send.button} ${symbol}`}
           pending={sendEvm.isPending}
-          pendingLabel="Envoi…"
+          pendingLabel={t.send.sending}
           icon={<Send className="size-4" />}
         />
       </form>

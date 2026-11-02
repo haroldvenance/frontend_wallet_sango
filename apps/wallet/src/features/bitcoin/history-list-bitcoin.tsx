@@ -22,19 +22,32 @@ import { truncateMiddle } from "@/lib/format";
 
 import { ExplorerLinkBitcoin } from "./explorer-link-bitcoin";
 
-/**
- * Historique Bitcoin — parité avec SANGO (Phase 13-B).
- *
- * **Ajouts** : filtres (tout/envoyé/reçu), skeletons, erreur + retry.
- * Distinct de l'état vide.
- *
- * **Hors scope** : pagination (limit 20). Reporté Session 2.
- */
-type Direction = "in" | "out" | "neutral";
+type Direction = "in" | "out" | "neutral" | "unknown";
 
 interface Row {
   readonly item: HistoryItem;
   readonly direction: Direction;
+}
+
+function classifyDirection(
+  item: HistoryItem,
+  myAddress: string,
+): Direction {
+  if (!myAddress) return "unknown";
+  if (!item.from || !item.to) return "unknown";
+  if (item.from === myAddress && item.to !== myAddress) return "out";
+  if (item.to === myAddress && item.from !== myAddress) return "in";
+  return "neutral";
+}
+
+function friendlyError(
+  msg: string,
+  t: ReturnType<typeof useTranslation>,
+): string {
+  if (msg.includes("rate limit") || msg.includes("429")) {
+    return t.history.evmErrors.rateLimited;
+  }
+  return t.history.evmErrors.generic;
 }
 
 export function HistoryListBitcoin() {
@@ -48,15 +61,10 @@ export function HistoryListBitcoin() {
 
   const allRows: Row[] = useMemo(() => {
     if (!data?.items) return [];
-    return data.items.map<Row>((item) => {
-      const direction: Direction =
-        item.from === myAddress && item.to !== myAddress
-          ? "out"
-          : item.to === myAddress && item.from !== myAddress
-            ? "in"
-            : "neutral";
-      return { item, direction };
-    });
+    return data.items.map<Row>((item) => ({
+      item,
+      direction: classifyDirection(item, myAddress),
+    }));
   }, [data, myAddress]);
 
   const rows = useMemo(() => {
@@ -91,9 +99,9 @@ export function HistoryListBitcoin() {
       >
         {isLoading && <HistorySkeleton rows={5} />}
 
-        {isError && (
+        {isError && error && (
           <HistoryError
-            message={error.message}
+            message={friendlyError(error.message, t)}
             onRetry={() => void refetch()}
           />
         )}
@@ -118,24 +126,28 @@ export function HistoryListBitcoin() {
   );
 }
 
-// ── Ligne ───────────────────────────────────────────────────
-
 function HistoryRow({ row }: { readonly row: Row }) {
+  const t = useTranslation();
   const { item, direction } = row;
   const isSent = direction === "out";
   const isReceived = direction === "in";
-  const isInternal = direction === "neutral";
+  const isNeutral = direction === "neutral";
+  const isUnknown = direction === "unknown";
   const isPending = item.status === "pending";
 
   const directionLabel = isSent
-    ? "Envoyée"
+    ? t.history.direction.sent
     : isReceived
-      ? "Reçue"
-      : isInternal
-        ? "Interne"
-        : "Transaction";
+      ? t.history.direction.received
+      : isUnknown
+        ? t.history.direction.unknown
+        : t.history.direction.internal;
 
-  const counterparty = isSent ? item.to : isReceived ? item.from : "";
+  const counterparty = isSent
+    ? item.to
+    : isReceived
+      ? item.from
+      : "";
 
   const iconCls = isPending
     ? "bg-amber-500/10 text-amber-500"
@@ -154,7 +166,7 @@ function HistoryRow({ row }: { readonly row: Row }) {
         : ArrowLeftRight;
 
   const date = item.timestamp
-    ? new Date(item.timestamp * 1000).toLocaleString("fr-FR", {
+    ? new Date(item.timestamp * 1000).toLocaleString(undefined, {
         day: "2-digit",
         month: "2-digit",
         hour: "2-digit",
@@ -162,7 +174,10 @@ function HistoryRow({ row }: { readonly row: Row }) {
       })
     : "—";
 
-  const amountStr = isInternal ? "0" : formatBitcoin(item.amount);
+  // Un montant n'est affiché que si la direction est fiable.
+  // Ni "neutral" ni "unknown" ne sont "0 BTC" — ce sont des états
+  // où l'information de flux est absente.
+  const showAmount = isSent || isReceived;
   const sign = isSent ? "-" : isReceived ? "+" : "";
 
   return (
@@ -181,7 +196,7 @@ function HistoryRow({ row }: { readonly row: Row }) {
           <span className="text-sm font-medium">{directionLabel}</span>
           {isPending && (
             <span className="rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-500">
-              en attente
+              {t.history.pending}
             </span>
           )}
         </div>
@@ -200,11 +215,17 @@ function HistoryRow({ row }: { readonly row: Row }) {
 
       <div className="shrink-0 text-right">
         <div className="font-mono text-sm font-medium">
-          {sign}
-          {amountStr}{" "}
-          <span className="text-xs font-normal text-muted-foreground">
-            BTC
-          </span>
+          {showAmount ? (
+            <>
+              {sign}
+              {formatBitcoin(item.amount)}{" "}
+              <span className="text-xs font-normal text-muted-foreground">
+                BTC
+              </span>
+            </>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
         </div>
         <div className="mt-0.5">
           <ExplorerLinkBitcoin

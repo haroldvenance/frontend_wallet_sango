@@ -9,49 +9,30 @@ import { SendEvmRoute } from "./send-evm";
 import { SangoSendRoute } from "./send-sango";
 
 /**
- * Dispatcher `/send` — Phase 10 (D10-b·A, D10-h·A).
+ * Dispatcher `/send` — `/send?network=<networkId>&asset=<assetId>`.
  *
- * **Route canonique** : `/send?network=<networkId>&asset=<assetId>`.
- *
- * **Validation** :
- *   - les deux params sont requis ;
- *   - `networkId` doit être **connu** (`isKnownNetworkId`) ;
- *   - la famille est dérivée via `resolveChainFamily(networkId)`.
- *
- * **En cas de params manquants ou invalides** → `SendAssetPicker`.
- * Aucun throw, aucune erreur bloquante : l'utilisateur revient au
- * point de départ sans perdre le fil.
- *
- * **Override de réseau** : le sous-arbre est enveloppé dans un
- * `NetworkOverrideProvider` avec le réseau dérivé des params. Tous
- * les hooks consommateurs (`useNetworkQueryContext`,
- * `useSendEvm`, `useBitcoinBalance`, `useAccount`…) voient le
- * réseau demandé, indépendamment du réseau actif du store.
- *
- * Le store `useWalletStore.networkId` **n'est jamais modifié**.
+ * - Params manquants ou invalides → `SendAssetPicker`.
+ * - Chaque route fille reçoit une `key` dérivée du réseau : changer
+ *   le réseau via l'URL force un remontage propre (state local reset,
+ *   pas de token « fantôme » d'un autre réseau).
  */
 export function SendRoute() {
   const [searchParams] = useSearchParams();
   const rawNetwork = searchParams.get("network");
   const rawAsset = searchParams.get("asset");
 
-  // Aucun paramètre → picker.
-  if (!rawNetwork || !rawAsset) {
-    return <SendAssetPicker />;
-  }
-
-  // Paramètres invalides → picker (pas d'erreur bloquante).
-  if (!isKnownNetworkId(rawNetwork)) {
-    return <SendAssetPicker />;
-  }
+  if (!rawNetwork || !rawAsset) return <SendAssetPicker />;
+  if (!isKnownNetworkId(rawNetwork)) return <SendAssetPicker />;
 
   const family = resolveChainFamily(rawNetwork);
 
   return (
     <NetworkOverrideProvider networkId={rawNetwork} family={family}>
-      {family === "bitcoin" && <SendBitcoinRoute />}
-      {family === "evm" && <SendEvmRoute />}
-      {family === "sango" && <SangoSendRoute />}
+      {family === "bitcoin" && (
+        <SendBitcoinRoute key={`btc-${rawNetwork}`} />
+      )}
+      {family === "evm" && <SendEvmRoute key={`evm-${rawNetwork}`} />}
+      {family === "sango" && <SangoSendRoute key={`sango-${rawNetwork}`} />}
     </NetworkOverrideProvider>
   );
 }
