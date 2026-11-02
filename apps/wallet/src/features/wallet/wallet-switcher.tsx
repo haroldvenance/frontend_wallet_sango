@@ -9,23 +9,6 @@ import { useWallets } from "@/hooks/use-wallets";
 
 import { WalletsAndAccountsModal } from "./wallets-and-accounts-modal";
 
-/**
- * Card dashboard du wallet actif — Phase 3.3 (D1·A).
- *
- * Affiche **wallet + compte** en une ligne, comme dans le mockup :
- *
- *   W1  Portefeuille 1  [Principal]                       ⌄
- *       Compte 1 · sango1q8…x7k4f          2 comptes
- *
- * **D13·A** — `null` si aucun wallet déverrouillé (après `lock()`).
- *
- * **D14·A** — l'état `open` est local. Un futur second point
- * d'entrée (Settings, Autres cryptos) réutilisera directement
- * `WalletsAndAccountsModal` sans store UI global.
- *
- * Pour SANGO legacy (`useAccounts()` → `null`) : le sous-titre
- * adresse/compte utilise le bech32m du wallet.
- */
 export function WalletSwitcher() {
   const t = useTranslation();
   const { activeWallet } = useWallets();
@@ -40,12 +23,10 @@ export function WalletSwitcher() {
       ? accounts.accounts.find((a) => a.index === accounts.activeIndex)
       : null;
 
-  // Adresse du compte actif (BIP-39), sinon fallback bech32m SANGO.
   const rawAddress =
     activeAccount?.address ??
     sangoWallet?.identity.addressBech32 ??
     "";
-  // Phase 4.2 (D2·A) — convention 10…4 via helper partagé.
   const addressShort = rawAddress ? truncateMiddle(rawAddress, 10, 4) : "—";
 
   const accountCount = activeWallet.accountCount;
@@ -59,7 +40,6 @@ export function WalletSwitcher() {
     String(activeWallet.position),
   );
 
-  // Sous-titre : "Compte N · adresse" (BIP-39) ou juste l'adresse (SANGO).
   const accountIndex = accounts?.activeIndex ?? null;
   const subtitle =
     accountIndex !== null
@@ -72,7 +52,7 @@ export function WalletSwitcher() {
         type="button"
         data-testid="wallet-switcher-card"
         onClick={() => setOpen(true)}
-        className="flex w-full items-center gap-3 rounded-2xl border bg-card p-4 text-left shadow-sm transition-colors hover:bg-accent/40"
+        className="flex w-full items-center gap-3 rounded-2xl border bg-card p-4 text-left shadow-sm transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       >
         <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-base font-bold text-primary-foreground">
           W{activeWallet.position}
@@ -94,10 +74,7 @@ export function WalletSwitcher() {
         <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
       </button>
 
-      <WalletsAndAccountsModal
-        open={open}
-        onClose={() => setOpen(false)}
-      />
+      <WalletsAndAccountsModal open={open} onClose={() => setOpen(false)} />
     </>
   );
 }

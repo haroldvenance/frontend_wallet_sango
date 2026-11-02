@@ -10,16 +10,11 @@ import { useWalletStore } from "@/stores/wallet-store";
 import { NetworkPickerModal } from "./network-picker-modal";
 
 /**
- * Carte du réseau actif — Phase 9.1 (D9-c·A).
+ * Carte du réseau actif.
  *
- * Affiche :
- *   - logo du réseau (NetworkLogo) ;
- *   - libellé "Réseau actif" + nom ;
- *   - bouton "Changer" → ouvre `NetworkPickerModal`.
- *
- * Le nom est résolu via `bitcoinNetworkById` / `evmNetworkById` selon
- * la famille. Pour SANGO, on affiche "Sango" (le networkId technique
- * `sango-devnet` reste stocké, jamais exposé — Phase 5.5).
+ * Fallback pour un `networkId` inconnu : libellé générique traduit
+ * (« Réseau ») — on n'expose JAMAIS l'ID technique brut à
+ * l'utilisateur.
  */
 export function NetworkCard() {
   const t = useTranslation();
@@ -28,8 +23,12 @@ export function NetworkCard() {
   const networkId = useWalletStore((s) => s.networkId);
 
   const name = (() => {
-    if (family === "bitcoin") return bitcoinNetworkById(networkId)?.name ?? networkId;
-    if (family === "evm") return evmNetworkById(networkId)?.name ?? networkId;
+    if (family === "bitcoin") {
+      return bitcoinNetworkById(networkId)?.name ?? t.network.sangoNetwork;
+    }
+    if (family === "evm") {
+      return evmNetworkById(networkId)?.name ?? t.network.sangoNetwork;
+    }
     return "Sango";
   })();
 
@@ -39,7 +38,7 @@ export function NetworkCard() {
         type="button"
         data-testid="network-card"
         onClick={() => setOpen(true)}
-        className="flex w-full items-center gap-3 rounded-2xl border bg-card p-4 text-left shadow-sm transition-colors hover:bg-accent/40"
+        className="flex w-full items-center gap-3 rounded-2xl border bg-card p-4 text-left shadow-sm transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       >
         <NetworkLogo networkId={networkId} size={40} />
         <div className="min-w-0 flex-1">

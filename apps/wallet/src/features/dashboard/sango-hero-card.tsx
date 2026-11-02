@@ -9,47 +9,62 @@ import {
 } from "@/hooks/use-all-wallet-assets";
 import { useTranslation } from "@/i18n/use-translation";
 import { formatSango } from "@/lib/format";
+import { useWalletStore } from "@/stores/wallet-store";
 
 /**
- * Grande carte SANGO du dashboard — Phase 9.1 (D9-b·A).
+ * Carte SANGO du dashboard.
  *
- * **D9-b** — mise en évidence du coin natif de la plateforme. Clic →
- * `/asset/sango`.
+ * **N'est affichée que si pertinente** :
+ *   - wallet actif = famille SANGO, OU
+ *   - un solde SANGO > 0 existe (portefeuille BIP-39 qui contient du
+ *     SANGO).
  *
- * **Source de vérité** : `useAllWalletAssets` — pas `useAccount`.
- * Raison : `useAccount()` est désactivé pour les wallets V2
- * (`format === "bip39"`), alors que `useAllWalletAssets` dérive
- * l'identité SANGO depuis la mnemonic via SLIP-0010.
- *
- * Si SANGO est introuvable dans l'agrégat (wallet non déverrouillé),
- * la carte retourne `null`.
+ * Sinon `null` — évite de suggérer à un utilisateur EVM/BTC pur qu'il
+ * détient du SANGO.
  */
 export function SangoHeroCard() {
   const t = useTranslation();
   const navigate = useNavigate();
+  const family = useWalletStore((s) => s.family);
+  const networkId = useWalletStore((s) => s.networkId);
   const { assets, loading } = useAllWalletAssets();
 
   const sango = assets.find((a) => getDisplayAssetId(a) === "sango");
-  if (!sango && !loading) return null;
 
-  // Fallback aligné Phase 4.2 (D1·A) : quand le RPC échoue,
-  // afficher "0" plutôt que "…" perpétuel. Le solde exact n'est
-  // jamais inventé — c'est une convention d'affichage.
-  const balanceStr =
-    sango?.balance !== null && sango?.balance !== undefined
-      ? formatSango(sango.balance)
-      : loading
-        ? "…"
-        : "0";
+  const hasSangoBalance =
+    sango?.balance !== null &&
+    sango?.balance !== undefined &&
+    sango.balance > 0n;
+  const isSangoFamily = family === "sango";
+
+  // Cas : chargement → placeholder. Sinon : ne rien afficher si
+  // l'utilisateur n'est pas sur SANGO et n'a pas de solde SANGO.
+  if (!loading && !isSangoFamily && !hasSangoBalance) {
+    return null;
+  }
+
+  const balanceStr = (() => {
+    if (sango?.balance !== null && sango?.balance !== undefined) {
+      return formatSango(sango.balance);
+    }
+    return loading ? "…" : "0";
+  })();
+
+  // Navigation vers l'asset SANGO — on garde le networkId effectif du
+  // wallet (pas de hardcode "sango-devnet" : pourrait diverger si un
+  // mainnet SANGO arrive).
+  const target = isSangoFamily
+    ? `/asset/${networkId}/sango`
+    : "/asset/sango-devnet/sango";
 
   return (
     <button
       type="button"
       data-testid="sango-hero-card"
-      onClick={() => navigate("/asset/sango-devnet/sango")}
-      className="group relative w-full overflow-hidden rounded-3xl border-2 border-primary/40 bg-gradient-to-br from-primary/[0.08] via-card to-emerald-500/[0.05] p-6 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg sm:p-8"
+      onClick={() => navigate(target)}
+      aria-label={`SANGO — ${balanceStr} ${t.assets.sangoName}`}
+      className="group relative w-full overflow-hidden rounded-3xl border-2 border-primary/40 bg-gradient-to-br from-primary/[0.08] via-card to-emerald-500/[0.05] p-6 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:p-8"
     >
-      {/* Halos */}
       <div
         aria-hidden
         className="pointer-events-none absolute -right-24 -top-24 size-64 rounded-full bg-primary/15 blur-3xl"
@@ -75,7 +90,7 @@ export function SangoHeroCard() {
 
         <div className="mt-6">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-            Disponible
+            {t.assets.availableBalance}
           </p>
           <p className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
             {balanceStr}{" "}

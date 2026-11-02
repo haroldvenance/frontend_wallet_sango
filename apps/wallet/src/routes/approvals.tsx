@@ -13,52 +13,34 @@ import { MainnetWarning } from "@/features/evm/mainnet-warning";
 import { useApproveEvm } from "@/hooks/use-approve-evm";
 import { useEvmAllowance } from "@/hooks/use-evm-allowance";
 import { useEvmTokens } from "@/hooks/use-evm-tokens";
-import { formatTokenAmount, isValidEvmAddress, parseTokenAmount } from "@/lib/eth";
+import { useTranslation } from "@/i18n/use-translation";
+import {
+  formatTokenAmount,
+  isValidEvmAddress,
+  parseTokenAmount,
+} from "@/lib/eth";
 import { useWalletStore } from "@/stores/wallet-store";
 
-/**
- * Page `/approvals` — E2.2.a.3.
- *
- * **Vérification et gestion manuelle** d'une allowance ERC-20. Pas de
- * découverte automatique : l'utilisateur choisit un token parmi ceux
- * configurés pour le réseau courant, puis saisit le spender. La lecture
- * et les actions n'apparaissent qu'une fois les deux valides.
- *
- * **Scope v1** :
- *   - page vierge (pas de query params, pas de deep-link)
- *   - pas de "liste de mes approvals" (nécessiterait un indexeur)
- *   - pas de lien dans la sidebar → accessible via le footer de
- *     `AssetListEvm` (lien "Gérer les approbations →")
- *
- * Actions proposées :
- *   - **Révoquer** (approve 0n)
- *   - **Montant exact** (input + bouton)
- *   - **Illimité** (MAX_UINT256)
- *
- * ⚠️ L'adresse zéro (`0x000…000`) est **bloquée** : autoriser un
- *    spender nul n'a aucune utilité et signale une erreur utilisateur.
- *    Le warning est explicite et les boutons sont désactivés.
- */
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 export function ApprovalsRoute() {
+  const t = useTranslation();
   const networkId = useWalletStore((s) => s.networkId);
   const { data: tokensWithBalance, isLoading: tokensLoading } = useEvmTokens();
   const approve = useApproveEvm();
 
-  const availableTokens = (tokensWithBalance ?? []).map((t) => t.token);
+  const availableTokens = (tokensWithBalance ?? []).map((x) => x.token);
 
   const [selectedContract, setSelectedContract] = useState("");
   const [spender, setSpender] = useState("");
   const [exactAmount, setExactAmount] = useState("");
 
   const selectedToken: Token | null =
-    availableTokens.find((t) => t.contract === selectedContract) ?? null;
+    availableTokens.find((x) => x.contract === selectedContract) ?? null;
   const spenderTrimmed = spender.trim();
   const spenderValid = isValidEvmAddress(spenderTrimmed);
   const spenderIsZero = spenderTrimmed.toLowerCase() === ZERO_ADDRESS;
-  const readyForRead =
-    selectedToken !== null && spenderValid && !spenderIsZero;
+  const readyForRead = selectedToken !== null && spenderValid && !spenderIsZero;
 
   const { data: allowanceData, isLoading: allowanceLoading } = useEvmAllowance(
     readyForRead ? selectedToken : null,
@@ -70,8 +52,8 @@ export function ApprovalsRoute() {
   const isUnlimited = allowance === MAX_UINT256;
 
   function formatAllowance(a: bigint, token: Token): string {
-    if (a === 0n) return "Aucune autorisation";
-    if (a === MAX_UINT256) return "Illimité";
+    if (a === 0n) return t.approvals.allowanceNone;
+    if (a === MAX_UINT256) return t.approvals.allowanceUnlimited;
     return `${formatTokenAmount(a, token.metadata.decimals)} ${token.metadata.symbol}`;
   }
 
@@ -113,52 +95,55 @@ export function ApprovalsRoute() {
   const buttonsDisabled = approve.isPending || spenderIsZero;
 
   return (
-    <div className="mx-auto max-w-2xl px-6 py-10">
+    <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
       <Link
         to="/"
-        className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       >
-        <ArrowLeft className="size-3" /> Retour au tableau de bord
+        <ArrowLeft className="size-3" /> {t.approvals.back}
       </Link>
 
       <h1 className="mt-6 text-xl font-semibold tracking-tight">
-        Gérer une approbation
+        {t.approvals.title}
       </h1>
       <p className="mt-1 text-xs text-muted-foreground">
-        Vérifie ou modifie l&apos;autorisation donnée à un contrat
-        d&apos;utiliser tes tokens.
+        {t.approvals.subtitle}
       </p>
 
       <MainnetWarning networkId={networkId} className="mt-4" />
 
       {tokensLoading ? (
         <div className="mt-6 rounded-2xl border bg-card p-6 text-center text-sm text-muted-foreground">
-          Chargement…
+          {t.common.loading}
         </div>
       ) : availableTokens.length === 0 ? (
         <div className="mt-6 rounded-2xl border bg-card p-6 text-center text-sm text-muted-foreground">
-          Aucun token configuré sur ce réseau.
+          {t.approvals.noTokens}
         </div>
       ) : (
         <div className="mt-6 space-y-4">
           <label className="block">
-            <span className="text-xs font-medium">Token</span>
+            <span className="mb-1 block text-xs font-medium">
+              {t.approvals.tokenLabel}
+            </span>
             <select
               value={selectedContract}
               onChange={(e) => setSelectedContract(e.target.value)}
-              className="mt-1 flex h-10 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex h-10 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <option value="">— Sélectionner un token —</option>
-              {availableTokens.map((t) => (
-                <option key={t.contract} value={t.contract}>
-                  {t.metadata.symbol} — {t.metadata.name}
+              <option value="">— {t.approvals.tokenPlaceholder} —</option>
+              {availableTokens.map((x) => (
+                <option key={x.contract} value={x.contract}>
+                  {x.metadata.symbol} — {x.metadata.name}
                 </option>
               ))}
             </select>
           </label>
 
           <label className="block">
-            <span className="text-xs font-medium">Contrat (spender)</span>
+            <span className="mb-1 block text-xs font-medium">
+              {t.approvals.spenderLabel}
+            </span>
             <input
               type="text"
               value={spender}
@@ -167,12 +152,11 @@ export function ApprovalsRoute() {
               spellCheck={false}
               autoCapitalize="none"
               autoComplete="off"
-              className="mt-1 flex h-10 w-full rounded-xl border border-input bg-background px-3 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex h-10 w-full rounded-xl border border-input bg-background px-3 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
             {spenderTrimmed && !spenderValid && (
               <p className="mt-1 text-[11px] text-destructive">
-                Adresse invalide — format attendu : 0x suivi de 40
-                caractères hexadécimaux.
+                {t.approvals.spenderInvalid}
               </p>
             )}
           </label>
@@ -180,22 +164,20 @@ export function ApprovalsRoute() {
           {spenderIsZero && (
             <div className="flex items-start gap-2 rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-[11px] text-destructive">
               <ShieldAlert className="mt-0.5 size-3 shrink-0" />
-              <span>
-                L&apos;adresse zéro (<code>0x000…000</code>) ne peut pas
-                dépenser tes tokens. Choisis l&apos;adresse du contrat
-                avec lequel tu interagis.
-              </span>
+              <span>{t.approvals.zeroSpender}</span>
             </div>
           )}
 
           {readyForRead && selectedToken && (
             <div className="rounded-2xl border bg-card p-5">
               <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                Autorisation actuelle
+                {t.approvals.currentAllowance}
               </p>
 
               {allowanceLoading ? (
-                <p className="mt-2 text-sm text-muted-foreground">Lecture…</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {t.common.loading}
+                </p>
               ) : allowance !== null ? (
                 <>
                   <div className="mt-2 flex items-center gap-2">
@@ -216,9 +198,9 @@ export function ApprovalsRoute() {
                         type="button"
                         onClick={onRevoke}
                         disabled={buttonsDisabled}
-                        className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-destructive/40 bg-destructive/5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+                        className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-destructive/40 bg-destructive/5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 disabled:opacity-50"
                       >
-                        Révoquer ({selectedToken.metadata.symbol})
+                        {t.approvals.revoke} ({selectedToken.metadata.symbol})
                       </button>
                     )}
 
@@ -228,15 +210,15 @@ export function ApprovalsRoute() {
                         inputMode="decimal"
                         value={exactAmount}
                         onChange={(e) => setExactAmount(e.target.value)}
-                        placeholder={`Montant exact (${selectedToken.metadata.symbol})`}
+                        placeholder={`${t.approvals.exactAmount} (${selectedToken.metadata.symbol})`}
                         className="flex h-10 flex-1 rounded-xl border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       />
                       <button
                         type="submit"
                         disabled={buttonsDisabled || !exactAmount}
-                        className="inline-flex h-10 items-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                        className="inline-flex h-10 items-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50"
                       >
-                        Approuver
+                        {t.approvals.approve}
                       </button>
                     </form>
 
@@ -244,10 +226,10 @@ export function ApprovalsRoute() {
                       type="button"
                       onClick={onApproveUnlimited}
                       disabled={buttonsDisabled || isUnlimited}
-                      className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/5 text-sm font-medium text-amber-600 transition-colors hover:bg-amber-500/10 disabled:opacity-50 dark:text-amber-400"
+                      className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/5 text-sm font-medium text-amber-600 transition-colors hover:bg-amber-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 disabled:opacity-50 dark:text-amber-400"
                     >
                       <InfinityIcon className="size-4" />
-                      Approuver un montant illimité
+                      {t.approvals.approveUnlimited}
                     </button>
                   </div>
                 </>

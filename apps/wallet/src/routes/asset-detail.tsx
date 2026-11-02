@@ -24,17 +24,24 @@ import { formatTokenAmount } from "@/lib/eth";
 import { formatSango, truncateMiddle } from "@/lib/format";
 
 /**
- * Page dédiée par actif — Phase 6.
+ * Convertit un bigint (base units) en float pour un calcul d'affichage
+ * fiat. Bornée : toute valeur > 2^53 (Number.MAX_SAFE_INTEGER) est
+ * plafonnée, et le résultat est documenté "approximation".
  *
- * Résout l'actif dans le **contexte courant** (D6-c·A) :
- * `family` + `networkId` + wallet actif. Affiche :
- *   - Hero (logo, symbole, balance, prix USD).
- *   - Actions Envoyer / Recevoir / Acheter / Échanger.
- *   - Courbe d'évolution (CoinGecko, D6-d·A) avec 5 timeframes (D6-e·A).
- *   - Détails (réseau, contrat, décimales, type).
- *
- * **D6-f·A** — Acheter et Échanger sont visibles mais désactivés.
+ * ⚠️ Ce calcul est **UI only**. Aucune valeur convertie ici ne doit
+ * alimenter une transaction.
  */
+function bigintToFloatApprox(value: bigint, decimals: number): number {
+  if (value === 0n) return 0;
+  const base = 10n ** BigInt(decimals);
+  const whole = value / base;
+  const frac = value % base;
+  if (whole > BigInt(Number.MAX_SAFE_INTEGER)) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+  return Number(whole) + Number(frac) / Number(base);
+}
+
 export function AssetDetailRoute() {
   const t = useTranslation();
   const navigate = useNavigate();
@@ -42,11 +49,10 @@ export function AssetDetailRoute() {
     networkId: string;
     assetId: string;
   }>();
-  const {
-    detail,
-    loading: detailLoading,
-    notFound,
-  } = useAssetDetail(networkId, assetId);
+  const { detail, loading: detailLoading, notFound } = useAssetDetail(
+    networkId,
+    assetId,
+  );
 
   const [timeframe, setTimeframe] = useState<Timeframe>("1d");
   const [receiveOpen, setReceiveOpen] = useState(false);
@@ -54,13 +60,12 @@ export function AssetDetailRoute() {
   const priceQuery = useAssetPrice(assetId, timeframe);
   const copy = useClipboard();
 
-  // ── Not found ──────────────────────────────────────────
   if (notFound) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+          className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           <ArrowLeft className="size-3" /> {t.assetDetail.back}
         </Link>
@@ -84,7 +89,6 @@ export function AssetDetailRoute() {
     );
   }
 
-  // ── Balance formatée ───────────────────────────────────
   const balanceStr = (() => {
     if (detail.balance === null) return "0";
     if (detail.family === "sango") return formatSango(detail.balance);
@@ -93,34 +97,36 @@ export function AssetDetailRoute() {
     return formatTokenAmount(detail.balance, detail.decimals);
   })();
 
-  // ── Prix USD ───────────────────────────────────────────
   const currentPrice = priceQuery.data?.current ?? null;
   const change24h = priceQuery.data?.change24hPct ?? null;
   const priceUnavailable = !priceQuery.isLoading && !priceQuery.data;
 
   const balanceFiat =
     currentPrice !== null && detail.balance !== null
-      ? (() => {
-          // Conversion base units → float pour le calcul fiat.
-          const base = 10n ** BigInt(detail.decimals);
-          const whole = Number(detail.balance / base);
-          const frac = Number(detail.balance % base) / Number(base);
-          return (whole + frac) * currentPrice;
-        })()
+      ? bigintToFloatApprox(detail.balance, detail.decimals) * currentPrice
       : null;
 
   const changePositive = (change24h ?? 0) >= 0;
+
+  const fiatFormatter = new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  });
+
+  const priceFormatter = new Intl.NumberFormat(undefined, {
+    maximumFractionDigits: 6,
+  });
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6">
       <Link
         to="/"
-        className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       >
         <ArrowLeft className="size-3" /> {t.assetDetail.back}
       </Link>
 
-      {/* ── Hero ──────────────────────────────────────── */}
       <header className="mt-6 flex items-center gap-4">
         <AssetLogo assetId={detail.assetId} size={56} />
         <div className="min-w-0 flex-1">
@@ -139,12 +145,7 @@ export function AssetDetailRoute() {
 
         {balanceFiat !== null && (
           <p className="mt-1 text-sm text-muted-foreground">
-            ≈{" "}
-            {new Intl.NumberFormat("en-US", {
-              style: "currency",
-              currency: "USD",
-              maximumFractionDigits: 2,
-            }).format(balanceFiat)}
+            ≈ {fiatFormatter.format(balanceFiat)}
           </p>
         )}
 
@@ -154,9 +155,7 @@ export function AssetDetailRoute() {
               {t.assetDetail.chart.priceNow} :
             </span>
             <span className="font-medium">
-              ${currentPrice.toLocaleString("en-US", {
-                maximumFractionDigits: 6,
-              })}
+              ${priceFormatter.format(currentPrice)}
             </span>
             {change24h !== null && (
               <span
@@ -174,13 +173,14 @@ export function AssetDetailRoute() {
         )}
       </div>
 
-      {/* ── Actions ──────────────────────────────────── */}
       <div className="mt-6 grid grid-cols-4 gap-2">
         <ActionButton
           icon={<ArrowUpFromLine className="size-4" />}
           label={t.assetDetail.actions.send}
           onClick={() =>
-            navigate(`/send?network=${detail.networkId}&asset=${detail.assetId}`)
+            navigate(
+              `/send?network=${detail.networkId}&asset=${detail.assetId}`,
+            )
           }
           testId="asset-action-send"
         />
@@ -206,7 +206,6 @@ export function AssetDetailRoute() {
         />
       </div>
 
-      {/* ── Chart ────────────────────────────────────── */}
       <div className="mt-6">
         <AssetChart
           data={priceQuery.data ?? null}
@@ -218,7 +217,6 @@ export function AssetDetailRoute() {
         />
       </div>
 
-      {/* ── Details ──────────────────────────────────── */}
       <section className="mt-6 rounded-2xl border bg-card p-5">
         <h2 className="text-sm font-semibold">
           {t.assetDetail.details.title}
@@ -237,12 +235,9 @@ export function AssetDetailRoute() {
               <button
                 type="button"
                 onClick={() =>
-                  copy(
-                    detail.contract!,
-                    t.assetDetail.receive.copied,
-                  )
+                  copy(detail.contract!, t.assetDetail.receive.copied)
                 }
-                className="inline-flex items-center gap-1.5 font-mono text-xs text-foreground transition-colors hover:text-primary"
+                className="inline-flex items-center gap-1.5 font-mono text-xs text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
                 {truncateMiddle(detail.contract, 10, 6)}
                 <Copy className="size-3 text-muted-foreground" />
@@ -255,7 +250,6 @@ export function AssetDetailRoute() {
         </dl>
       </section>
 
-      {/* ── Receive modal ────────────────────────────── */}
       <ReceiveAssetModal
         open={receiveOpen}
         onClose={() => setReceiveOpen(false)}
@@ -265,8 +259,6 @@ export function AssetDetailRoute() {
     </div>
   );
 }
-
-// ── Helpers ───────────────────────────────────────────────────
 
 interface ActionButtonProps {
   readonly icon: React.ReactNode;
@@ -292,7 +284,7 @@ function ActionButton({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className="flex flex-col items-center gap-1.5 rounded-xl border bg-card py-3 text-[11px] font-medium transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-card"
+      className="flex flex-col items-center gap-1.5 rounded-xl border bg-card py-3 text-[11px] font-medium transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-card"
     >
       <span className="text-primary">{icon}</span>
       {label}
