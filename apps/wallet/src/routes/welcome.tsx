@@ -1,3 +1,4 @@
+import { bitcoinNetworkById, evmNetworkById } from "@sango/wallet-chains";
 import { Check, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -5,17 +6,21 @@ import { AuthShell } from "@/components/branding/auth-shell";
 import { useTranslation } from "@/i18n/use-translation";
 
 /**
- * Page d'accueil — refonte E2.5.
- *
- * Point d'entrée unique de l'onboarding. Trois actions :
- *   - Créer un portefeuille → /create (flow unifié SANGO/EVM/Bitcoin)
- *   - Importer avec ma phrase → /import-evm (mnemonic BIP-39)
- *   - Se connecter → /unlock (déverrouiller le keyring)
- *
- * Le mockup propose une card "multi-chaînes" comme argument produit,
- * alignée sur notre capacité réelle depuis E2.1.b (Bitcoin testnet +
- * mainnet, EVM 6 réseaux, SANGO devnet).
+ * Label des réseaux supportés, construit à partir du registre
+ * `@sango/wallet-chains` (source unique de vérité).
+ * SANGO est explicitement marqué "devnet".
  */
+function buildSupportedNetworksLabel(): string {
+  const evmIds = ["ethereum", "bsc", "base", "arbitrum-one"] as const;
+  const evmNames = evmIds
+    .map((id) => evmNetworkById(id)?.name)
+    .filter((n): n is string => Boolean(n));
+  const btcName = bitcoinNetworkById("bitcoin-mainnet")?.name ?? "Bitcoin";
+  return ["SANGO (devnet)", ...evmNames, btcName].join(" · ");
+}
+
+const SUPPORTED_NETWORKS_LABEL = buildSupportedNetworksLabel();
+
 export function Welcome() {
   const t = useTranslation();
 
@@ -26,7 +31,6 @@ export function Welcome() {
       logoSize={84}
       maxWidth="md"
     >
-      {/* Card multi-chaînes */}
       <div className="mt-2 flex items-center gap-3 rounded-2xl border bg-card p-4 shadow-sm">
         <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
           <Check className="size-4" strokeWidth={3} />
@@ -36,11 +40,18 @@ export function Welcome() {
         </p>
       </div>
 
-      {/* Actions */}
+      <p className="mt-3 text-center text-xs text-muted-foreground">
+        {t.onboarding.welcome.selfCustody}
+      </p>
+
+      <p className="mt-1 text-center text-[11px] text-muted-foreground/80">
+        {SUPPORTED_NETWORKS_LABEL}
+      </p>
+
       <div className="mt-6 space-y-3">
         <Link
           to="/create"
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90"
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           <Sparkles className="size-4" />
           {t.onboarding.welcome.create}
@@ -48,7 +59,7 @@ export function Welcome() {
 
         <Link
           to="/import"
-          className="flex h-12 w-full items-center justify-center rounded-xl border-2 border-primary/30 bg-background text-sm font-semibold text-primary transition-colors hover:border-primary/60 hover:bg-primary/5"
+          className="flex h-12 w-full items-center justify-center rounded-xl border-2 border-primary/30 bg-background text-sm font-semibold text-primary transition-colors hover:border-primary/60 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           {t.onboarding.welcome.import}
         </Link>

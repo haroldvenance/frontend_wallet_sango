@@ -11,70 +11,74 @@ import { NavLink } from "react-router-dom";
 import { useTranslation } from "@/i18n/use-translation";
 import { useWalletStore } from "@/stores/wallet-store";
 import { EXPLORER_URL } from "@/lib/config";
+import { SHOW_STAKING } from "@/lib/env-flags";
 
 /**
- * Barre de navigation mobile — visible uniquement sur < 1024px (lg:).
+ * Valide qu'un lien externe peut être exposé à l'utilisateur.
  *
- * **Phase 5.7** — passage à 5 items :
- *   Accueil      → /
- *   Historique   → /history    (renommé depuis "Activité")
- *   Staking / Envoyer  → /validators (SANGO) · /send (autres)
- *   Paramètres   → /settings
- *   Explorer     → lien externe (EXPLORER_URL)
- *
- * "Activité" a été renommé "Historique" pour cohérence avec la
- * sidebar desktop. "Explorer" ouvre l'explorer dans un nouvel onglet.
- *
- * Le padding-bottom utilise `env(safe-area-inset-bottom)` pour éviter
- * d'être masqué par la barre gestuelle iOS.
+ * Rejette : HTTP, localhost, IPv4 loopback, IPv6 loopback, plages
+ * IP privées (10.x, 172.16-31.x, 192.168.x), .local.
  */
+function isSafeExternalUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:") return false;
+    const host = parsed.hostname.toLowerCase();
+    if (
+      host === "" ||
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "0.0.0.0" ||
+      host === "[::1]" ||
+      host === "::1" ||
+      host.endsWith(".local")
+    ) {
+      return false;
+    }
+    if (/^10\./.test(host)) return false;
+    if (/^192\.168\./.test(host)) return false;
+    if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+type NavItem = {
+  to: string;
+  label: string;
+  icon: typeof Home;
+  end: boolean;
+};
+
 export function MobileBottomNav() {
   const t = useTranslation();
-  const isSango = useWalletStore((s) => s.family === "sango");
+  const family = useWalletStore((s) => s.family);
 
-  const items = isSango
-    ? [
-        { to: "/", label: t.nav.mobile.home, icon: Home, end: true },
-        {
-          to: "/history",
-          label: t.nav.mobile.history,
-          icon: Clock,
-          end: false,
-        },
-        {
-          to: "/validators",
-          label: t.nav.mobile.staking,
-          icon: Layers,
-          end: false,
-        },
-        {
-          to: "/settings",
-          label: t.nav.mobile.settings,
-          icon: Settings,
-          end: false,
-        },
-      ]
-    : [
-        { to: "/", label: t.nav.mobile.home, icon: Home, end: true },
-        {
-          to: "/history",
-          label: t.nav.mobile.history,
-          icon: Clock,
-          end: false,
-        },
-        {
-          to: "/send",
-          label: t.nav.mobile.send,
-          icon: ArrowUpFromLine,
-          end: false,
-        },
-        {
-          to: "/settings",
-          label: t.nav.mobile.settings,
-          icon: Settings,
-          end: false,
-        },
-      ];
+  const showStaking = SHOW_STAKING && family === "sango";
+  const explorerSafe = isSafeExternalUrl(EXPLORER_URL);
+
+  const primary: NavItem[] = [
+    { to: "/", label: t.nav.mobile.home, icon: Home, end: true },
+    { to: "/history", label: t.nav.mobile.history, icon: Clock, end: false },
+    { to: "/send", label: t.nav.mobile.send, icon: ArrowUpFromLine, end: false },
+  ];
+  const staking: NavItem = {
+    to: "/validators",
+    label: t.nav.mobile.staking,
+    icon: Layers,
+    end: false,
+  };
+  const settings: NavItem = {
+    to: "/settings",
+    label: t.nav.mobile.settings,
+    icon: Settings,
+    end: false,
+  };
+
+  const items: NavItem[] = showStaking
+    ? [...primary, staking, settings]
+    : [...primary, settings];
 
   return (
     <nav
@@ -116,18 +120,19 @@ export function MobileBottomNav() {
           );
         })}
 
-        {/* Explorer — lien externe (pas de NavLink, pas d'état actif) */}
-        <a
-          href={EXPLORER_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex flex-1 flex-col items-center justify-center gap-0.5 text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ExternalLink className="size-5" strokeWidth={2} />
-          <span className="text-[10px] font-medium leading-none">
-            {t.nav.mobile.explorer}
-          </span>
-        </a>
+        {!showStaking && explorerSafe && (
+          <a
+            href={EXPLORER_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-1 flex-col items-center justify-center gap-0.5 text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ExternalLink className="size-5" strokeWidth={2} />
+            <span className="text-[10px] font-medium leading-none">
+              {t.nav.mobile.explorer}
+            </span>
+          </a>
+        )}
       </div>
     </nav>
   );
