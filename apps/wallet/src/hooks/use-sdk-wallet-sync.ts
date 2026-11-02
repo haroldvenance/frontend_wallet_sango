@@ -1,56 +1,61 @@
 /**
- * Synchronise le `Wallet` déverrouillé avec le `SangoClient`.
+ * Synchronise le `Wallet` SANGO déverrouillé avec le `SangoClient`.
  *
- * ⚠️ V0.1 — encore nécessaire pour le staking (V0.2).
+ * ⚠️ V0.1 — nécessaire uniquement pour le staking (V0.2 migrera vers
+ * WalletSession). Les hooks migrés (`use-account`, `use-send-tx`)
+ * n'ont plus besoin du wallet attaché.
  *
- * Les hooks migrés vers WalletSession (`use-account`, `use-send-tx`)
- * n'ont plus besoin du wallet attaché au client : la session signe via
- * le `Signer` dérivé du `Wallet` directement.
+ * ⚠️ Le `SangoClient` (SDK) n'accepte QUE les Wallet SANGO Ed25519.
+ * Les wallets BIP-39 (EVM/Bitcoin) passent par EvmAdapter /
+ * wallet-chains — on détache donc systématiquement le SDK pour eux.
  *
- * Mais les hooks staking appellent toujours les méthodes dédiées du
- * `SangoClient` (bond, delegate, undelegate, claimRewards, unjail,
- * updateCommission). Ces méthodes exigent un wallet attaché (sinon
- * "No wallet attached"). Ce hook doit donc rester monté tant que le
- * staking n'a pas migré vers WalletSession (V0.2).
- *
- * Note : `client.send()` — la méthode générique du SDK — n'est plus
- * utilisée depuis la migration de `use-send-tx` (D-SESS-8).
- *
- * Migration future : quand WalletSession exposera un `StakingProvider`,
- * retirer ce hook et le montage dans `App.tsx`.
+ * **Garanties** :
+ *   - `detachWallet()` est appelé au cleanup (unmount) → pas de
+ *     référence pendante à un wallet détruit.
+ *   - Chaque appel attach/detach est isolé par try/catch (un échec
+ *     n'interrompt pas la session — le SDK continuera de throw à
+ *     l'appel suivant, ce qui est préférable à un état incohérent).
  */
-
 import { Wallet } from "@sango/wallet-core";
 import { useEffect } from "react";
 
 import { useSdkStore } from "@/stores/sdk-store";
 import { useWalletStore } from "@/stores/wallet-store";
 
-/**
- * Synchronise le `Wallet` déverrouillé avec le `SangoClient`.
- *
- * Sans ce hook, `SangoClient` n'a pas de wallet attaché et toute méthode
- * qui signe (`send`, `bond`, `delegate`, `registerValidator`, …) lève
- * "No wallet attached".
- *
- * À monter **une seule fois** dans `App`. Le hook se ré-attache
- * automatiquement quand :
- *  - le wallet passe à `unlocked` / `locked` ;
- *  - l'instance `client` change (changement de réseau dans `sdk-store`).
- */
 export function useSdkWalletSync(): void {
   const { client } = useSdkStore();
   const { wallet, status } = useWalletStore();
 
   useEffect(() => {
-    // ⚠️ Le SangoClient (SDK) n'accepte qu'un Wallet SANGO (Ed25519).
-    // Les wallets BIP-39 EVM ne passent PAS par le SDK — ils utilisent
-    // EvmRpcUsingPool + EvmAdapter (wallet-chains) directement.
-    // On détache donc le SDK pour les wallets BIP-39.
-    if (status === "unlocked" && wallet instanceof Wallet) {
-      client.attachWallet(wallet);
+    const shouldAttach = status === "unlocked" && wallet instanceof Wallet;
+
+    if (shouldAttach) {
+      try {
+        client.attachWallet(wallet);
+      } catch (err) {
+        // Le SDK peut throw si un wallet est déjà attaché (aucun cas
+        // normal, mais défensif) ou si le client est fermé.
+        if (import.meta.env.DEV) {
+          console.warn("[useSdkWalletSync] attachWallet failed", err);
+        }
+      }
     } else {
-      client.detachWallet();
+      try {
+        client.detachWallet();
+      } catch {
+        /* detach idempotent, throw signifie "déjà détaché" */
+      }
     }
+
+    // Cleanup : détache au unmount du composant qui monte ce hook
+    // (App.tsx à la racine). Évite une référence pendante à `wallet`
+    // si le composant disparaît alors qu'un wallet est déverrouillé.
+    return () => {
+      try {
+        client.detachWallet();
+      } catch {
+        /* ignore */
+      }
+    };
   }, [client, wallet, status]);
 }
