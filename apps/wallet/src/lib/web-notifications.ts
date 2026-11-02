@@ -1,17 +1,22 @@
 /**
- * **Phase 12-D-A** — Wrapper Web Notification API.
+ * Wrapper Web Notification API.
  *
- * **Modèle** :
- *   - La permission navigateur (`Notification.permission`) et la
- *     préférence utilisateur (`preferences.systemNotificationsEnabled`)
- *     sont **deux états distincts**.
- *   - Le toggle demande la permission au premier ON (user gesture).
- *   - Si la permission est refusée, on garde le toast in-app + badge.
- *
- * **Emission** : uniquement si onglet **caché** (évite doublon
- * toast + notif système quand l'utilisateur regarde l'app).
+ * - Permission navigateur ≠ préférence utilisateur (deux états séparés).
+ * - Permission demandée **uniquement sur action utilisateur**
+ *   (`requestNotificationPermission` est appelée depuis le toggle
+ *   `settings.tsx`, jamais automatiquement).
+ * - Emission uniquement si l'onglet est **caché** — sinon le toast
+ *   in-app suffit et évite un doublon.
+ * - `txHash` est validé avant d'être encodé dans l'URL de deep-link :
+ *   un hash malformé ne permet jamais une navigation arbitraire.
  */
-export type NotificationSupport = "unsupported" | "granted" | "denied" | "default";
+export type NotificationSupport =
+  | "unsupported"
+  | "granted"
+  | "denied"
+  | "default";
+
+const TX_HASH_RE = /^0x[0-9a-fA-F]{64}$/;
 
 export function getNotificationSupport(): NotificationSupport {
   if (typeof window === "undefined") return "unsupported";
@@ -36,22 +41,13 @@ export interface ShowIncomingArgs {
   readonly body: string;
   readonly tag?: string;
   /**
-   * **Phase 12-E** — Hash de la tx (pour deep-link au clic).
-   * Si fourni, un clic navigue vers `/history?tx=<hash>`.
+   * Hash de la tx (32 bytes hex, préfixe `0x`). S'il est fourni ET
+   * valide, un clic navigue vers `/history?tx=<hash>`. Sinon le clic
+   * ramène juste le focus sur l'app.
    */
   readonly txHash?: string;
 }
 
-/**
- * **Phase 12-E** — Bridge SPA navigation.
- *
- * `web-notifications.ts` est une lib pure, sans contexte React. Un
- * composant (`NotificationNavigationBridge`) enregistre son `navigate`
- * ici au mount. Au clic sur une notif système, on délègue.
- *
- * Sans bridge actif (ex: notif pendant l'écran de welcome), le clic
- * ne fait que ramener le focus — comportement 12-D-A préservé.
- */
 type NotificationNavigator = (path: string) => void;
 let _navigator: NotificationNavigator | null = null;
 
@@ -61,30 +57,24 @@ export function setNotificationNavigator(
   _navigator = fn;
 }
 
-/**
- * Affiche une notification système si :
- *   1. l'API est supportée ;
- *   2. la permission est `granted` ;
- *   3. `document.hidden === true` (onglet caché).
- *
- * **Ne navigue pas automatiquement** — un click notif ramène le focus
- * seulement. `markAllRead` reste sous contrôle utilisateur.
- */
 export function showIncomingNotification(args: ShowIncomingArgs): boolean {
   if (typeof window === "undefined" || !("Notification" in window)) {
     return false;
   }
   if (Notification.permission !== "granted") return false;
 
-  // Garde-fou UX : pas de notif système si l'utilisateur est sur
-  // l'app (le toast in-app suffit).
+  // Ne pas doubler le toast in-app quand l'utilisateur regarde l'app.
   if (typeof document !== "undefined" && !document.hidden) return false;
+
+  // `tag` unique par tx : la nouvelle notif remplace la précédente si
+  // le même hash est relancé, mais ne détruit pas les autres.
+  const tag = args.tag ?? `sango-incoming-${args.txHash ?? "generic"}`;
 
   try {
     const n = new Notification(args.title, {
       body: args.body,
       icon: "/sango-logo.png",
-      tag: args.tag ?? "sango-incoming",
+      tag,
     });
     n.onclick = () => {
       try {
@@ -93,20 +83,22 @@ export function showIncomingNotification(args: ShowIncomingArgs): boolean {
         /* ignore */
       }
       n.close();
-      if (_navigator && args.txHash) {
+
+      // Validation stricte du hash AVANT toute navigation. Un hash
+      // malformé ne peut jamais dévier l'URL.
+      if (_navigator && args.txHash && TX_HASH_RE.test(args.txHash)) {
         try {
           _navigator(
             `/history?tx=${encodeURIComponent(args.txHash)}`,
           );
         } catch {
-          /* navigation peut échouer si le router est démonté */
+          /* router démonté — silencieux */
         }
       }
     };
     return true;
   } catch {
-    // Certains environnements (iframes, permissions restreintes)
-    // throw à la construction.
+    // Iframes, permissions restreintes : constructeur peut throw.
     return false;
   }
 }

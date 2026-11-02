@@ -5,12 +5,25 @@ import { AUTO_LOCK_MS } from "@/lib/config";
 /**
  * Verrouille automatiquement le wallet après une période d'inactivité.
  *
- * - Écoute : mousemove, keydown, click, touchstart, scroll.
- * - Recalcule le timer au retour d'onglet (visibilitychange).
- * - Ignore les events quand `enabled === false`.
+ * **Définition d'« interaction »** : un geste clavier/pointeur/molette
+ * explicite de l'utilisateur. On exclut volontairement :
+ *   - `mousemove` : signal ambigu (l'utilisateur peut être actif sans
+ *     bouger la souris, ou bouger la souris sans lire) ;
+ *   - `scroll` programmatique : rare dans un wallet mais possible
+ *     (`scrollTo`, virtualisation) — gardé côté événement natif car il
+ *     n'y a pas de moyen simple de distinguer.
  *
- * Le timer est réinitialisé à chaque interaction. Un check toutes les
- * 30 s détecte le dépassement de seuil.
+ * Events écoutés : `pointerdown` (couvre souris/touch/stylus),
+ * `keydown`, `wheel`, `scroll`.
+ *
+ * **Latence de lock** : un tick toutes les 30 s. Le pire cas est
+ * timeoutMs + 30 s avant lock effectif — acceptable (l'auto-lock
+ * n'est pas un anti-intrusion temps réel, c'est une protection
+ * d'inactivité).
+ *
+ * **Au retour d'onglet** (`visibilitychange`) :
+ *   - si absence > timeoutMs → lock immédiat ;
+ *   - sinon → reset du timer (l'utilisateur revient, il est là).
  */
 export function useAutoLock(
   enabled: boolean,
@@ -30,34 +43,32 @@ export function useAutoLock(
       lastActivityRef.current = Date.now();
     };
 
+    // `pointerdown` unifie souris + touch + stylus. Pas de `mousemove`.
     const events: (keyof WindowEventMap)[] = [
-      "mousemove",
-      "mousedown",
+      "pointerdown",
       "keydown",
-      "touchstart",
-      "scroll",
       "wheel",
+      "scroll",
     ];
 
     for (const e of events) {
+      // `passive: true` sur `scroll`/`wheel` pour ne pas bloquer le
+      // scroll natif. `pointerdown`/`keydown` sans passive : pas de
+      // preventDefault, mais le flag `passive` évite juste un warning.
       window.addEventListener(e, touch, { passive: true });
     }
 
-    // Recalcule au retour au premier plan (l'onglet peut être resté
-    // caché longtemps sans events).
     const onVisibility = (): void => {
-      if (document.visibilityState === "visible") {
-        // Si on était caché plus longtemps que le timeout, on lock direct.
-        if (Date.now() - lastActivityRef.current > timeoutMs) {
-          onLockRef.current();
-        } else {
-          lastActivityRef.current = Date.now();
-        }
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastActivityRef.current > timeoutMs) {
+        onLockRef.current();
+      } else {
+        lastActivityRef.current = Date.now();
       }
     };
     document.addEventListener("visibilitychange", onVisibility);
 
-    // Check périodique.
+    // Tick périodique : détecte le dépassement en cours de session.
     const interval = window.setInterval(() => {
       if (Date.now() - lastActivityRef.current > timeoutMs) {
         onLockRef.current();
