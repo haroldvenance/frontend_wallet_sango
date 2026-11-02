@@ -1,31 +1,76 @@
 import type { Network } from "@sango/types";
 
 /**
- * Endpoint RPC par défaut.
+ * Résout une URL et refuse les valeurs dangereuses en production.
  *
- * Depuis que le nœud Rust renvoie les headers `Access-Control-*` (preflight
- * OPTIONS inclus), on peut appeler directement depuis le navigateur — plus
- * besoin de proxy Vite.
+ * Règles PROD (fermes) :
+ *   - protocole `https:` uniquement ;
+ *   - pas de localhost/127.0.0.1/0.0.0.0/[::1]/.local.
  *
- * Surchargable via `VITE_SANGO_RPC_URL` (prod : URL HTTPS publique).
+ * En cas de refus : `console.warn` + chaîne vide. Une chaîne vide est
+ * préférable à un appel vers `localhost` qui échouerait silencieusement.
+ * Si l'opérateur oublie de configurer `VITE_SANGO_EXPLORER_URL` en prod,
+ * l'Explorer sera simplement masqué au lieu de mener vers une page morte.
+ *
+ * En DEV : aucune validation — les fallbacks localhost sont intentionnels.
  */
-export const DEFAULT_ENDPOINT =
-  import.meta.env.VITE_SANGO_RPC_URL ?? "http://127.0.0.1:8545";
+function resolveSafeUrl(
+  raw: string | undefined,
+  fallback: string,
+  label: string,
+): string {
+  const value = raw ?? fallback;
+  if (!import.meta.env.PROD) return value;
+
+  try {
+    const parsed = new URL(value);
+    const host = parsed.hostname.toLowerCase();
+    const isSafe =
+      parsed.protocol === "https:" &&
+      host !== "" &&
+      host !== "localhost" &&
+      host !== "127.0.0.1" &&
+      host !== "0.0.0.0" &&
+      host !== "[::1]" &&
+      host !== "::1" &&
+      !host.endsWith(".local");
+    if (!isSafe) {
+      console.warn(
+        `[config] ${label}: "${value}" is unsafe in production build — using empty`,
+      );
+      return "";
+    }
+    return value;
+  } catch {
+    console.warn(`[config] ${label}: "${value}" is not a valid URL — using empty`);
+    return "";
+  }
+}
+
+/**
+ * Endpoint RPC SANGO.
+ *
+ * En DEV : fallback localhost (devnet local).
+ * En PROD : `VITE_SANGO_RPC_URL` DOIT être une URL HTTPS valide.
+ *           Si absent/invalide → chaîne vide (les hooks devront
+ *           afficher un état "RPC non configuré", pas crasher).
+ */
+export const DEFAULT_ENDPOINT: string = resolveSafeUrl(
+  import.meta.env.VITE_SANGO_RPC_URL,
+  "http://127.0.0.1:8545",
+  "VITE_SANGO_RPC_URL",
+);
 
 export const DEFAULT_NETWORK: Network =
   import.meta.env.VITE_SANGO_NETWORK ?? "testnet";
 
 /**
- * Endpoints connus par réseau.
- *
- * ⚠️ Testnet/Mainnet publics ne sont PAS déployés (cf. backend P3).
- *    Le devnet local reste la seule cible opérationnelle.
+ * Endpoints connus par réseau. `mainnet` n'est pas déployé.
  */
 export const NETWORK_ENDPOINTS: Record<Network, string> = {
   mainnet: "",
   testnet: DEFAULT_ENDPOINT,
 };
-
 
 /** Auto-lock après inactivité (15 min). */
 export const AUTO_LOCK_MS = 15 * 60 * 1000;
@@ -33,68 +78,35 @@ export const AUTO_LOCK_MS = 15 * 60 * 1000;
 /** Clipboard auto-clear (30 s). */
 export const CLIPBOARD_CLEAR_MS = 30 * 1000;
 
-/**
- * Table des gas fixes par TxKind — SUPPRIMÉE en V0.2.
- *
- * Elle était dupliquée avec le SDK SANGO (@sango/sdk
- * DEFAULT_GAS_BY_TX_KIND) et divergeait sur Delegate/Undelegate
- * (80_000 ici, 300_000 dans le SDK).
- *
- * Le SangoTransactionBuilder utilise désormais sa propre table
- * GAS_BY_KIND (miroir du SDK) — voir
- * packages/wallet-chains/src/sango/transaction-builder.ts.
- *
- * Reste supprimé pour éviter la tentation de réintroduire une
- * troisième source de vérité.
- */
-
-/**
- * Max fee par défaut (base units / gas).
- *
- * ⚠️ En attendant `sango_baseFee`, hardcodé. Au devnet actuel, la base
- *    fee initiale est 1 et ne bouge pas tant que les blocs sont vides.
- */
+/** Max fee par défaut (base units / gas). */
 export const DEFAULT_MAX_FEE = 1_000n;
 export const DEFAULT_PRIORITY_FEE = 0n;
 
 /**
  * Base URL de l'explorer web.
  *
- * Résolution (préférée → fallback) :
- *   1. VITE_SANGO_EXPLORER_URL (préféré)
- *   2. VITE_EXPLORER_URL       (legacy, doc backend)
- *   3. DEFAULT_EXPLORER_URL    (devnet local)
+ * Résolution : `VITE_SANGO_EXPLORER_URL` > `VITE_EXPLORER_URL` > devnet local.
+ * En PROD : vide si absent — les liens "Explorer" sont masqués par les
+ * composants consommateurs au lieu de pointer vers localhost.
  */
-export const DEFAULT_EXPLORER_URL = "http://127.0.0.1:8090";
-
-export const EXPLORER_URL: string =
+export const EXPLORER_URL: string = resolveSafeUrl(
   (import.meta.env.VITE_SANGO_EXPLORER_URL as string | undefined) ??
-  (import.meta.env.VITE_EXPLORER_URL as string | undefined) ??
-  DEFAULT_EXPLORER_URL;
+    (import.meta.env.VITE_EXPLORER_URL as string | undefined),
+  "http://127.0.0.1:8090",
+  "VITE_SANGO_EXPLORER_URL",
+);
 
-/**
- * Endpoint du faucet HTTP.
- *
- * Résolution (préférée → fallback) :
- *   1. VITE_SANGO_FAUCET_URL (préféré)
- *   2. VITE_FAUCET_URL       (legacy, doc backend)
- *   3. DEFAULT_FAUCET_URL    (devnet local)
- */
-export const DEFAULT_FAUCET_URL = "http://127.0.0.1:3001";
-
-export const FAUCET_ENDPOINT: string =
+/** Endpoint faucet HTTP — dev/testnet uniquement. */
+export const FAUCET_ENDPOINT: string = resolveSafeUrl(
   (import.meta.env.VITE_SANGO_FAUCET_URL as string | undefined) ??
-  (import.meta.env.VITE_FAUCET_URL as string | undefined) ??
-  DEFAULT_FAUCET_URL;
+    (import.meta.env.VITE_FAUCET_URL as string | undefined),
+  "http://127.0.0.1:3001",
+  "VITE_SANGO_FAUCET_URL",
+);
 
 /**
- * Etherscan V2 API key (D-INDEXER-2).
- *
- * ⚠️ Cette clé n'est PAS un secret : elle finit dans le bundle
- *    navigateur. Configurer des restrictions de domaine + rate limit
- *    côté Etherscan.
- *
- * Si vide, l'historique EVM est désactivé (page vide).
+ * Etherscan V2 API key — publique, PAS un secret. Restreindre le
+ * domaine côté Etherscan. Si vide : l'historique EVM est désactivé.
  */
 export const ETHERSCAN_API_KEY: string =
   (import.meta.env.VITE_ETHERSCAN_API_KEY as string | undefined) ?? "";
