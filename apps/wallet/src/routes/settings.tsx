@@ -23,45 +23,52 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-import { NetworkSelector } from "@/components/settings/network-selector";
 import { FamilySelector } from "@/components/settings/family-selector";
+import { NetworkSelector } from "@/components/settings/network-selector";
 import { SettingsModal } from "@/components/settings/settings-modal";
 import { BitcoinNetworkSelector } from "@/features/bitcoin/bitcoin-network-selector";
 import { EvmNetworkSelector } from "@/features/evm/evm-network-selector";
 import { useTranslation } from "@/i18n/use-translation";
+import { EXPLORER_URL } from "@/lib/config";
 import {
   getNotificationSupport,
   requestNotificationPermission,
 } from "@/lib/web-notifications";
-import { EXPLORER_URL } from "@/lib/config";
+import { useLocaleStore } from "@/stores/locale-store";
 import {
   AUTO_LOCK_OPTIONS_MS,
   FIAT_CURRENCIES,
+  PREFERENCES_STORAGE_KEY,
   usePreferencesStore,
 } from "@/stores/preferences-store";
-import { useLocaleStore } from "@/stores/locale-store";
 import { useThemeStore } from "@/stores/theme-store";
 import { useWalletStore } from "@/stores/wallet-store";
 
-/**
- * Page Paramètres — Phase 11 (refonte complète).
- *
- * Sections :
- *   - Card wallet
- *   - SÉCURITÉ      : Recovery, Password (WIP), Auto-lock
- *   - RÉSEAUX       : FamilySelector + sous-sélecteur, Approbations (EVM only)
- *   - NOTIFICATIONS : toggle des toasts de succès
- *   - SANGO         : Validators + Explorer (uniquement family=sango)
- *   - PRÉFÉRENCES   : Langue, Thème, Devise fiat
- *   - AVANCÉ        : Endpoint RPC (SANGO only)
- *   - SUPPORT       : À propos, Terms, Privacy
- *   - ZONE DE DANGER : Effacer toutes les données locales
- *   - Déconnexion
- *
- * **Phase 11** — SANGO-only : la section SANGO et l'endpoint RPC
- * n'apparaissent que si `family === "sango"`. Approbations n'apparaît
- * que si `family === "evm"`.
- */
+/** Valide qu'un lien externe peut être exposé (HTTPS strict). */
+function isSafeExternalUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:") return false;
+    const host = parsed.hostname.toLowerCase();
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "0.0.0.0" ||
+      host === "::1" ||
+      host === "[::1]" ||
+      host.endsWith(".local")
+    ) {
+      return false;
+    }
+    if (/^10\./.test(host)) return false;
+    if (/^192\.168\./.test(host)) return false;
+    if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function SettingsRoute() {
   const t = useTranslation();
   const navigate = useNavigate();
@@ -146,7 +153,6 @@ export function SettingsRoute() {
       setSystemNotificationsEnabled(false);
       return;
     }
-    // Demande la permission au premier ON (user gesture).
     if (notificationSupport === "default") {
       const result = await requestNotificationPermission();
       setNotificationSupport(result);
@@ -156,7 +162,10 @@ export function SettingsRoute() {
         return;
       }
     }
-    if (notificationSupport === "denied" || notificationSupport === "unsupported") {
+    if (
+      notificationSupport === "denied" ||
+      notificationSupport === "unsupported"
+    ) {
       toast.error(
         notificationSupport === "unsupported"
           ? t.settings.items.systemNotificationsUnsupported
@@ -178,8 +187,8 @@ export function SettingsRoute() {
       : t.settings.themeValues.light;
 
   const fiatLabel = t.settings.fiatValues[fiatCurrency];
-
   const autoLockLabel = formatAutoLockLabel(autoLockMs, t);
+  const explorerSafe = isSafeExternalUrl(EXPLORER_URL);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6">
@@ -187,7 +196,6 @@ export function SettingsRoute() {
         {t.settings.title}
       </h1>
 
-      {/* ── Card wallet ─────────────────────────────────── */}
       <div className="mt-6 rounded-2xl border bg-card p-4 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-base font-bold text-primary-foreground">
@@ -214,14 +222,13 @@ export function SettingsRoute() {
           <button
             type="button"
             onClick={() => setKeyfileOpen(true)}
-            className="shrink-0 text-xs font-semibold text-primary transition-colors hover:underline"
+            className="shrink-0 text-xs font-semibold text-primary transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
             {t.settings.wallet.manage}
           </button>
         </div>
       </div>
 
-      {/* ── SÉCURITÉ ─────────────────────────────────────── */}
       <SettingsSection title={t.settings.sections.security}>
         <SettingRow
           icon={<ShieldCheck className="size-4" />}
@@ -256,7 +263,7 @@ export function SettingsRoute() {
                       setAutoLockExpanded(false);
                     }}
                     className={[
-                      "flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors",
+                      "flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
                       isActive
                         ? "bg-primary/10 font-medium text-primary"
                         : "text-muted-foreground hover:bg-accent",
@@ -272,7 +279,6 @@ export function SettingsRoute() {
         )}
       </SettingsSection>
 
-      {/* ── RÉSEAUX ──────────────────────────────────────── */}
       <SettingsSection title={t.settings.sections.networks}>
         <div className="space-y-3 border-b p-3 last:border-b-0">
           <FamilySelector />
@@ -289,7 +295,6 @@ export function SettingsRoute() {
         )}
       </SettingsSection>
 
-      {/* ── NOTIFICATIONS ────────────────────────────────── */}
       <SettingsSection title={t.settings.sections.notifications}>
         <SettingRowToggle
           icon={<BellRing className="size-4" />}
@@ -314,7 +319,6 @@ export function SettingsRoute() {
         />
       </SettingsSection>
 
-      {/* ── SANGO (conditionnel) ────────────────────────── */}
       {isSango && (
         <SettingsSection title={t.settings.sections.sango}>
           <SettingRow
@@ -322,24 +326,25 @@ export function SettingsRoute() {
             label={t.settings.items.validators}
             onClick={() => navigate("/validators")}
           />
-          <a
-            href={EXPLORER_URL}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="flex w-full items-center gap-3 border-b px-4 py-3.5 text-left transition-colors last:border-b-0 hover:bg-accent/40"
-          >
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <ExternalLink className="size-4" />
-            </div>
-            <span className="min-w-0 flex-1 truncate text-sm font-medium">
-              {t.settings.items.sangoExplorer}
-            </span>
-            <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-          </a>
+          {explorerSafe && (
+            <a
+              href={EXPLORER_URL}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="flex w-full items-center gap-3 border-b px-4 py-3.5 text-left transition-colors last:border-b-0 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            >
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <ExternalLink className="size-4" />
+              </div>
+              <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                {t.settings.items.sangoExplorer}
+              </span>
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+            </a>
+          )}
         </SettingsSection>
       )}
 
-      {/* ── PRÉFÉRENCES ──────────────────────────────────── */}
       <SettingsSection title={t.settings.sections.preferences}>
         <SettingRow
           icon={<Globe className="size-4" />}
@@ -384,7 +389,7 @@ export function SettingsRoute() {
                       setFiatExpanded(false);
                     }}
                     className={[
-                      "flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors",
+                      "flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
                       isActive
                         ? "bg-primary/10 font-medium text-primary"
                         : "text-muted-foreground hover:bg-accent",
@@ -400,7 +405,6 @@ export function SettingsRoute() {
         )}
       </SettingsSection>
 
-      {/* ── AVANCÉ (SANGO only) ─────────────────────────── */}
       {isSango && (
         <SettingsSection title={t.settings.sections.advanced}>
           <SettingRow
@@ -419,7 +423,6 @@ export function SettingsRoute() {
         </SettingsSection>
       )}
 
-      {/* ── SUPPORT ──────────────────────────────────────── */}
       <SettingsSection title={t.settings.sections.support}>
         <SettingRow
           icon={<Info className="size-4" />}
@@ -438,19 +441,23 @@ export function SettingsRoute() {
         />
       </SettingsSection>
 
-      {/* ── ZONE DE DANGER ──────────────────────────────── */}
       <DangerZone />
 
-      {/* ── Déconnexion ──────────────────────────────────── */}
       <button
         type="button"
         onClick={onLogout}
-        className="mt-8 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-destructive/40 bg-destructive/5 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10"
+        className="mt-8 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-destructive/40 bg-destructive/5 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50"
       >
         <LogOut className="size-4" />
         {t.settings.logout}
       </button>
 
+      {/*
+        ⚠️ Refactor noté : SettingsModal est un composant legacy
+        (500+ lignes) uniquement utilisé ici et dans
+        `/settings/recovery-phrase` pour l'export keyfile. À remplacer
+        par un `KeyfileDialog` autonome lors de la dépréciation.
+      */}
       <SettingsModal
         open={keyfileOpen}
         onClose={() => setKeyfileOpen(false)}
@@ -475,14 +482,12 @@ function DangerZone() {
     if (!matches) return;
     setBusy(true);
     try {
-      // 1. Détruire les instances runtime.
       const state = useWalletStore.getState();
       for (const entry of Object.values(state.wallets)) {
         entry.wallet.destroy();
       }
       state.noWallet();
 
-      // 2. Vider le keyring IndexedDB.
       try {
         const kr = await Keyring.open();
         await kr.clear();
@@ -491,18 +496,30 @@ function DangerZone() {
         /* idb peut ne pas exister */
       }
 
-      // 3. Vider localStorage (préférences, session persistée, etc.).
+      // ⚠️ Scoped : ne PAS utiliser `localStorage.clear()` qui
+      // effacerait toutes les clés de l'origine — potentiellement des
+      // données d'autres apps sur le même hostname. On ne supprime
+      // que les clés explicitement possédées par Sango.
       try {
-        localStorage.clear();
+        const toRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i += 1) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith("sango.") || key.startsWith("sango-"))) {
+            toRemove.push(key);
+          }
+        }
+        for (const k of toRemove) localStorage.removeItem(k);
+        // Ceinture + bretelles : la clé preferences connue.
+        localStorage.removeItem(PREFERENCES_STORAGE_KEY);
       } catch {
-        /* storage peut être indisponible */
+        /* storage indisponible */
       }
 
-      // 4. Retour à l'accueil.
-      toast.success(t.settings.items.resetAll);
+      toast.success(t.settings.items.resetConfirmButton);
       navigate("/welcome");
-    } catch (err) {
-      toast.error("Erreur", { description: (err as Error).message });
+    } catch {
+      // Jamais `(err as Error).message`.
+      toast.error(t.settings.items.resetConfirmTitle);
     } finally {
       setBusy(false);
     }
@@ -518,7 +535,7 @@ function DangerZone() {
           type="button"
           data-testid="danger-zone-trigger"
           onClick={() => setOpen((v) => !v)}
-          className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-destructive/[0.06]"
+          className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-destructive/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50"
         >
           <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
             <Trash2 className="size-4" />
@@ -560,7 +577,7 @@ function DangerZone() {
               data-testid="danger-zone-confirm"
               onClick={onReset}
               disabled={!matches || busy}
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-destructive text-sm font-semibold text-destructive-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-destructive text-sm font-semibold text-destructive-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 disabled:opacity-50"
             >
               <Trash2 className="size-4" />
               {t.settings.items.resetConfirmButton}
@@ -628,7 +645,9 @@ function SettingRow({ icon, label, value, onClick }: SettingRowProps) {
         {label}
       </span>
       {value && (
-        <span className="shrink-0 text-xs text-muted-foreground">{value}</span>
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {value}
+        </span>
       )}
       {onClick && (
         <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
@@ -641,7 +660,7 @@ function SettingRow({ icon, label, value, onClick }: SettingRowProps) {
       <button
         type="button"
         onClick={onClick}
-        className="flex w-full items-center gap-3 border-b px-4 py-3.5 text-left transition-colors last:border-b-0 hover:bg-accent/40"
+        className="flex w-full items-center gap-3 border-b px-4 py-3.5 text-left transition-colors last:border-b-0 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       >
         {content}
       </button>
@@ -687,7 +706,7 @@ function SettingRowToggle({
         aria-checked={value}
         onClick={() => onChange(!value)}
         className={[
-          "relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors",
+          "relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
           value ? "bg-primary" : "bg-muted",
         ].join(" ")}
       >

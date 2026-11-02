@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { Keyring } from "@sango/wallet-core";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Keyring } from "@sango/wallet-core";
 
 import { AuthShell } from "@/components/branding/auth-shell";
 import { SangoIcon } from "@/components/branding/sango-icon";
@@ -9,16 +9,6 @@ import { useTranslation } from "@/i18n/use-translation";
 import { decryptAllWallets } from "@/lib/decrypt-wallets";
 import { useWalletStore } from "@/stores/wallet-store";
 
-/**
- * Déverrouille la **session keyring** (Phase 3.1, D-Phase3-1).
- *
- * Un password réussi déverrouille **toutes** les entrées qui
- * matchent. `switchWallet(id)` est ensuite instantané (aucun
- * re-prompt).
- *
- * `activeId` persisté est restauré s'il pointe vers un wallet
- * toujours présent ; sinon, premier wallet déverrouillé.
- */
 export function Unlock() {
   const t = useTranslation();
   const navigate = useNavigate();
@@ -27,7 +17,6 @@ export function Unlock() {
   const [busy, setBusy] = useState(false);
   const [activeLabel, setActiveLabel] = useState<string | null>(null);
 
-  // Pré-charge le label du wallet actif (persisté) — purement cosmétique.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -44,7 +33,7 @@ export function Unlock() {
           entries.sort((a, b) => b.createdAt - a.createdAt)[0];
         setActiveLabel(target?.label ?? null);
       } catch {
-        // Silencieux : cosmétique.
+        /* cosmétique — silencieux */
       }
     })();
     return () => {
@@ -52,16 +41,16 @@ export function Unlock() {
     };
   }, []);
 
-  async function onSubmit() {
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (busy || !password) return;
     setBusy(true);
     try {
       const { decrypted } = await decryptAllWallets(password);
-
       if (decrypted.length === 0) {
         toast.error(t.unlock.wrongPassword);
         return;
       }
-
       unlock({
         wallets: decrypted.map((d) => ({
           id: d.id,
@@ -73,9 +62,6 @@ export function Unlock() {
         })),
       });
 
-      // D-Phase3-5 (D32·A) — label UI dérivé du tri `createdAt`
-      // (même source que `useWallets()`). On n'utilise plus
-      // `entry.label` (souvent dupliqué "Mon portefeuille").
       const activeId = useWalletStore.getState().activeId;
       const sorted = [...decrypted].sort(
         (a, b) => a.createdAt - b.createdAt,
@@ -85,6 +71,9 @@ export function Unlock() {
       const label = t.wallets.labelPattern.replace("{n}", String(position));
       toast.success(`${t.unlock.unlocked} : ${label}`);
       navigate("/");
+    } catch {
+      // Jamais `(err as Error).message` — peut fuiter un détail crypto.
+      toast.error(t.unlock.wrongPassword);
     } finally {
       setBusy(false);
     }
@@ -98,7 +87,7 @@ export function Unlock() {
       logoSize={64}
       maxWidth="md"
     >
-      <div className="mt-2 space-y-4">
+      <form onSubmit={onSubmit} className="mt-2 space-y-4" noValidate>
         <div className="flex items-center gap-3 rounded-2xl border bg-card p-3 shadow-sm">
           <SangoIcon size={40} />
           <div className="min-w-0 flex-1">
@@ -125,15 +114,14 @@ export function Unlock() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder={t.onboarding.unlock.passwordPlaceholder}
             autoComplete="current-password"
-            className="flex h-12 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex h-12 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
 
         <button
-          type="button"
-          onClick={onSubmit}
+          type="submit"
           disabled={busy || !password}
-          className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50"
         >
           {busy ? t.unlock.unlocking : t.onboarding.unlock.submit}
         </button>
@@ -141,19 +129,19 @@ export function Unlock() {
         <div className="space-y-3 pt-4 text-center">
           <Link
             to="/import"
-            className="block text-xs font-medium text-primary hover:underline"
+            className="block text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
             {t.onboarding.unlock.forgotPassword}
           </Link>
           <button
             type="button"
             onClick={() => navigate("/welcome")}
-            className="block w-full text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className="block w-full text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
             {t.onboarding.unlock.useAnother}
           </button>
         </div>
-      </div>
+      </form>
     </AuthShell>
   );
 }

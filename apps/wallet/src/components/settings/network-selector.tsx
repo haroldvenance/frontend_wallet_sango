@@ -10,26 +10,69 @@ import { useSdkStore } from "@/stores/sdk-store";
 
 type Mode = "preset-testnet" | "preset-mainnet" | "custom";
 
-function modeOf(
-  network: Network,
-  customEndpoint: string | null,
-): Mode {
+function modeOf(network: Network, customEndpoint: string | null): Mode {
   if (customEndpoint) return "custom";
   if (network === "mainnet") return "preset-mainnet";
   return "preset-testnet";
 }
 
 /**
- * Sélecteur de réseau + endpoint custom.
- *
- * Trois modes :
- *  - Preset Testnet (devnet local) — endpoint par défaut
- *  - Preset Mainnet — désactivé tant qu'aucune URL n'est publiée
- *  - Custom — l'utilisateur saisit n'importe quelle URL RPC
- *
- * En mode Custom, la connexion est testée (appel `sango_chainId`) avant
- * sauvegarde pour éviter de figer une URL injoignable.
+ * Valide une URL RPC : HTTPS/HTTP, refuse schémas dangereux,
+ * refuse loopback et IP privées.
  */
+function isValidRpcUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      return false;
+    }
+    const host = parsed.hostname.toLowerCase();
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "0.0.0.0" ||
+      host === "::1" ||
+      host === "[::1]" ||
+      host.endsWith(".local")
+    ) {
+      return false;
+    }
+    if (/^10\./.test(host)) return false;
+    if (/^192\.168\./.test(host)) return false;
+    if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Masque les query strings et userinfo dans l'URL affichée à
+ * l'utilisateur (les providers type Infura/Alchemy embarquent souvent
+ * une clé API dans le path ou le query).
+ */
+function redactEndpoint(url: string): string {
+  try {
+    const parsed = new URL(url);
+    parsed.search = "";
+    parsed.username = "";
+    parsed.password = "";
+    const host = parsed.host;
+    // Si le path contient un segment très long (>20 chars), c'est
+    // probablement une clé API — on le tronque.
+    const pathParts = parsed.pathname.split("/").filter(Boolean);
+    if (pathParts.length > 0 && pathParts[pathParts.length - 1].length > 20) {
+      pathParts[pathParts.length - 1] = "…";
+    }
+    return `${parsed.protocol}//${host}/${pathParts.join("/")}`.replace(
+      /\/$/,
+      "",
+    );
+  } catch {
+    return url;
+  }
+}
+
 export function NetworkSelector() {
   const t = useTranslation();
   const {
@@ -44,7 +87,6 @@ export function NetworkSelector() {
   const [draftUrl, setDraftUrl] = useState(customEndpoint ?? "");
   const [testing, setTesting] = useState(false);
 
-  // Resynchronise le mode quand le store change (ex: rehydratation).
   useEffect(() => {
     setMode(modeOf(network, customEndpoint));
     if (customEndpoint) setDraftUrl(customEndpoint);
@@ -57,28 +99,26 @@ export function NetworkSelector() {
     } else if (next === "preset-mainnet") {
       setPresetNetwork("mainnet");
     }
-    // "custom" : on attend le test & save
   }
 
   async function handleTestAndSave() {
     const url = draftUrl.trim();
-    if (!/^https?:\/\/.+/.test(url)) {
+    if (!isValidRpcUrl(url)) {
       toast.error(t.networkSelector.invalidUrl);
       return;
     }
     setTesting(true);
     try {
-      // Probe directe (CORS activé côté nœud).
       const probe = new SangoClient({ endpoint: url, network });
       const chainId = await probe.getChainId();
       setCustomEndpoint(url);
       toast.success(
         `${t.networkSelector.connectionOk} — ${chainId.slice(0, 10)}…`,
       );
-    } catch (err) {
-      toast.error(t.networkSelector.connectionFailed, {
-        description: (err as Error).message,
-      });
+    } catch {
+      // Jamais `(err as Error).message` — peut contenir l'URL RPC
+      // avec clé API, l'adresse du provider, etc.
+      toast.error(t.networkSelector.connectionFailed);
     } finally {
       setTesting(false);
     }
@@ -91,7 +131,9 @@ export function NetworkSelector() {
   }
 
   const mainnetAvailable = Boolean(NETWORK_ENDPOINTS.mainnet);
-  const activeEndpoint = customEndpoint ?? NETWORK_ENDPOINTS[network] ?? "—";
+  const rawEndpoint = customEndpoint ?? NETWORK_ENDPOINTS[network] ?? "—";
+  const displayedEndpoint =
+    rawEndpoint === "—" ? "—" : redactEndpoint(rawEndpoint);
 
   return (
     <div className="rounded-xl border bg-card p-3">
@@ -133,17 +175,19 @@ export function NetworkSelector() {
               type="button"
               onClick={handleTestAndSave}
               disabled={testing || !draftUrl.trim()}
-              className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary text-[11px] font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary text-[11px] font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50"
             >
               <Check className="size-3.5" />
-              {testing ? t.networkSelector.testing : t.networkSelector.testAndSave}
+              {testing
+                ? t.networkSelector.testing
+                : t.networkSelector.testAndSave}
             </button>
             {customEndpoint && (
               <button
                 type="button"
                 onClick={handleClearCustom}
                 title={t.networkSelector.clearCustom}
-                className="inline-flex size-8 items-center justify-center rounded-lg border bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                className="inline-flex size-8 items-center justify-center rounded-lg border bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
                 <RotateCcw className="size-3.5" />
               </button>
@@ -154,7 +198,9 @@ export function NetworkSelector() {
 
       <div className="mt-3 flex items-center gap-1.5 text-[10px] text-muted-foreground">
         <Server className="size-3 shrink-0" />
-        <code className="truncate font-mono">{activeEndpoint}</code>
+        <code className="truncate font-mono" title={displayedEndpoint}>
+          {displayedEndpoint}
+        </code>
       </div>
     </div>
   );

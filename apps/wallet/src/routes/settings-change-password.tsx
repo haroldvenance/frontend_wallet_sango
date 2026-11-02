@@ -2,30 +2,28 @@ import {
   changeKeyringPassword,
   type ChangeKeyringPasswordError,
 } from "@sango/wallet-core";
-import { AlertTriangle, ArrowLeft, CheckCircle2, Eye, EyeOff, KeyRound, ShieldCheck } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  KeyRound,
+  ShieldCheck,
+} from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
+import { scorePassword } from "@/components/branding/password-strength";
 import { useTranslation } from "@/i18n/use-translation";
 import { useWalletStore } from "@/stores/wallet-store";
 
-/**
- * Page "Changer le mot de passe" — Phase 11.2.
- *
- * **Parcours (D11.2-h = B1)** :
- *   1. Formulaire : actuel + nouveau + confirmation.
- *   2. Validation locale (longueur, match, ≠ actuel).
- *   3. `changeKeyringPassword` (3 phases — voir wallet-core).
- *   4. Écran de succès **avant** verrouillage (le wallet reste
- *      déverrouillé tant que l'utilisateur n'a pas cliqué "Compris").
- *   5. Clic "Compris" → `lock()` + navigation `/unlock`.
- *
- * **Cas particulier** — `status: "warning"` : le mot de passe a bien
- * été changé, mais la vérification post-commit a échoué. On affiche
- * quand même l'écran de succès, avec un bandeau d'avertissement
- * demandant à l'utilisateur de confirmer en se déverrouillant.
- */
 type Phase = "form" | "success";
+
+type ChangeResult =
+  | { status: "ok" }
+  | { status: "warning"; message: string }
+  | { status: "error"; reason: ChangeKeyringPasswordError };
 
 export function SettingsChangePasswordRoute() {
   const t = useTranslation();
@@ -71,6 +69,10 @@ export function SettingsChangePasswordRoute() {
       setError(t.settings.password.errors.tooShort);
       return;
     }
+    if (scorePassword(next) < 2) {
+      setError(t.settings.password.errors.tooWeak);
+      return;
+    }
     if (next !== confirm) {
       setError(t.settings.password.errors.mismatch);
       return;
@@ -79,20 +81,23 @@ export function SettingsChangePasswordRoute() {
       setError(t.settings.password.errors.sameAsCurrent);
       return;
     }
-
     if (!activeId) {
       setError(t.settings.password.errors.entryNotFound);
       return;
     }
 
     setBusy(true);
-    let result;
+    let result: ChangeResult;
     try {
       result = await changeKeyringPassword({
         currentPassword: current,
         newPassword: next,
         targetEntryId: activeId,
       });
+    } catch {
+      // Exception imprévue (I/O, quota, etc.) — ne jamais exposer le
+      // message technique à l'utilisateur.
+      result = { status: "error", reason: "reencrypt-failed" };
     } finally {
       setBusy(false);
     }
@@ -113,8 +118,6 @@ export function SettingsChangePasswordRoute() {
   }
 
   function onAcknowledge() {
-    // Ordre volontaire : d'abord navigate (pour éviter que
-    // ProtectedLayout redirige avant), puis lock.
     navigate("/unlock", { replace: true });
     lock();
   }
@@ -127,7 +130,7 @@ export function SettingsChangePasswordRoute() {
     <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6">
       <Link
         to="/settings"
-        className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       >
         <ArrowLeft className="size-3" />
         {t.settings.password.back}
@@ -164,7 +167,7 @@ export function SettingsChangePasswordRoute() {
           label={t.settings.password.currentLabel}
           value={current}
           onChange={setCurrent}
-          autoComplete="new-password"
+          autoComplete="current-password"
         />
         <Field
           testId="cp-new"
@@ -195,7 +198,7 @@ export function SettingsChangePasswordRoute() {
           type="submit"
           data-testid="cp-submit"
           disabled={busy}
-          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50"
         >
           <ShieldCheck className="size-4" />
           {busy ? t.settings.password.submitting : t.settings.password.submit}
@@ -234,7 +237,7 @@ function Field(props: {
           aria-label={
             visible ? t.settings.password.hide : t.settings.password.show
           }
-          className="absolute right-1 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="absolute right-1 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           tabIndex={-1}
         >
           {visible ? (
@@ -286,7 +289,7 @@ function SuccessView(props: {
         type="button"
         data-testid="cp-acknowledge"
         onClick={props.onAcknowledge}
-        className="mt-6 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+        className="mt-6 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       >
         <ShieldCheck className="size-4" />
         {t.settings.password.successAcknowledge}

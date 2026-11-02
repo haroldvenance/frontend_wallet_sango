@@ -7,18 +7,16 @@ import { useTranslation } from "@/i18n/use-translation";
 import { useWalletStore } from "@/stores/wallet-store";
 
 /**
- * Page "Phrase de récupération" — refonte Phase 13-A.
+ * Page "Phrase de récupération".
  *
- * **Q1 = A (audit 13)** — La mnemonic n'est **jamais persistée** par
- * l'app (invariant D-HD-1). Cette page explique ce que ça implique et
- * fournit :
- *   1. L'export du keyfile chiffré (seed dérivé — pas la mnemonic).
- *   2. Un lien vers `/settings/recovery-phrase/verify-keyfile` pour
- *      tester un fichier de sauvegarde.
+ * La mnemonic n'est JAMAIS persistée (invariant D-HD-1). Cette page
+ * explique et fournit :
+ *   1. L'export du keyfile chiffré (seed dérivé, PAS la mnemonic).
+ *   2. Un lien vers `/settings/recovery-phrase/verify-keyfile`.
  *
- * **Le texte insiste sur la distinction mnemonic / keyfile** : le
- * keyfile restaure le wallet à l'identique, mais ne permet **pas**
- * de réimporter dans MetaMask/Trust Wallet/Ledger.
+ * ⚠️ TODO refactor : le bouton "Exporter" ouvre `SettingsModal` en
+ * onglet "wallet" — un composant legacy de 500+ lignes. À remplacer
+ * par un `KeyfileDialog` autonome quand le legacy sera déprécié.
  */
 export function SettingsRecoveryPhraseRoute() {
   const t = useTranslation();
@@ -34,7 +32,7 @@ export function SettingsRecoveryPhraseRoute() {
     <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6">
       <Link
         to="/settings"
-        className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       >
         <ArrowLeft className="size-3" />
         {t.settings.recoveryPhrase.backButton}
@@ -44,7 +42,6 @@ export function SettingsRecoveryPhraseRoute() {
         {t.settings.recoveryPhrase.title}
       </h1>
 
-      {/* ── Card 1 : Info ─────────────────────────────── */}
       <div className="mt-6 rounded-2xl border bg-card p-5 shadow-sm">
         <div className="flex items-start gap-3">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -61,7 +58,6 @@ export function SettingsRecoveryPhraseRoute() {
         </div>
       </div>
 
-      {/* ── Card 2 : Keyfile ──────────────────────────── */}
       <div className="mt-4 rounded-2xl border bg-card p-5 shadow-sm">
         <p className="text-sm font-semibold">
           {t.settings.recoveryPhrase.keyfileTitle}
@@ -78,14 +74,13 @@ export function SettingsRecoveryPhraseRoute() {
         <button
           type="button"
           onClick={() => setKeyfileOpen(true)}
-          className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+          className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           <Download className="size-4" />
           {t.settings.recoveryPhrase.exportButton}
         </button>
       </div>
 
-      {/* ── Card 3 : Verify ──────────────────────────── */}
       <div className="mt-4 rounded-2xl border bg-card p-5 shadow-sm">
         <div className="flex items-start gap-3">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -104,19 +99,15 @@ export function SettingsRecoveryPhraseRoute() {
         <Link
           to="/settings/recovery-phrase/verify-keyfile"
           data-testid="verify-keyfile-link"
-          className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border bg-background text-sm font-semibold text-foreground transition-colors hover:bg-accent"
+          className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border bg-background text-sm font-semibold text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           {t.settings.recoveryPhrase.verifyButton}
         </Link>
       </div>
 
-      {/* ── Warning footer ────────────────────────────── */}
       <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/5 p-3 text-[11px] text-amber-700 dark:text-amber-400">
         <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-        <span>
-          Ne partage jamais le keyfile ni ton mot de passe. Quiconque les
-          possède contrôle ton wallet.
-        </span>
+        <span>{t.settings.recoveryPhrase.footerWarning}</span>
       </div>
 
       <SettingsModal
