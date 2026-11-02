@@ -38,7 +38,7 @@ interface Row {
   tx: Tx;
   label: string;
   amount: string;
-  direction: "in" | "out" | "neutral" | "pending";
+  direction: "in" | "out" | "neutral" | "pending" | "unknown";
   counterparty: string | null;
   icon: ReactElement;
 }

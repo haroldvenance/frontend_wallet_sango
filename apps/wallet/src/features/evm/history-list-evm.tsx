@@ -141,7 +141,6 @@ function HistoryRow({ row }: { readonly row: Row }) {
   const { item, direction } = row;
   const isSent = direction === "out";
   const isReceived = direction === "in";
-  const isNeutral = direction === "neutral";
   const isUnknown = direction === "unknown";
   const isPending = item.status === "pending";
   const isFailed = item.status === "failed";

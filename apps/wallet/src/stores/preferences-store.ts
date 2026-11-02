@@ -79,7 +79,7 @@ export const usePreferencesStore = create<PreferencesState>()(
       version: 1,
       storage: createJSONStorage(() => localStorage),
       // Migrate : à compléter quand on passe à version 2.
-      migrate: (persisted, fromVersion) => persisted as PreferencesState,
+      migrate: (persisted, _fromVersion) => persisted as PreferencesState,
     },
   ),
 );
